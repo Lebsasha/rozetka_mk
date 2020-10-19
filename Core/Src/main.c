@@ -97,7 +97,7 @@ int main(void)
   while (1)
   {
       HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); //on
-      HAL_Delay(5000);
+      HAL_Delay(100);
       state=HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5);
       if (state==GPIO_PIN_RESET)
       {
@@ -119,7 +119,7 @@ int main(void)
       else
           HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 0);
       HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); //off
-      HAL_Delay(1000);
+      HAL_Delay(100);
     
 // 		//HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_5);
 
@@ -218,7 +218,7 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin : PB5 */
   GPIO_InitStruct.Pin = GPIO_PIN_5;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 }
