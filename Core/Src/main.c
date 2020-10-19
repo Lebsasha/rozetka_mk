@@ -86,28 +86,55 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
-  int counter=0;
-  GPIO_PinState state;
+
+    unsigned int counter=0;
+    GPIO_PinState state;
+    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-		//HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_5);
+      HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); //on
+      HAL_Delay(5000);
+      state=HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5);
+      if (state==GPIO_PIN_RESET)
+      {
+          HAL_Delay(1000);
+          state=HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5);
+          if (state==GPIO_PIN_RESET)
+          ++counter;
+      }
+      if (counter&1U)
+          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
+      else
+          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 0);
+      if (counter&2U)
+          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
+      else
+          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 0);
+      if (counter&4U)
+          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 1);
+      else
+          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 0);
+      HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); //off
+      HAL_Delay(1000);
+    
+// 		//HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_5);
 
-//	  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_5);
+// //	  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_5);
 
-		HAL_Delay(5000);
-//		state=HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5);
-		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 0);
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
-		HAL_Delay(2000);
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
-		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 0);
-//		HAL_Delay(500);
+// 		HAL_Delay(5000);
+// //		state=HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5);
+// 		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+// 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 0);
+// 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
+// 		HAL_Delay(2000);
+// 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
+// 		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+// 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 0);
+// //		HAL_Delay(500);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -172,10 +199,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8|GPIO_PIN_9, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
@@ -184,8 +208,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PA8 PA9 */
-  GPIO_InitStruct.Pin = GPIO_PIN_8|GPIO_PIN_9;
+  /*Configure GPIO pins : PA8 PA9 PA10 */
+  GPIO_InitStruct.Pin = GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -193,9 +217,8 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : PB5 */
   GPIO_InitStruct.Pin = GPIO_PIN_5;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 }
