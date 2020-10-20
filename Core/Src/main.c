@@ -101,7 +101,7 @@ int main(void)
       state=HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5);
       if (state==GPIO_PIN_RESET)
       {
-          HAL_Delay(250);
+          HAL_Delay(100);
           state=HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5);
           if (state==GPIO_PIN_RESET)
           ++counter;
