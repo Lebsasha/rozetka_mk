@@ -176,6 +176,8 @@ void SystemClock_Config(void)
   }
 }
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "hicpp-signed-bitwise"
 /**
   * @brief GPIO Initialization Function
   * @param None
@@ -218,6 +220,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 }
+#pragma clang diagnostic pop
 
 /* USER CODE BEGIN 4 */
 
