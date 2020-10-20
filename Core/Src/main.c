@@ -99,12 +99,10 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-      HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); //on
-      HAL_Delay(100);
       state=HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5);
       if (state==GPIO_PIN_RESET)
       {
-          HAL_Delay(200);
+          HAL_Delay(250);
           state=HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5);
           if (state==GPIO_PIN_RESET)
           ++counter;
@@ -121,8 +119,6 @@ int main(void)
           HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 0);
       else
           HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
-      HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); //off
-      HAL_Delay(100);
     
 // 		//HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_5);
 
