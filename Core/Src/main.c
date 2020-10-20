@@ -54,10 +54,11 @@ static void MX_GPIO_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+const int DETAILS=255;
+void soft_glow(GPIO_TypeDef *port, int pin, int duty_cycle, int ms);
 /* USER CODE END 0 */
 
-void soft_glow(GPIO_TypeDef *port, int pin, double duty_cycle, int ms);
+
 
 /**
   * @brief  The application entry point.
@@ -113,44 +114,58 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-      soft_glow(GPIOA, GPIO_PIN_10, 0.2, 50);
-      soft_glow(GPIOA, GPIO_PIN_10, 0.4, 50);
-      soft_glow(GPIOA, GPIO_PIN_10, 0.5, 50);
-      soft_glow(GPIOA, GPIO_PIN_10, 0.8, 50);
-      soft_glow(GPIOA, GPIO_PIN_10, 0.9, 50);
-      soft_glow(GPIOA, GPIO_PIN_10, 1, 1000);
-      soft_glow(GPIOA, GPIO_PIN_10, 0.9, 50);
-      soft_glow(GPIOA, GPIO_PIN_10, 0.8, 50);
-      soft_glow(GPIOA, GPIO_PIN_10, 0.5, 50);
-      soft_glow(GPIOA, GPIO_PIN_10, 0.4, 50);
-      soft_glow(GPIOA, GPIO_PIN_10, 0, 50);
+      for(int i=0; i < DETAILS; i+=2)
+        soft_glow(GPIOA, GPIO_PIN_10, i, 10);
+
+      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
+//      soft_glow(GPIOA, GPIO_PIN_10, DETAILS, 50);
+      HAL_Delay(1000);
+
+      for(int i=DETAILS; i >= 0; i-=2)
+          soft_glow(GPIOA, GPIO_PIN_10, i, 10);
       HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
-
-      soft_glow(GPIOA, GPIO_PIN_9, 0.2, 50);
-      soft_glow(GPIOA, GPIO_PIN_9, 0.4, 50);
-      soft_glow(GPIOA, GPIO_PIN_9, 0.5, 50);
-      soft_glow(GPIOA, GPIO_PIN_9, 0.8, 50);
-      soft_glow(GPIOA, GPIO_PIN_9, 0.9, 50);
-      soft_glow(GPIOA, GPIO_PIN_9, 1, 1000);
-      soft_glow(GPIOA, GPIO_PIN_9, 0.9, 50);
-      soft_glow(GPIOA, GPIO_PIN_9, 0.8, 50);
-      soft_glow(GPIOA, GPIO_PIN_9, 0.5, 50);
-      soft_glow(GPIOA, GPIO_PIN_9, 0.4, 50);
-      soft_glow(GPIOA, GPIO_PIN_9, 0, 50);
-      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
-
-      soft_glow(GPIOA, GPIO_PIN_8, 0.2, 50);
-      soft_glow(GPIOA, GPIO_PIN_8, 0.4, 50);
-      soft_glow(GPIOA, GPIO_PIN_8, 0.5, 50);
-      soft_glow(GPIOA, GPIO_PIN_8, 0.8, 50);
-      soft_glow(GPIOA, GPIO_PIN_8, 0.9, 50);
-      soft_glow(GPIOA, GPIO_PIN_8, 1, 1000);
-      soft_glow(GPIOA, GPIO_PIN_8, 0.9, 50);
-      soft_glow(GPIOA, GPIO_PIN_8, 0.8, 50);
-      soft_glow(GPIOA, GPIO_PIN_8, 0.5, 50);
-      soft_glow(GPIOA, GPIO_PIN_8, 0.4, 50);
-      soft_glow(GPIOA, GPIO_PIN_8, 0, 50);
-      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+      HAL_Delay(200);
+//
+//      soft_glow(GPIOA, GPIO_PIN_10, 30, 50);
+//      soft_glow(GPIOA, GPIO_PIN_10, 50, 50);
+//      soft_glow(GPIOA, GPIO_PIN_10, 80, 50);
+//      soft_glow(GPIOA, GPIO_PIN_10, 100, 50);
+//      soft_glow(GPIOA, GPIO_PIN_10, 130, 50);
+//      soft_glow(GPIOA, GPIO_PIN_10, 150, 50);
+//      soft_glow(GPIOA, GPIO_PIN_10, 170, 50);
+//      soft_glow(GPIOA, GPIO_PIN_10, 1, 1000);
+//      soft_glow(GPIOA, GPIO_PIN_10, 0.9, 50);
+//      soft_glow(GPIOA, GPIO_PIN_10, 0.8, 50);
+//      soft_glow(GPIOA, GPIO_PIN_10, 0.5, 50);
+//      soft_glow(GPIOA, GPIO_PIN_10, 0.4, 50);
+//      soft_glow(GPIOA, GPIO_PIN_10, 0, 50);
+//      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
+//
+//      soft_glow(GPIOA, GPIO_PIN_9, 0.2, 50);
+//      soft_glow(GPIOA, GPIO_PIN_9, 0.4, 50);
+//      soft_glow(GPIOA, GPIO_PIN_9, 0.5, 50);
+//      soft_glow(GPIOA, GPIO_PIN_9, 0.8, 50);
+//      soft_glow(GPIOA, GPIO_PIN_9, 0.9, 50);
+//      soft_glow(GPIOA, GPIO_PIN_9, 1, 1000);
+//      soft_glow(GPIOA, GPIO_PIN_9, 0.9, 50);
+//      soft_glow(GPIOA, GPIO_PIN_9, 0.8, 50);
+//      soft_glow(GPIOA, GPIO_PIN_9, 0.5, 50);
+//      soft_glow(GPIOA, GPIO_PIN_9, 0.4, 50);
+//      soft_glow(GPIOA, GPIO_PIN_9, 0, 50);
+//      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
+//
+//      soft_glow(GPIOA, GPIO_PIN_8, 0.2, 50);
+//      soft_glow(GPIOA, GPIO_PIN_8, 0.4, 50);
+//      soft_glow(GPIOA, GPIO_PIN_8, 0.5, 50);
+//      soft_glow(GPIOA, GPIO_PIN_8, 0.8, 50);
+//      soft_glow(GPIOA, GPIO_PIN_8, 0.9, 50);
+//      soft_glow(GPIOA, GPIO_PIN_8, 1, 1000);
+//      soft_glow(GPIOA, GPIO_PIN_8, 0.9, 50);
+//      soft_glow(GPIOA, GPIO_PIN_8, 0.8, 50);
+//      soft_glow(GPIOA, GPIO_PIN_8, 0.5, 50);
+//      soft_glow(GPIOA, GPIO_PIN_8, 0.4, 50);
+//      soft_glow(GPIOA, GPIO_PIN_8, 0, 50);
+//      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -160,17 +175,17 @@ int main(void)
   /* USER CODE END 3 */
 }
 
-void soft_glow(GPIO_TypeDef *port, int pin, double duty_cycle, int ms)
+void soft_glow(GPIO_TypeDef *port, int pin, int duty_cycle, int ms)
 {
-    assert(duty_cycle<=1.0);
-    static const int frequency=80;
-    static const int time=(int)(1.0/frequency*1000);// 12.5
+    assert(duty_cycle >=0 && duty_cycle<DETAILS+1);
+    static const int frequency=100;
+    static const int time=1000/frequency;// 12.5
     while((ms-=time)>=0)
     {
         HAL_GPIO_WritePin(port, pin, GPIO_PIN_RESET);//on
-        HAL_Delay(duty_cycle * time);
+        HAL_Delay(duty_cycle * time/DETAILS);
         HAL_GPIO_WritePin(port, pin, GPIO_PIN_SET);//off
-        HAL_Delay((1 - duty_cycle) * time);
+        HAL_Delay((DETAILS - duty_cycle) * time/DETAILS);
     }
 }
 
