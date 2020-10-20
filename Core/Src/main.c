@@ -19,7 +19,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-
+#include <assert.h>
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -56,6 +56,8 @@ static void MX_GPIO_Init(void);
 /* USER CODE BEGIN 0 */
 
 /* USER CODE END 0 */
+
+void soft_glow(GPIO_TypeDef *port, int pin, double duty_cycle, int ms);
 
 /**
   * @brief  The application entry point.
@@ -111,26 +113,17 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-      state=HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5);
-      if (state==GPIO_PIN_RESET)
-      {
-          HAL_Delay(100);
-          state=HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5);
-          if (state==GPIO_PIN_RESET)
-          ++counter;
-      }
-      if (counter&1U)
-          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 0);
-      else
-          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 1);
-      if (counter&2U)
-          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 0);
-      else
-          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
-      if (counter&4U)
-          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 0);
-      else
-          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
+      soft_glow(GPIOA, GPIO_PIN_10, 0.2, 1000);
+      soft_glow(GPIOA, GPIO_PIN_10, 0.4, 1000);
+      soft_glow(GPIOA, GPIO_PIN_10, 0.5, 1000);
+      soft_glow(GPIOA, GPIO_PIN_10, 0.8, 1000);
+      soft_glow(GPIOA, GPIO_PIN_10, 0.9, 1000);
+      soft_glow(GPIOA, GPIO_PIN_10, 1, 1000);
+      soft_glow(GPIOA, GPIO_PIN_10, 0.9, 1000);
+      soft_glow(GPIOA, GPIO_PIN_10, 0.8, 1000);
+      soft_glow(GPIOA, GPIO_PIN_10, 0.5, 1000);
+      soft_glow(GPIOA, GPIO_PIN_10, 0.4, 1000);
+      soft_glow(GPIOA, GPIO_PIN_10, 0, 5000);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -138,6 +131,20 @@ int main(void)
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "hicpp-signed-bitwise"
   /* USER CODE END 3 */
+}
+
+void soft_glow(GPIO_TypeDef *port, int pin, double duty_cycle, int ms)
+{
+    assert(duty_cycle<=1.0);
+    static const int frequency=80;
+    static const int time=(int)(1.0/frequency*1000);// 12.5
+    while((ms-=time)>=0)
+    {
+        HAL_GPIO_WritePin(port, pin, GPIO_PIN_RESET);//on
+        HAL_Delay(duty_cycle * time);
+        HAL_GPIO_WritePin(port, pin, GPIO_PIN_SET);//off
+        HAL_Delay((1 - duty_cycle) * time);
+    }
 }
 
 /**
