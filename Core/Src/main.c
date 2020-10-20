@@ -135,6 +135,8 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
   }
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "hicpp-signed-bitwise"
   /* USER CODE END 3 */
 }
 
@@ -220,7 +222,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+#pragma clang diagnostic pop
 /* USER CODE END 4 */
 
 /**
