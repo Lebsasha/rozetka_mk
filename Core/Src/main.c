@@ -86,7 +86,6 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
-
     unsigned int counter=0;
     GPIO_PinState state;
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
@@ -119,21 +118,6 @@ int main(void)
           HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 0);
       else
           HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
-    
-// 		//HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_5);
-
-// //	  HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_5);
-
-// 		HAL_Delay(5000);
-// //		state=HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5);
-// 		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-// 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 0);
-// 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
-// 		HAL_Delay(2000);
-// 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
-// 		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-// 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 0);
-// //		HAL_Delay(500);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
