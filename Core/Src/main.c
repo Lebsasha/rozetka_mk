@@ -90,6 +90,9 @@ int main(void)
     unsigned int counter=0;
     GPIO_PinState state;
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 0);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 0);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 0);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -101,23 +104,23 @@ int main(void)
       state=HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5);
       if (state==GPIO_PIN_RESET)
       {
-          HAL_Delay(1000);
+          HAL_Delay(200);
           state=HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5);
           if (state==GPIO_PIN_RESET)
           ++counter;
       }
       if (counter&1U)
-          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
-      else
-          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 0);
-      if (counter&2U)
-          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
-      else
-          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 0);
-      if (counter&4U)
           HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 1);
       else
           HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 0);
+      if (counter&2U)
+          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
+      else
+          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 0);
+      if (counter&4U)
+          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
+      else
+          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 0);
       HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); //off
       HAL_Delay(100);
     
