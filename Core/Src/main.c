@@ -92,7 +92,7 @@ int main(void)
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 1);
-    HAL_Delay(800);
+    HAL_Delay(300);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 0);
     HAL_Delay(800);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
