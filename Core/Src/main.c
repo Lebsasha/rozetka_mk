@@ -123,7 +123,7 @@ int main(void)
       for(int i=DETAILYTY; i >= 0; i-=65)
           soft_glow(GPIOA, GPIO_PIN_10, i, 1);
       HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
-      HAL_Delay(200);
+      HAL_Delay(1000);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
