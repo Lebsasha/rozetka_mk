@@ -55,7 +55,7 @@ static void MX_GPIO_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 const int DETAILYTY=100;
-static const int frequency=100;
+static const int MY_FREQ=100;
 void soft_glow(GPIO_TypeDef *port, int pin, int duty_cycle, int ms);
 /* USER CODE END 0 */
 
@@ -90,7 +90,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
-  assert(1000/frequency*DETAILYTY==1000);
+  //assert(1000/MY_FREQ*DETAILYTY==1000);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
@@ -136,7 +136,7 @@ int main(void)
 void soft_glow(GPIO_TypeDef *port, int pin, int duty_cycle, int ms)
 {
     assert(duty_cycle >=0 && duty_cycle<DETAILYTY+1);
-    static const int time=1000/frequency;// 12.5
+    static const int time= 1000 / MY_FREQ;// 12.5
     while((ms-=time)>=0)
     {
         HAL_GPIO_WritePin(port, pin, GPIO_PIN_RESET);//on
