@@ -89,8 +89,6 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
-    unsigned int counter=0;
-    GPIO_PinState state;
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
