@@ -130,6 +130,8 @@ int main(void)
   }
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "hicpp-signed-bitwise"
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCInconsistentNamingInspection"
   /* USER CODE END 3 */
 }
 
@@ -227,7 +229,6 @@ void soft_glow(GPIO_TypeDef *port, int pin, int duty_cycle, int ms)
         HAL_Delay((DETAILYTY - duty_cycle) * time / DETAILYTY);//Ghange HERE //TODO
     }
 }
-#pragma clang diagnostic pop
 /* USER CODE END 4 */
 
 /**
@@ -259,7 +260,8 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-
+#pragma clang diagnostic pop
+#pragma clang diagnostic pop
   /* USER CODE END Error_Handler_Debug */
 }
 
