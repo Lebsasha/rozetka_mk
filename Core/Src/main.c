@@ -54,7 +54,8 @@ static void MX_GPIO_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-const int DETAILYTY=256*256;
+const int DETAILYTY=100;
+static const int MY_FREQ=100;
 void soft_glow(GPIO_TypeDef *port, int pin, int duty_cycle, int ms);
 /* USER CODE END 0 */
 
@@ -89,11 +90,12 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
+  //assert(1000/MY_FREQ*DETAILYTY==1000);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 1);
-    HAL_Delay(0);
+    HAL_Delay(800);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 0);
     HAL_Delay(300);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
@@ -112,14 +114,14 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-      for(int i=0; i < DETAILYTY; i+=65)
-        soft_glow(GPIOA, GPIO_PIN_10, i, 1);
+      for(int i=0; i < DETAILYTY; i+=1)
+        soft_glow(GPIOA, GPIO_PIN_10, i, 10);
 
       HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
       HAL_Delay(1000);
 
-      for(int i=DETAILYTY; i >= 0; i-=65)
-          soft_glow(GPIOA, GPIO_PIN_10, i, 1);
+      for(int i=DETAILYTY; i >= 0; i-=1)
+          soft_glow(GPIOA, GPIO_PIN_10, i, 10);
       HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
       HAL_Delay(1000);
     /* USER CODE END WHILE */
@@ -133,15 +135,14 @@ int main(void)
 
 void soft_glow(GPIO_TypeDef *port, int pin, int duty_cycle, int ms)
 {
-    assert(duty_cycle >=0 && duty_cycle < DETAILYTY + 1);
-    static const int frequency=1000;
-    static const int time=1000/frequency;// 12.5
+    assert(duty_cycle >=0 && duty_cycle<DETAILYTY+1);
+    static const int time= 1000 / MY_FREQ;// 12.5
     while((ms-=time)>=0)
     {
         HAL_GPIO_WritePin(port, pin, GPIO_PIN_RESET);//on
-        HAL_Delay(duty_cycle * time / DETAILYTY);
+        HAL_Delay(duty_cycle * time / DETAILYTY);// CHANGE  func HERE //TODO
         HAL_GPIO_WritePin(port, pin, GPIO_PIN_SET);//off
-        HAL_Delay((DETAILYTY - duty_cycle) * time / DETAILYTY);
+        HAL_Delay((DETAILYTY - duty_cycle) * time / DETAILYTY);//Ghange HERE //TODO
     }
 }
 
