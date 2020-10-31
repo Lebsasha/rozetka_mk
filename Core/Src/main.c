@@ -95,15 +95,15 @@ int main(void)
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 1);
-    HAL_Delay(800);
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 0);
     HAL_Delay(300);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 0);
+    HAL_Delay(800);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 0);
     HAL_Delay(300);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 0);
-    HAL_Delay(300);
+    HAL_Delay(800);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 1);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 0);
     HAL_Delay(300);
@@ -230,6 +230,27 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 #pragma clang diagnostic pop
 /* USER CODE END 4 */
+
+/**
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM1 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  /* USER CODE BEGIN Callback 0 */
+
+  /* USER CODE END Callback 0 */
+  if (htim->Instance == TIM1) {
+    HAL_IncTick();
+  }
+  /* USER CODE BEGIN Callback 1 */
+
+  /* USER CODE END Callback 1 */
+}
 
 /**
   * @brief  This function is executed in case of error occurrence.
