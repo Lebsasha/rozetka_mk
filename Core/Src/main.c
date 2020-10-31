@@ -19,10 +19,10 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include <assert.h>
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <assert.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -133,19 +133,6 @@ int main(void)
   /* USER CODE END 3 */
 }
 
-void soft_glow(GPIO_TypeDef *port, int pin, int duty_cycle, int ms)
-{
-    assert(duty_cycle >=0 && duty_cycle<DETAILYTY+1);
-    static const int time= 1000 / MY_FREQ;// 12.5
-    while((ms-=time)>=0)
-    {
-        HAL_GPIO_WritePin(port, pin, GPIO_PIN_RESET);//on
-        HAL_Delay(duty_cycle * time / DETAILYTY);// CHANGE  func HERE //TODO
-        HAL_GPIO_WritePin(port, pin, GPIO_PIN_SET);//off
-        HAL_Delay((DETAILYTY - duty_cycle) * time / DETAILYTY);//Ghange HERE //TODO
-    }
-}
-
 /**
   * @brief System Clock Configuration
   * @retval None
@@ -228,6 +215,18 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void soft_glow(GPIO_TypeDef *port, int pin, int duty_cycle, int ms)
+{
+    assert(duty_cycle >=0 && duty_cycle<DETAILYTY+1);
+    static const int time= 1000 / MY_FREQ;// 12.5
+    while((ms-=time)>=0)
+    {
+        HAL_GPIO_WritePin(port, pin, GPIO_PIN_RESET);//on
+        HAL_Delay(duty_cycle * time / DETAILYTY);// CHANGE  func HERE //TODO
+        HAL_GPIO_WritePin(port, pin, GPIO_PIN_SET);//off
+        HAL_Delay((DETAILYTY - duty_cycle) * time / DETAILYTY);//Ghange HERE //TODO
+    }
+}
 #pragma clang diagnostic pop
 /* USER CODE END 4 */
 
