@@ -284,9 +284,9 @@ void soft_glow(GPIO_TypeDef *port, int pin, int duty_cycle, int mc_s)
     while((mc_s-=time) >= 0)
     {
         HAL_GPIO_WritePin(port, pin, GPIO_PIN_RESET);//on
-        my_delay(duty_cycle * time / DETAILYTY);// CHANGE  func HERE //TODO
+        my_delay(duty_cycle * time / DETAILYTY);
         HAL_GPIO_WritePin(port, pin, GPIO_PIN_SET);//off
-        my_delay((DETAILYTY - duty_cycle) * time / DETAILYTY);//Ghange HERE //TODO
+        my_delay((DETAILYTY - duty_cycle) * time / DETAILYTY);
     }
 }
 /* USER CODE END 4 */
