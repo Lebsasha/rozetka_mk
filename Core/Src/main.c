@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <assert.h>
+#include <math.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -116,13 +117,13 @@ int main(void)
   while (1)
   {
       for(int i=0; i < DETAILYTY; i+=1)
-        soft_glow(GPIOA, GPIO_PIN_10, i, 10);
+        soft_glow(GPIOA, GPIO_PIN_10, DETAILYTY*sin(i*1.0/DETAILYTY), 10);
 
       HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
       HAL_Delay(1000);
 
       for(int i=DETAILYTY; i >= 0; i-=1)
-          soft_glow(GPIOA, GPIO_PIN_10, i, 10);
+          soft_glow(GPIOA, GPIO_PIN_10, DETAILYTY*sin((double)(i)/DETAILYTY), 10);
       HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
       HAL_Delay(1000);
     /* USER CODE END WHILE */
