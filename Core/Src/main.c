@@ -127,6 +127,12 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
   }
+
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "hicpp-signed-bitwise"
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCInconsistentNamingInspection"
+
   /* USER CODE END 3 */
 }
 
@@ -291,6 +297,8 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
+#pragma clang diagnostic pop
+#pragma clang diagnostic pop
   /* USER CODE END Error_Handler_Debug */
 }
 
