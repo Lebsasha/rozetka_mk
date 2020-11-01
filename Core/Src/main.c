@@ -22,7 +22,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <assert.h>
+#include <math.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -40,6 +41,7 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+TIM_HandleTypeDef htim1;
 
 /* USER CODE BEGIN PV */
 
@@ -48,13 +50,16 @@
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+const int DETAILYTY=100;
+static const int MY_FREQ=100;
+void soft_glow(GPIO_TypeDef *port, int pin, int duty_cycle, int mc_s);
 /* USER CODE END 0 */
 
 /**
@@ -85,9 +90,11 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
-    unsigned int counter=0;
-    GPIO_PinState state;
+
+  //assert(1000/MY_FREQ*DETAILYTY==1000);
+    HAL_TIM_Base_Start(&htim1);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
@@ -111,32 +118,23 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-      state=HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5);
-      if (state==GPIO_PIN_RESET)
-      {
-          HAL_Delay(100);
-          state=HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5);
-          if (state==GPIO_PIN_RESET)
-          ++counter;
-      }
-      if (counter&1U)
-          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 0);
-      else
-          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 1);
-      if (counter&2U)
-          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 0);
-      else
-          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
-      if (counter&4U)
-          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 0);
-      else
-          HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
+      for(int i=0; i < DETAILYTY; i+=1)
+        soft_glow(GPIOA, GPIO_PIN_10, (int)(DETAILYTY*(sin((double)(i)/DETAILYTY*M_PI-M_PI_2)+1)/2), 10000);
+
+      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
+      HAL_Delay(1000);
+
+      for(int i=DETAILYTY; i >= 0; i-=1)
+          soft_glow(GPIOA, GPIO_PIN_10, (int)(DETAILYTY*(sin((double)(i)/DETAILYTY*M_PI-M_PI_2)+1)/2), 10000);
+      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
   }
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "hicpp-signed-bitwise"
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCInconsistentNamingInspection"
   /* USER CODE END 3 */
 }
 
@@ -176,6 +174,52 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief TIM1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM1_Init(void)
+{
+
+  /* USER CODE BEGIN TIM1_Init 0 */
+
+  /* USER CODE END TIM1_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM1_Init 1 */
+
+  /* USER CODE END TIM1_Init 1 */
+  htim1.Instance = TIM1;
+  htim1.Init.Prescaler = 71;
+  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim1.Init.Period = 65534;
+  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim1.Init.RepetitionCounter = 0;
+  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM1_Init 2 */
+
+  /* USER CODE END TIM1_Init 2 */
+
 }
 
 /**
@@ -223,11 +267,32 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 #pragma clang diagnostic pop
+#pragma clang diagnostic pop
+
+void my_delay(int mc_s)
+{
+    __HAL_TIM_SET_COUNTER(&htim1, 0);
+    while (__HAL_TIM_GET_COUNTER(&htim1) < mc_s)
+    {}
+}
+
+void soft_glow(GPIO_TypeDef *port, int pin, int duty_cycle, int mc_s)
+{
+    assert(duty_cycle >=0 && duty_cycle<DETAILYTY+1);
+    static const int time= 1000000 / MY_FREQ;// 10000
+    while((mc_s-=time) >= 0)
+    {
+        HAL_GPIO_WritePin(port, pin, GPIO_PIN_RESET);//on
+        my_delay(duty_cycle * time / DETAILYTY);
+        HAL_GPIO_WritePin(port, pin, GPIO_PIN_SET);//off
+        my_delay((DETAILYTY - duty_cycle) * time / DETAILYTY);
+    }
+}
 /* USER CODE END 4 */
 
 /**
   * @brief  Period elapsed callback in non blocking mode
-  * @note   This function is called  when TIM1 interrupt took place, inside
+  * @note   This function is called  when TIM2 interrupt took place, inside
   * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
   * a global variable "uwTick" used as application time base.
   * @param  htim : TIM handle
@@ -238,7 +303,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 0 */
 
   /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM1) {
+  if (htim->Instance == TIM2) {
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
@@ -254,7 +319,6 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-
   /* USER CODE END Error_Handler_Debug */
 }
 
