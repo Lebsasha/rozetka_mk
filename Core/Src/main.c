@@ -265,6 +265,8 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+#pragma clang diagnostic pop
+#pragma clang diagnostic pop
 void soft_glow(GPIO_TypeDef *port, int pin, int duty_cycle, int ms)
 {
     assert(duty_cycle >=0 && duty_cycle<DETAILYTY+1);
@@ -308,8 +310,6 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-#pragma clang diagnostic pop
-#pragma clang diagnostic pop
   /* USER CODE END Error_Handler_Debug */
 }
 
