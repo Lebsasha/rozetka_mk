@@ -2,7 +2,6 @@
 // Created by alexander on 01/11/2020.
 //
 
-#include "main_target.h"
 #include "main.h"
 #include <assert.h>
 #include <math.h>

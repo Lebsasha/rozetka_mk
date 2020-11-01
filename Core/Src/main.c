@@ -19,9 +19,10 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "main_target.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "main_target.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -87,7 +88,13 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
+
+
+
   main_f();
+
+
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -99,10 +106,6 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
   }
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "hicpp-signed-bitwise"
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "OCInconsistentNamingInspection"
   /* USER CODE END 3 */
 }
 
@@ -234,8 +237,6 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-#pragma clang diagnostic pop
-#pragma clang diagnostic pop
 
 
 /* USER CODE END 4 */
