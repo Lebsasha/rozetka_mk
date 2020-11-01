@@ -52,3 +52,6 @@ Mkfile.old
 dkms.conf
 
 Debug/first_mk.bin
+
+Debug/first_mk.list
+cmake-build-debug
