@@ -57,8 +57,8 @@ static void MX_TIM1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-const int DETAILYTY=1000;
-static const int MY_FREQ=1000;
+const int DETAILYTY=100;
+static const int MY_FREQ=100;
 void soft_glow(GPIO_TypeDef *port, int pin, int duty_cycle, int mc_s);
 /* USER CODE END 0 */
 
@@ -119,13 +119,13 @@ int main(void)
   while (1)
   {
       for(int i=0; i < DETAILYTY; i+=1)
-        soft_glow(GPIOA, GPIO_PIN_10, (int)(DETAILYTY*sin(i*1.0/DETAILYTY)), 1000);
+        soft_glow(GPIOA, GPIO_PIN_10, (int)(DETAILYTY*sin(i*1.0/DETAILYTY)), 10000);
 
       HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
       HAL_Delay(1000);
 
       for(int i=DETAILYTY; i >= 0; i-=1)
-          soft_glow(GPIOA, GPIO_PIN_10, (int)(DETAILYTY*sin((double)(i)/DETAILYTY)), 1000);
+          soft_glow(GPIOA, GPIO_PIN_10, (int)(DETAILYTY*sin((double)(i)/DETAILYTY)), 10000);
       HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
       HAL_Delay(1000);
     /* USER CODE END WHILE */
@@ -280,7 +280,7 @@ void my_delay(int mc_s)
 void soft_glow(GPIO_TypeDef *port, int pin, int duty_cycle, int mc_s)
 {
     assert(duty_cycle >=0 && duty_cycle<DETAILYTY+1);
-    static const int time= 1000000 / MY_FREQ;// 1000
+    static const int time= 1000000 / MY_FREQ;// 10000
     while((mc_s-=time) >= 0)
     {
         HAL_GPIO_WritePin(port, pin, GPIO_PIN_RESET);//on
