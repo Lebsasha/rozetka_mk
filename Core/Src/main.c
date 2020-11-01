@@ -57,6 +57,7 @@ static void MX_TIM1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+volatile int i=0;
 const int DETAILYTY=100;
 /* USER CODE END 0 */
 
@@ -114,16 +115,11 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-      for (int i = 0; i < DETAILYTY; i += 1)
           soft_glow(GPIOA, GPIO_PIN_10, (int) (DETAILYTY * (sin((double) (i) / DETAILYTY * M_PI - M_PI_2) + 1) / 2), 10000);
-
-      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
-      HAL_Delay(1000);
-
-      for (int i = DETAILYTY; i >= 0; i -= 1)
-          soft_glow(GPIOA, GPIO_PIN_10, (int) (DETAILYTY * (sin((double) (i) / DETAILYTY * M_PI - M_PI_2) + 1) / 2), 10000);
-      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
-    /* USER CODE END WHILE */
+//      for (int i = DETAILYTY; i >= 0; i -= 1)
+      soft_glow(GPIOA, GPIO_PIN_9, (int) (DETAILYTY * (sin((double) (i) / DETAILYTY * M_PI - M_PI_2) + 1) / 2), 10000);
+      soft_glow(GPIOA, GPIO_PIN_8, (int) (DETAILYTY * (sin((double) (i) / DETAILYTY * M_PI - M_PI_2) + 1) / 2), 10000);
+      /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
   }
