@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "main_target.h"
+#include <math.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -56,6 +57,7 @@ static void MX_TIM1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+const int DETAILYTY=100;
 /* USER CODE END 0 */
 
 /**
@@ -89,11 +91,22 @@ int main(void)
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 
-
-
-  main_f();
-
-
+//assert(1000/MY_FREQ*DETAILYTY==1000);
+    HAL_TIM_Base_Start(&htim1);
+    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 1);
+    HAL_Delay(200);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 0);
+    HAL_Delay(500);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 0);
+    HAL_Delay(500);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 0);
+    HAL_Delay(500);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 1);
 
   /* USER CODE END 2 */
 
@@ -101,7 +114,15 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+      for (int i = 0; i < DETAILYTY; i += 1)
+          soft_glow(GPIOA, GPIO_PIN_10, (int) (DETAILYTY * (sin((double) (i) / DETAILYTY * M_PI - M_PI_2) + 1) / 2), 10000);
 
+      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
+      HAL_Delay(1000);
+
+      for (int i = DETAILYTY; i >= 0; i -= 1)
+          soft_glow(GPIOA, GPIO_PIN_10, (int) (DETAILYTY * (sin((double) (i) / DETAILYTY * M_PI - M_PI_2) + 1) / 2), 10000);
+      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
