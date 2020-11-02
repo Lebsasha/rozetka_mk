@@ -11,6 +11,8 @@ extern TIM_HandleTypeDef htim1;
 
 void my_delay(int mc_s)
 {
+    if(mc_s<=0)
+        return;
     __HAL_TIM_SET_COUNTER(&htim1, 0);
     while (__HAL_TIM_GET_COUNTER(&htim1) < mc_s)
     {}

@@ -118,10 +118,14 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-          soft_glow(GPIOA, GPIO_PIN_10, (int) (DETAILYTY * (sin((double) (i) / DETAILYTY * M_PI - M_PI_2) + 1) / 2), 10000);
-//      for (int i = DETAILYTY; i >= 0; i -= 1)
+      soft_glow(GPIOA, GPIO_PIN_10, (int) (DETAILYTY * (sin((double) (i) / DETAILYTY * M_PI - M_PI_2) + 1) / 2), 10000);
       soft_glow(GPIOA, GPIO_PIN_9, (int) (DETAILYTY * (sin((double) (i) / DETAILYTY * M_PI - M_PI_2) + 1) / 2), 10000);
       soft_glow(GPIOA, GPIO_PIN_8, (int) (DETAILYTY * (sin((double) (i) / DETAILYTY * M_PI - M_PI_2) + 1) / 2), 10000);
+//if(i==0)
+//{
+//    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
+//    HAL_Delay(500);
+//}
       /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -308,7 +312,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-int counter_for_i=0;
+volatile int counter_for_i=0;
 
 /* USER CODE END 4 */
 
@@ -332,9 +336,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 if (htim->Instance == TIM3)
 {
     ++counter_for_i;
-    if (counter_for_i==10)// 100us * 100 = 10ms
+    if (counter_for_i==100)// 100us * 100 = 10ms
     {
-        counter_for_i-=10;
+        counter_for_i-=1;
         ++i;
     }
   }
