@@ -97,8 +97,6 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
 //assert(1000/MY_FREQ*DETAILYTY_1==1000);
-    HAL_TIM_Base_Start(&htim1);
-    HAL_TIM_Base_Start_IT(&htim3);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
@@ -113,7 +111,8 @@ int main(void)
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 0);
     HAL_Delay(500);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 1);
-
+    HAL_TIM_Base_Start(&htim1);
+    HAL_TIM_Base_Start_IT(&htim3);
   /* USER CODE END 2 */
 
   /* Infinite loop */
