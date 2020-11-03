@@ -23,7 +23,6 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "main_target.h"
-#include <math.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -121,9 +120,9 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-      soft_glow(GPIOA, GPIO_PIN_10, (int) (DETAILYTY_1 * (sin((double) (i) / DETAILYTY_1 * M_PI - M_PI_2) + 1) / 2), 10000, DETAILYTY_1);
-      soft_glow(GPIOA, GPIO_PIN_9, (int) (DETAILYTY_2 * (sin((double) (i) / DETAILYTY_2 * M_PI - M_PI_2) + 1) / 2), 10000, DETAILYTY_2);
-      soft_glow(GPIOA, GPIO_PIN_8, (int) (DETAILYTY_3 * (sin((double) (i) / DETAILYTY_3 * M_PI - M_PI_2) + 1) / 2), 10000, DETAILYTY_3);
+//      soft_glow(GPIOA, GPIO_PIN_10, (int) (DETAILYTY_1 * (sin((double) (i) / DETAILYTY_1 * M_PI - M_PI_2) + 1) / 2), 10000, DETAILYTY_1);
+//      soft_glow(GPIOA, GPIO_PIN_9, (int) (DETAILYTY_2 * (sin((double) (i) / DETAILYTY_2 * M_PI - M_PI_2) + 1) / 2), 10000, DETAILYTY_2);
+//      soft_glow(GPIOA, GPIO_PIN_8, (int) (DETAILYTY_3 * (sin((double) (i) / DETAILYTY_3 * M_PI - M_PI_2) + 1) / 2), 10000, DETAILYTY_3);
 //if(i==0)
 //{
 //    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
@@ -339,6 +338,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 if (htim->Instance == TIM3)
 {
     ++counter_for_i;
+    calc_1();
     if (counter_for_i==100)// 100us * 100 = 10ms
     {
         counter_for_i-=1;

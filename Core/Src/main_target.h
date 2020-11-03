@@ -6,4 +6,5 @@
 #define MAIN_TARGET
 void my_delay(int mc_s);
 void soft_glow(GPIO_TypeDef *port, int pin, int duty_cycle, int mc_s, int detailyty);
+void calc_1();
 #endif //MAIN_TARGET
