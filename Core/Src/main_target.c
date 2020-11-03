@@ -10,6 +10,8 @@ extern const int DETAILYTY_1;
 extern const int DETAILYTY_2;
 extern const int DETAILYTY_3;
 extern TIM_HandleTypeDef htim1;
+void calc_2();
+void calc_3();
 
 void my_delay(int mc_s)
 {
@@ -79,4 +81,58 @@ void calc_1()
     }
     else if (counter == 30000)
         counter-=30000+1;//because above ++counter;
+    calc_2();
+}
+
+/**
+ * @note 100 ticks per 10^-4 * DETAILYTY_1 = 1 s
+ * @note 100 ticks per 10^-4 * DETAILYTY_2 = 1.3 s
+ * @note 100 ticks per 10^-4 * DETAILYTY_3 = 1.7 s
+ */
+void calc_2()
+{
+    static int counter=0;
+    static int i=0;
+    static int ampl=0;
+    ++counter;
+    if (counter < 13000)// 0-1.3s
+    {
+        if (!(counter % 130))// DETAILYTY_1
+        {
+            ++i;
+            ampl=(int) (100*(sin((double) (i) / 130 * M_PI - M_PI_2) + 1) / 2);
+            //        100 ticks per 10^-4      DETAILYTY_1
+        }
+        if(counter%100<ampl)// 100 ticks per 10^-4
+        {
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
+        }
+        else
+        {
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
+        }
+    }
+    else if (counter == 13000)// 1.3-2.6s
+    {
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
+    }
+    else if (counter >=26000 && counter < 39000)// 2.6-3.9s
+    {
+        if (!(counter % 130))// DETAILYTY_1
+        {
+            --i;
+            ampl=(int) (100*(sin((double) (i) / 130 * M_PI - M_PI_2) + 1) / 2);
+            //        100 ticks per 10^-4      DETAILYTY_1
+        }
+        if(counter%100<ampl)// 100 ticks per 10^-4
+        {
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
+        }
+        else
+        {
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
+        }
+    }
+    else if (counter == 39000)
+        counter-=39000+1;//because above ++counter;
 }
