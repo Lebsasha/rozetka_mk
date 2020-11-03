@@ -18,16 +18,16 @@ void my_delay(int mc_s)
     {}
 }
 
-void soft_glow(GPIO_TypeDef *port, int pin, int duty_cycle, int mc_s, int DETAILYTY_1)
+void soft_glow(GPIO_TypeDef *port, int pin, int duty_cycle, int mc_s, int detailyty)
 {
-    assert(duty_cycle >=0 && duty_cycle < DETAILYTY_1 + 1);
+    assert(duty_cycle >=0 && duty_cycle < detailyty + 1);
     static const int TIME= 1000000 / MY_FREQ;// 10000
     while((mc_s-=TIME) >= 0)
     {
         HAL_GPIO_WritePin(port, pin, GPIO_PIN_RESET);//on
-        my_delay(duty_cycle * TIME / DETAILYTY_1);
+        my_delay(duty_cycle * TIME / detailyty);
         HAL_GPIO_WritePin(port, pin, GPIO_PIN_SET);//off
-        my_delay((DETAILYTY_1 - duty_cycle) * TIME / DETAILYTY_1);
+        my_delay((detailyty - duty_cycle) * TIME / detailyty);
     }
 }
 
