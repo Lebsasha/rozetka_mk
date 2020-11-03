@@ -60,7 +60,9 @@ static void MX_TIM3_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 volatile int i=0;
-const int DETAILYTY=100;
+const int DETAILYTY_1=100;
+const int DETAILYTY_2=130;
+const int DETAILYTY_3=170;
 /* USER CODE END 0 */
 
 /**
@@ -95,7 +97,7 @@ int main(void)
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 
-//assert(1000/MY_FREQ*DETAILYTY==1000);
+//assert(1000/MY_FREQ*DETAILYTY_1==1000);
     HAL_TIM_Base_Start(&htim1);
     HAL_TIM_Base_Start_IT(&htim3);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
@@ -119,15 +121,15 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-      soft_glow(GPIOA, GPIO_PIN_10, (int) (DETAILYTY * (sin((double) (i) / DETAILYTY * M_PI - M_PI_2) + 1) / 2), 10000);
-      soft_glow(GPIOA, GPIO_PIN_9, (int) (DETAILYTY * (sin((double) (i) / DETAILYTY * M_PI - M_PI_2) + 1) / 2), 10000);
-      soft_glow(GPIOA, GPIO_PIN_8, (int) (DETAILYTY * (sin((double) (i) / DETAILYTY * M_PI - M_PI_2) + 1) / 2), 10000);
+      soft_glow(GPIOA, GPIO_PIN_10, (int) (DETAILYTY_1 * (sin((double) (i) / DETAILYTY_1 * M_PI - M_PI_2) + 1) / 2), 10000, DETAILYTY_1);
+      soft_glow(GPIOA, GPIO_PIN_9, (int) (DETAILYTY_2 * (sin((double) (i) / DETAILYTY_2 * M_PI - M_PI_2) + 1) / 2), 10000, DETAILYTY_2);
+      soft_glow(GPIOA, GPIO_PIN_8, (int) (DETAILYTY_3 * (sin((double) (i) / DETAILYTY_3 * M_PI - M_PI_2) + 1) / 2), 10000, DETAILYTY_3);
 //if(i==0)
 //{
 //    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
 //    HAL_Delay(500);
 //}
-      /* USER CODE END WHILE */
+    /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
   }
@@ -243,9 +245,9 @@ static void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 7199;
+  htim3.Init.Prescaler = 4;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 65535;
+  htim3.Init.Period = 1800;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
@@ -337,10 +339,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 if (htim->Instance == TIM3)
 {
     ++counter_for_i;
-    if (counter_for_i==100)// 100us * 100 = 10ms
+    if (counter_for_i==1)// 100us * 100 = 10ms
     {
         counter_for_i-=1;
-        ++i;
+        i+=5;
     }
   }
   /* USER CODE END Callback 1 */
