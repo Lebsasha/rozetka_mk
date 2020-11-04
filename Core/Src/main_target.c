@@ -96,7 +96,7 @@ void calc_2()
     ++counter;
     if (counter < 13000)// 0-1.3s
     {
-        if (!(counter % 130))// DETAILYTY_2
+        if (!(counter % 100))// some strange number
         {
             ++i;
             ampl=(int) (100*(sin((double) (i) / 130 * M_PI - M_PI_2) + 1) / 2);
@@ -117,7 +117,7 @@ void calc_2()
     }
     else if (counter >=26000 && counter < 39000)// 2.6-3.9s
     {
-        if (!(counter % 130))// DETAILYTY_2
+        if (!(counter % 100))// some strange number
         {
             --i;
             ampl=(int) (100*(sin((double) (i) / 130 * M_PI - M_PI_2) + 1) / 2);
@@ -145,7 +145,7 @@ void calc_3()
     ++counter;
     if (counter < 17000)// 0-1.7s
     {
-        if (!(counter % 170))// DETAILYTY_3
+        if (!(counter % 100))// DETAILYTY_3
         {
             ++i;
             ampl=(int) (100*(sin((double) (i) / 170 * M_PI - M_PI_2) + 1) / 2);
@@ -166,7 +166,7 @@ void calc_3()
     }
     else if (counter >=34000 && counter < 51000)// 3.4-5.1s
     {
-        if (!(counter % 170))// DETAILYTY_3
+        if (!(counter % 100))// some strange number
         {
             --i;
             ampl=(int) (100*(sin((double) (i) / 170 * M_PI - M_PI_2) + 1) / 2);
