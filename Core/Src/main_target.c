@@ -34,53 +34,79 @@ void soft_glow(GPIO_TypeDef *port, int pin, int duty_cycle, int mc_s, int detail
     }
 }
 
+
 void calc_1()
 {
     static int counter = 0;
     static int i = 0;
     static int ampl = 0;
+    static enum STEP curr_step=UP;
     ++counter;
-    if (counter < 10000)// 0-1s
+    switch (curr_step)
     {
-        if (!(counter % 100))// DETAILYTY_1
-        {
-            ++i;
-            ampl = (int) (100 * (sin((double) (i) / 100 * M_PI - M_PI_2) + 1) / 2);
-            //        100 ticks per 10^-4      DETAILYTY_1
-        }
-        if (counter % 100 < ampl)// 100 ticks per 10^-4
-        {
+        case UP:
+                if (counter == 100)// DETAILYTY_1
+                {
+                    ++i;
+                    ampl = (int) (100 * (sin((double) (i) / 100 * M_PI - M_PI_2) + 1) / 2);
+                    counter=0;
+                    //        100 ticks per 10^-4      DETAILYTY_1
+                }
+            if(i==100)
+            {
+//                HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+                curr_step=LIGHT;
+                i=0;
+                counter=0;//Unused?
+            }
+                if (counter < ampl)// 100 ticks per 10^-4
+                {
+                    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
+                }
+                else
+                {
+                    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
+                }
+                break;
+        case LIGHT:
+            if(counter==100)
+                {
+                    ++i;
+                    counter=0;
+                }
+            if(i==100)
+            {
+                curr_step=DOWN;
+                i=100;
+                counter=0;//Unused?
+            }
             HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
-        }
-        else
-        {
-            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
-        }
+            break;
+        case DOWN:
+            if (counter == 100)// DETAILYTY_1
+            {
+                --i;
+                ampl = (int) (100 * (sin((double) (i) / 100 * M_PI - M_PI_2) + 1) / 2);
+                counter=0;
+                //        100 ticks per 10^-4      DETAILYTY_1
+            }
+            if(i==0)
+            {
+                curr_step=UP;
+                i=0;//Why?
+                counter=0;//Unused?
+            }
+            if (counter  < ampl)// 100 ticks per 10^-4
+            {
+                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
+            }
+            else
+            {
+                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
+            }
+            break;
     }
-    else if (counter == 10000)// 1-2s
-    {
-        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
     }
-    else if (counter >= 20000 && counter < 30000)// 2-3s
-    {
-        if (!(counter % 100))// DETAILYTY_1
-        {
-            --i;
-            ampl = (int) (100 * (sin((double) (i) / 100 * M_PI - M_PI_2) + 1) / 2);
-            //        100 ticks per 10^-4      DETAILYTY_1
-        }
-        if (counter % 100 < ampl)// 100 ticks per 10^-4
-        {
-            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
-        }
-        else
-        {
-            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
-        }
-    }
-    else if (counter == 30000)
-        counter -= 30000 + 1;//because above ++counter;
-}
 
 /**
  * @note 100 ticks per 10^-4 * DETAILYTY_1 = 1 s

@@ -15,4 +15,12 @@ void calc_2();
 
 void calc_3();
 
+enum STEP {UP, LIGHT, DOWN};
+struct LED
+{
+    int counter;
+    int i;
+    int ampl;
+    const int DETAILYTY;
+};
 #endif //MAIN_TARGET
