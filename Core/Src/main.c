@@ -328,6 +328,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 if (htim->Instance == TIM3)
 {
     calc_1();
+}
   /* USER CODE END Callback 1 */
 }
 
