@@ -80,7 +80,6 @@ void calc_1()
     }
     else if (counter == 30000)
         counter-=30000+1;//because above ++counter;
-    calc_2();
 }
 
 /**
@@ -134,7 +133,6 @@ void calc_2()
     }
     else if (counter == 39000)
         counter-=39000+1;//because above ++counter;
-    calc_3();
 }
 
 void calc_3()
