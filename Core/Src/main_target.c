@@ -3,6 +3,7 @@
 //
 
 #include "main.h"
+#include "main_target.h"
 #include <assert.h>
 
 const int MY_FREQ=100;
@@ -10,8 +11,6 @@ extern const int DETAILYTY_1;
 extern const int DETAILYTY_2;
 extern const int DETAILYTY_3;
 extern TIM_HandleTypeDef htim1;
-void calc_2();
-void calc_3();
 
 void my_delay(int mc_s)
 {
