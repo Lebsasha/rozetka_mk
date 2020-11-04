@@ -135,4 +135,53 @@ void calc_2()
     }
     else if (counter == 39000)
         counter-=39000+1;//because above ++counter;
+    calc_3();
+}
+
+void calc_3()
+{
+    static int counter=0;
+    static int i=0;
+    static int ampl=0;
+    ++counter;
+    if (counter < 17000)// 0-1.7s
+    {
+        if (!(counter % 170))// DETAILYTY_1
+        {
+            ++i;
+            ampl=(int) (100*(sin((double) (i) / 170 * M_PI - M_PI_2) + 1) / 2);
+            //        100 ticks per 10^-4      DETAILYTY_1
+        }
+        if(counter%100<ampl)// 100 ticks per 10^-4
+        {
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+        }
+        else
+        {
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+        }
+    }
+    else if (counter == 17000)// 1.7-3.4s
+    {
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+    }
+    else if (counter >=34000 && counter < 51000)// 3.4-5.1s
+    {
+        if (!(counter % 170))// DETAILYTY_1
+        {
+            --i;
+            ampl=(int) (100*(sin((double) (i) / 170 * M_PI - M_PI_2) + 1) / 2);
+            //        100 ticks per 10^-4      DETAILYTY_1
+        }
+        if(counter%100<ampl)// 100 ticks per 10^-4
+        {
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+        }
+        else
+        {
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+        }
+    }
+    else if (counter == 51000)
+        counter-=51000+1;//because above ++counter;
 }
