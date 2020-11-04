@@ -113,6 +113,9 @@ int main(void)
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 1);
     HAL_TIM_Base_Start(&htim1);
     HAL_TIM_Base_Start_IT(&htim3);
+    #define static_assert(cond, str) char _temp[-!((void)str, (cond))]
+    static_assert(1==0, "bad");
+    static_assert(0==0, "good");
   /* USER CODE END 2 */
 
   /* Infinite loop */
