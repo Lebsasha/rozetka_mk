@@ -34,24 +34,7 @@ void ctor_LED(struct LED* led, int detailyty, int pin)
     led->counter=0;
     led->i=0;
     led->ampl=0;
-    led->curr_step=UP;
-}
-
-
-void calc(struct LED* led)
-{
-    switch(led->curr_step)
-    {
-        case UP:
-            calc_up(led);
-            break;
-        case LIGHT:
-            calc_middle(led);
-            break;
-        case DOWN:
-            calc_down(led);
-            break;
-    }
+    led->curr_step=calc_up;
 }
 
 void calc_down(struct LED *led)
@@ -64,7 +47,7 @@ void calc_down(struct LED *led)
         //        100 ticks per 10^-4
         led->counter = 0;
         if (led->i == 0)
-            led->curr_step = UP;
+            led->curr_step = calc_up;
     }
     if (led->counter < led->ampl)// 100 ticks per 10^-4
         HAL_GPIO_WritePin(GPIOA, led->pin, GPIO_PIN_RESET);
@@ -80,7 +63,7 @@ void calc_middle(struct LED *led)
         ++led->i;
         led->counter = 0;
         if (led->i == led->detailyty)
-            led->curr_step = DOWN;
+            led->curr_step = calc_down;
     }
     HAL_GPIO_WritePin(GPIOA, led->pin, GPIO_PIN_RESET);
 }
@@ -96,7 +79,7 @@ void calc_up(struct LED *led)
         led->counter = 0;
         if (led->i == led->detailyty)
         {
-            led->curr_step = LIGHT;
+            led->curr_step = calc_middle;
             led->i = 0;
         }
     }

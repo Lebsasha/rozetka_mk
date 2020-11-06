@@ -336,9 +336,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 1 */
 if (htim->Instance == TIM3)
 {
-    calc(led);
-    calc(led+1);
-    calc(led+2);
+    led[0].curr_step(&led[0]);
+    led[1].curr_step(&led[1]);
+    led[2].curr_step(&led[2]);
 }
   /* USER CODE END Callback 1 */
 }
