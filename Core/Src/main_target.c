@@ -12,6 +12,12 @@ extern const int DETAILYTY_2;
 extern const int DETAILYTY_3;
 extern TIM_HandleTypeDef htim1;
 
+void calc_up(struct LED *led);
+
+void calc_middle(struct LED *led);
+
+void calc_down(struct LED *led);
+
 void my_delay(int mc_s)
 {
     if (mc_s <= 0)
@@ -21,240 +27,81 @@ void my_delay(int mc_s)
     {}
 }
 
-void soft_glow(GPIO_TypeDef *port, int pin, int duty_cycle, int mc_s, int detailyty)
+void ctor_LED(struct LED* led, int detailyty, int pin)
 {
-    assert(duty_cycle >= 0 && duty_cycle < detailyty + 1);
-    static const int TIME = 1000000 / MY_FREQ;// 10000
-    while ((mc_s -= TIME) >= 0)
-    {
-        HAL_GPIO_WritePin(port, pin, GPIO_PIN_RESET);//on
-        my_delay(duty_cycle * TIME / detailyty);
-        HAL_GPIO_WritePin(port, pin, GPIO_PIN_SET);//off
-        my_delay((detailyty - duty_cycle) * TIME / detailyty);
-    }
+    led->detailyty=detailyty;
+    led->pin=pin;
+    led->counter=0;
+    led->i=0;
+    led->ampl=0;
+    led->curr_step=UP;
 }
 
 
-void calc_1()
+void calc(struct LED* led)
 {
-    static int counter = 0;
-    static int i = 0;
-    static int ampl = 0;
-    static enum STEP curr_step = UP;
-    ++counter;
-    switch (curr_step)
+    switch(led->curr_step)
     {
         case UP:
-            if (counter == 100)// DETAILYTY_1
-            {
-                ++i;
-                ampl = (int) (100 * (sin((double) (i) / 100 * M_PI - M_PI_2) + 1) / 2);
-                //        100 ticks per 10^-4      DETAILYTY_1
-                counter = 0;
-            }
-            if (i == 100)
-            {
-//                HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-                curr_step = LIGHT;
-                i = 0;
-                counter = 0;//Unused? TODO
-            }
-            if (counter < ampl)// 100 ticks per 10^-4
-            {
-                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
-            }
-            else
-            {
-                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
-            }
+            calc_up(led);
             break;
         case LIGHT:
-            if (counter == 100)
-            {
-                ++i;
-                counter = 0;
-            }
-            if (i == 100)
-            {
-                curr_step = DOWN;
-                i = 100;//Why? TODO x2
-                counter = 0;//Unused?
-            }
-            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
+            calc_middle(led);
             break;
         case DOWN:
-            if (counter == 100)// DETAILYTY_1
-            {
-                --i;
-                ampl = (int) (100 * (sin((double) (i) / 100 * M_PI - M_PI_2) + 1) / 2);
-                //        100 ticks per 10^-4      DETAILYTY_1
-                counter = 0;
-            }
-            if (i == 0)
-            {
-                curr_step = UP;
-                i = 0;//Why? TODO x2
-                counter = 0;//Unused?
-            }
-            if (counter < ampl)// 100 ticks per 10^-4
-            {
-                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
-            }
-            else
-            {
-                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
-            }
+            calc_down(led);
             break;
     }
 }
 
-/**
- * @note 100 ticks per 10^-4 * DETAILYTY_1 = 1 s
- * @note 100 ticks per 10^-4 * DETAILYTY_2 = 1.3 s
- * @note 100 ticks per 10^-4 * DETAILYTY_3 = 1.7 s
- */
-void calc_2()
+void calc_down(struct LED *led)
 {
-    static int counter = 0;
-    static int i = 0;
-    static int ampl = 0;
-    static enum STEP curr_step = UP;
-    ++counter;
-    switch (curr_step)
+    ++led->counter;
+    if (led->counter == 100)
     {
-        case UP:
-            if (counter == 100)// DETAILYTY_1
-            {
-                ++i;
-                ampl = (int) (100 * (sin((double) (i) / 130 * M_PI - M_PI_2) + 1) / 2);
-                //        100 ticks per 10^-4      DETAILYTY_1
-                counter = 0;
-            }
-            if (i == 130)
-            {
-//                HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-                curr_step = LIGHT;
-                i = 0;
-                counter = 0;//Unused? TODO
-            }
-            if (counter < ampl)// 100 ticks per 10^-4
-            {
-                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
-            }
-            else
-            {
-                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
-            }
-            break;
-        case LIGHT:
-            if (counter == 100)
-            {
-                ++i;
-                counter = 0;
-            }
-            if (i == 130)
-            {
-                curr_step = DOWN;
-                i = 130;// Why? TODO x2
-                counter = 0;//Unused?
-            }
-            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
-            break;
-        case DOWN:
-            if (counter == 100)// DETAILYTY_1
-            {
-                --i;
-                ampl = (int) (100 * (sin((double) (i) / 130 * M_PI - M_PI_2) + 1) / 2);
-                counter = 0;
-                //        100 ticks per 10^-4      DETAILYTY_1
-            }
-            if (i == 0)
-            {
-                curr_step = UP;
-                i = 0;//Why?
-                counter = 0;//Unused? TODO x2
-            }
-            if (counter < ampl)// 100 ticks per 10^-4
-            {
-                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
-            }
-            else
-            {
-                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
-            }
-            break;
+        --led->i;
+        led->ampl = (unsigned char) (100 * (sin((double) (led->i) / led->detailyty * M_PI - M_PI_2) + 1) / 2);
+        //        100 ticks per 10^-4
+        led->counter = 0;
+        if (led->i == 0)
+            led->curr_step = UP;
     }
+    if (led->counter < led->ampl)// 100 ticks per 10^-4
+        HAL_GPIO_WritePin(GPIOA, led->pin, GPIO_PIN_RESET);
+    else
+        HAL_GPIO_WritePin(GPIOA, led->pin, GPIO_PIN_SET);
 }
 
-void calc_3()
+void calc_middle(struct LED *led)
 {
-    static int counter = 0;
-    static int i = 0;
-    static int ampl = 0;
-    static enum STEP curr_step = UP;
-    ++counter;
-    switch (curr_step)
+    ++led->counter;
+    if (led->counter == 100)
     {
-        case UP:
-            if (counter == 100)// DETAILYTY_1
-            {
-                ++i;
-                ampl = (int) (100 * (sin((double) (i) / 170 * M_PI - M_PI_2) + 1) / 2);
-                //        100 ticks per 10^-4      DETAILYTY_1
-                counter = 0;
-            }
-            if (i == 170)
-            {
-//                HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-                curr_step = LIGHT;
-                i = 0;
-                counter = 0;//Unused? TODO
-            }
-            if (counter < ampl)// 100 ticks per 10^-4
-            {
-                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
-            }
-            else
-            {
-                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
-            }
-            break;
-        case LIGHT:
-            if (counter == 100)
-            {
-                ++i;
-                counter = 0;
-            }
-            if (i == 170)
-            {
-                curr_step = DOWN;
-                i = 170;// Why? TODO x2
-                counter = 0;//Unused?
-            }
-            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
-            break;
-        case DOWN:
-            if (counter == 100)// DETAILYTY_1
-            {
-                --i;
-                ampl = (int) (100 * (sin((double) (i) / 170 * M_PI - M_PI_2) + 1) / 2);
-                counter = 0;
-                //        100 ticks per 10^-4      DETAILYTY_1
-            }
-            if (i == 0)
-            {
-                curr_step = UP;
-                i = 0;//Why?
-                counter = 0;//Unused? TODO x2
-            }
-            if (counter < ampl)// 100 ticks per 10^-4
-            {
-                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
-            }
-            else
-            {
-                HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
-            }
-            break;
+        ++led->i;
+        led->counter = 0;
+        if (led->i == led->detailyty)
+            led->curr_step = DOWN;
     }
+    HAL_GPIO_WritePin(GPIOA, led->pin, GPIO_PIN_RESET);
+}
+
+void calc_up(struct LED *led)
+{
+    ++led->counter;
+    if (led->counter == 100)
+    {
+        ++led->i;
+        led->ampl = (unsigned char) (100 * (sin((double) (led->i) / led->detailyty * M_PI - M_PI_2) + 1) / 2);
+        //        100 ticks per 10^-4
+        led->counter = 0;
+        if (led->i == led->detailyty)
+        {
+            led->curr_step = LIGHT;
+            led->i = 0;
+        }
+    }
+    if (led->counter < led->ampl)// 100 ticks per 10^-4
+        HAL_GPIO_WritePin(GPIOA, led->pin, GPIO_PIN_RESET);
+    else
+        HAL_GPIO_WritePin(GPIOA, led->pin, GPIO_PIN_SET);
 }

@@ -5,22 +5,19 @@
 #ifndef MAIN_TARGET
 #define MAIN_TARGET
 
-void my_delay(int mc_s);
-
-void soft_glow(GPIO_TypeDef *port, int pin, int duty_cycle, int mc_s, int detailyty);
-
-void calc_1();
-
-void calc_2();
-
-void calc_3();
-
 enum STEP {UP, LIGHT, DOWN};
 struct LED
 {
-    int counter;
-    int i;
-    int ampl;
-    const int DETAILYTY;
+    uint16_t pin;
+    uint16_t detailyty;
+    uint16_t i;
+    unsigned char counter;
+    unsigned char ampl;
+    enum STEP curr_step;
 };
+
+void ctor_LED(struct LED* led, int detailyty, int pin);
+void my_delay(int mc_s);
+void calc(struct LED*);
+
 #endif //MAIN_TARGET

@@ -62,6 +62,7 @@ volatile int i=0;
 const int DETAILYTY_1=100;
 const int DETAILYTY_2=130;
 const int DETAILYTY_3=170;
+struct LED led[3];
 /* USER CODE END 0 */
 
 /**
@@ -111,11 +112,16 @@ int main(void)
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 0);
     HAL_Delay(500);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 1);
+ /**
+ * @note 100 ticks per 10^-4 * DETAILYTY_1 = 1 s
+ * @note 100 ticks per 10^-4 * DETAILYTY_2 = 1.3 s
+ * @note 100 ticks per 10^-4 * DETAILYTY_3 = 1.7 s
+ */
+    ctor_LED(led+0, 100, GPIO_PIN_10);
+    ctor_LED(led+1, 130, GPIO_PIN_9);
+    ctor_LED(led+2, 170, GPIO_PIN_8);
     HAL_TIM_Base_Start(&htim1);
     HAL_TIM_Base_Start_IT(&htim3);
-    #define static_assert(cond, str) char _temp[-!((void)str, (cond))]
-    static_assert(1==0, "bad");
-    static_assert(0==0, "good");
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -330,9 +336,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 1 */
 if (htim->Instance == TIM3)
 {
-    calc_1();
-    calc_2();
-    calc_3();
+    calc(led);
+    calc(led+1);
+    calc(led+2);
 }
   /* USER CODE END Callback 1 */
 }
