@@ -8,11 +8,11 @@
 
 extern TIM_HandleTypeDef htim1;
 
-void calc_up(struct LED *led);
+void calc_up(struct LED* led);
 
-void calc_middle(struct LED *led);
+void calc_middle(struct LED* led);
 
-void calc_down(struct LED *led);
+void calc_down(struct LED* led);
 
 void my_delay(int mc_s)
 {
@@ -25,15 +25,15 @@ void my_delay(int mc_s)
 
 void ctor_LED(struct LED* led, int detailyty, int pin)
 {
-    led->detailyty=detailyty;
-    led->pin=pin;
-    led->counter=0;
-    led->i=0;
-    led->ampl=0;
-    led->curr_step=calc_up;
+    led->detailyty = detailyty;
+    led->pin = pin;
+    led->counter = 0;
+    led->i = 0;
+    led->ampl = 0;
+    led->curr_step = calc_up;
 }
 
-void calc_down(struct LED *led)
+void calc_down(struct LED* led)
 {
     ++led->counter;
     if (led->counter == 100)
@@ -51,7 +51,7 @@ void calc_down(struct LED *led)
         HAL_GPIO_WritePin(GPIOA, led->pin, GPIO_PIN_SET);
 }
 
-void calc_middle(struct LED *led)
+void calc_middle(struct LED* led)
 {
     ++led->counter;
     if (led->counter == 100)
@@ -64,7 +64,7 @@ void calc_middle(struct LED *led)
     HAL_GPIO_WritePin(GPIOA, led->pin, GPIO_PIN_RESET);
 }
 
-void calc_up(struct LED *led)
+void calc_up(struct LED* led)
 {
     ++led->counter;
     if (led->counter == 100)
