@@ -6,7 +6,7 @@
 #include "main.h"
 #include "main_target.h"
 
-extern TIM_HandleTypeDef htim1;
+extern TIM_HandleTypeDef htim3;
 
 void calc_up(struct LED* led);
 
@@ -18,8 +18,8 @@ void my_delay(int mc_s)
 {
     if (mc_s <= 0)
         return;
-    __HAL_TIM_SET_COUNTER(&htim1, 0);
-    while (__HAL_TIM_GET_COUNTER(&htim1) < mc_s)
+    __HAL_TIM_SET_COUNTER(&htim3, 0);
+    while (__HAL_TIM_GET_COUNTER(&htim3) < mc_s)
     {}
 }
 
