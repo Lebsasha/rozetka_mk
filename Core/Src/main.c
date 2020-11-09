@@ -117,10 +117,12 @@ int main(void)
  * @note 100 ticks per 10^-4 * DETAILYTY_2 = 1.3 s
  * @note 100 ticks per 10^-4 * DETAILYTY_3 = 1.7 s
  */
-    ctor_LED(led+0, DETAILYTY_1, GPIO_PIN_10);
-    ctor_LED(led+1, DETAILYTY_2, GPIO_PIN_9);
-    ctor_LED(led+2, DETAILYTY_3, GPIO_PIN_8);
+    ctor_LED(led+0, DETAILYTY_1, &(htim1.Instance->CCR1));
+    ctor_LED(led+1, DETAILYTY_2, &(htim1.Instance->CCR2));
+    ctor_LED(led+2, DETAILYTY_3, &(htim1.Instance->CCR3));
     HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);
+    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);
+    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);
     //HAL_TIM_Base_Start(&htim3);
     HAL_TIM_Base_Start_IT(&htim3);
   /* USER CODE END 2 */
@@ -364,9 +366,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 1 */
 if (htim->Instance == TIM3)
 {
-//    led[0].curr_step(&led[0]);
-//    led[1].curr_step(&led[1]);
-//    led[2].curr_step(&led[2]);
+    led[0].curr_step(&led[0]);
+    led[1].curr_step(&led[1]);
+    led[2].curr_step(&led[2]);
 }
   /* USER CODE END Callback 1 */
 }
