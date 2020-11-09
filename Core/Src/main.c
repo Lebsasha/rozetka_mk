@@ -100,18 +100,18 @@ int main(void)
 //assert(1000/MY_FREQ*DETAILYTY_1==1000);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
 //    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 1);
-    HAL_Delay(200);
+//    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
+//    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 1);
+//    HAL_Delay(200);
 //    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 0);
-    HAL_Delay(500);
+//    HAL_Delay(500);
 //    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 0);
-    HAL_Delay(500);
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 0);
-    HAL_Delay(500);
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 1);
+//    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 0);
+//    HAL_Delay(500);
+//    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
+//    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 0);
+//    HAL_Delay(500);
+//    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 1);
  /**
  * @note 100 ticks per 10^-4 * DETAILYTY_1 = 1 s
  * @note 100 ticks per 10^-4 * DETAILYTY_2 = 1.3 s
@@ -119,7 +119,7 @@ int main(void)
  */
     ctor_LED(led+0, DETAILYTY_1, GPIO_PIN_10);
     ctor_LED(led+1, DETAILYTY_2, GPIO_PIN_9);
-//    ctor_LED(led+2, DETAILYTY_3, GPIO_PIN_8);
+    ctor_LED(led+2, DETAILYTY_3, GPIO_PIN_8);
     HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);
     //HAL_TIM_Base_Start(&htim3);
     HAL_TIM_Base_Start_IT(&htim3);
@@ -237,6 +237,14 @@ static void MX_TIM1_Init(void)
   {
     Error_Handler();
   }
+  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
+  {
+    Error_Handler();
+  }
   sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
   sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
   sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
@@ -318,22 +326,12 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9|GPIO_PIN_10, GPIO_PIN_RESET);
-
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : PA9 PA10 */
-  GPIO_InitStruct.Pin = GPIO_PIN_9|GPIO_PIN_10;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PB5 */
   GPIO_InitStruct.Pin = GPIO_PIN_5;
@@ -366,8 +364,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 1 */
 if (htim->Instance == TIM3)
 {
-    led[0].curr_step(&led[0]);
-    led[1].curr_step(&led[1]);
+//    led[0].curr_step(&led[0]);
+//    led[1].curr_step(&led[1]);
 //    led[2].curr_step(&led[2]);
 }
   /* USER CODE END Callback 1 */
