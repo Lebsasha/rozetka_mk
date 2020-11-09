@@ -7,6 +7,8 @@
 #include "main_target.h"
 
 const uint16_t COUNTER_PERIOD=100;
+
+extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim3;
 
 void calc_up(struct LED* led);
@@ -24,18 +26,23 @@ void my_delay(int mc_s)
     {}
 }
 
-void ctor_LED(struct LED* led, uint16_t detailyty, volatile uint32_t* pin)
+void ctor_LED(struct LED* led, uint16_t detailyty, volatile uint32_t* pin, char num)
 {
     led->pin=pin;
     led->detailyty = detailyty;
     led->i = 0;
+    led->num=num;
     led->curr_step = calc_up;
 }
 
 void calc_up(struct LED* led)
 {
     ++led->i;
+
     *led->pin=led->i*COUNTER_PERIOD/led->detailyty;
+
+    if(led->num==0)
+        htim1.Instance->CCR1=led->i*COUNTER_PERIOD/led->detailyty;
 
     if (led->i == led->detailyty)
     {
@@ -48,6 +55,8 @@ void calc_middle(struct LED* led)
 {
     ++led->i;
     *led->pin=COUNTER_PERIOD;
+    if(led->num==0)
+        htim1.Instance->CCR1=COUNTER_PERIOD;
     if (led->i == led->detailyty)
         led->curr_step = calc_down;
 }
@@ -56,6 +65,9 @@ void calc_down(struct LED* led)
 {
     --led->i;
     *led->pin=led->i*COUNTER_PERIOD/led->detailyty;
+    if(led->num==0)
+        htim1.Instance->CCR1=led->i*COUNTER_PERIOD/led->detailyty;
+
     if (led->i == 0)
         led->curr_step = calc_up;
 }

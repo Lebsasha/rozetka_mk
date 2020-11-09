@@ -117,9 +117,9 @@ int main(void)
  * @note 100 ticks per 10^-4 * DETAILYTY_2 = 1.3 s
  * @note 100 ticks per 10^-4 * DETAILYTY_3 = 1.7 s
  */
-    ctor_LED(led+0, DETAILYTY_1, &(htim1.Instance->CCR1));
-    ctor_LED(led+1, DETAILYTY_2, &(htim1.Instance->CCR2));
-    ctor_LED(led+2, DETAILYTY_3, &(htim1.Instance->CCR3));
+    ctor_LED(led+0, DETAILYTY_1, &(htim1.Instance->CCR1),0);
+    ctor_LED(led+1, DETAILYTY_2, &(htim1.Instance->CCR2),1);
+    ctor_LED(led+2, DETAILYTY_3, &(htim1.Instance->CCR3),2);
     HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);
     HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);
     HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);
