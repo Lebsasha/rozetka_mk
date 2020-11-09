@@ -23,7 +23,7 @@ void my_delay(int mc_s)
     {}
 }
 
-void ctor_LED(struct LED* led, int detailyty, int pin)
+void ctor_LED(struct LED* led, uint16_t detailyty, uint16_t pin)
 {
     led->detailyty = detailyty;
     led->pin = pin;
@@ -33,17 +33,20 @@ void ctor_LED(struct LED* led, int detailyty, int pin)
     led->curr_step = calc_up;
 }
 
-void calc_down(struct LED* led)
+void calc_up(struct LED* led)
 {
     ++led->counter;
     if (led->counter == 100)
     {
-        --led->i;
+        ++led->i;
         led->ampl = (unsigned char) (100 * (sin((double) (led->i) / led->detailyty * M_PI - M_PI_2) + 1) / 2);
         //        100 ticks per 10^-4
         led->counter = 0;
-        if (led->i == 0)
-            led->curr_step = calc_up;
+        if (led->i == led->detailyty)
+        {
+            led->curr_step = calc_middle;
+            led->i = 0;
+        }
     }
     if (led->counter < led->ampl)// 100 ticks per 10^-4
         HAL_GPIO_WritePin(GPIOA, led->pin, GPIO_PIN_RESET);
@@ -64,20 +67,17 @@ void calc_middle(struct LED* led)
     HAL_GPIO_WritePin(GPIOA, led->pin, GPIO_PIN_RESET);
 }
 
-void calc_up(struct LED* led)
+void calc_down(struct LED* led)
 {
     ++led->counter;
     if (led->counter == 100)
     {
-        ++led->i;
+        --led->i;
         led->ampl = (unsigned char) (100 * (sin((double) (led->i) / led->detailyty * M_PI - M_PI_2) + 1) / 2);
         //        100 ticks per 10^-4
         led->counter = 0;
-        if (led->i == led->detailyty)
-        {
-            led->curr_step = calc_middle;
-            led->i = 0;
-        }
+        if (led->i == 0)
+            led->curr_step = calc_up;
     }
     if (led->counter < led->ampl)// 100 ticks per 10^-4
         HAL_GPIO_WritePin(GPIOA, led->pin, GPIO_PIN_RESET);
