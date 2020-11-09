@@ -5,7 +5,6 @@
 #ifndef MAIN_TARGET
 #define MAIN_TARGET
 
-enum STEP {UP, LIGHT, DOWN};
 struct LED
 {
     uint16_t pin;
@@ -17,6 +16,7 @@ struct LED
 };
 
 void ctor_LED(struct LED* led, int detailyty, int pin);
+
 void my_delay(int mc_s);
 
 #endif //MAIN_TARGET

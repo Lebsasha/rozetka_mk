@@ -1,15 +1,11 @@
+#include <limits.h>
 //
 // Created by alexander on 01/11/2020.
 //
 
 #include "main.h"
 #include "main_target.h"
-#include <assert.h>
 
-const int MY_FREQ = 100;
-extern const int DETAILYTY_1;
-extern const int DETAILYTY_2;
-extern const int DETAILYTY_3;
 extern TIM_HandleTypeDef htim1;
 
 void calc_up(struct LED *led);

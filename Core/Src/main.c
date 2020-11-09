@@ -117,9 +117,9 @@ int main(void)
  * @note 100 ticks per 10^-4 * DETAILYTY_2 = 1.3 s
  * @note 100 ticks per 10^-4 * DETAILYTY_3 = 1.7 s
  */
-    ctor_LED(led+0, 100, GPIO_PIN_10);
-    ctor_LED(led+1, 130, GPIO_PIN_9);
-    ctor_LED(led+2, 170, GPIO_PIN_8);
+    ctor_LED(led+0, DETAILYTY_1, GPIO_PIN_10);
+    ctor_LED(led+1, DETAILYTY_2, GPIO_PIN_9);
+    ctor_LED(led+2, DETAILYTY_3, GPIO_PIN_8);
     HAL_TIM_Base_Start(&htim1);
     HAL_TIM_Base_Start_IT(&htim3);
   /* USER CODE END 2 */
