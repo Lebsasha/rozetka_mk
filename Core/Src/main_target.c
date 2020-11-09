@@ -39,7 +39,7 @@ void calc_up(struct LED* led)
 {
     ++led->i;
 
-    *led->pin=COUNTER_PERIOD-led->i*COUNTER_PERIOD/led->detailyty;
+    *led->pin=COUNTER_PERIOD-(COUNTER_PERIOD * (sin((double) (led->i) / led->detailyty * M_PI - M_PI_2) + 1) / 2);
 
 //    if(led->num==0)
 //        htim1.Instance->CCR1=led->i*COUNTER_PERIOD/led->detailyty;
@@ -64,7 +64,7 @@ void calc_middle(struct LED* led)
 void calc_down(struct LED* led)
 {
     --led->i;
-    *led->pin=COUNTER_PERIOD-led->i*COUNTER_PERIOD/led->detailyty;
+    *led->pin=COUNTER_PERIOD-(COUNTER_PERIOD * (sin((double) (led->i) / led->detailyty * M_PI - M_PI_2) + 1) / 2);
 //    if(led->num==0)
 //        htim1.Instance->CCR1=led->i*COUNTER_PERIOD/led->detailyty;
 
