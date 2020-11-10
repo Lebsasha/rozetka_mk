@@ -19,6 +19,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -95,23 +96,11 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM1_Init();
   MX_TIM3_Init();
+  MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
 
 //assert(1000/MY_FREQ*DETAILYTY_1==1000);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-//    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
-//    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
-//    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 1);
-//    HAL_Delay(200);
-//    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 0);
-//    HAL_Delay(500);
-//    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
-//    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 0);
-//    HAL_Delay(500);
-//    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
-//    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 0);
-//    HAL_Delay(500);
-//    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 1);
  /**
  * @note 100 ticks per 10^-4 * DETAILYTY_1 = 1 s
  * @note 100 ticks per 10^-4 * DETAILYTY_2 = 1.3 s
@@ -123,7 +112,7 @@ int main(void)
     HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);//red
     HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);//blue
     HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);//yellow
-    //HAL_TIM_Base_Start(&htim3);
+    //HAL_TIM_Base_Start_IT(&htim3);
     HAL_TIM_Base_Start_IT(&htim3);
   /* USER CODE END 2 */
 
@@ -152,6 +141,7 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
@@ -177,6 +167,12 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB;
+  PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_PLL_DIV1_5;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
     Error_Handler();
   }
