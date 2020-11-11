@@ -23,7 +23,7 @@
 #include "usbd_cdc_if.h"
 
 /* USER CODE BEGIN INCLUDE */
-
+#include "../../Core/Src/main_target.h"
 /* USER CODE END INCLUDE */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -241,7 +241,7 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
   return (USBD_OK);
   /* USER CODE END 5 */
 }
-#include "../../Core/Src/main_target.h"
+
 /**
   * @brief  Data received over USB OUT endpoint are sent over CDC interface
   *         through this function.
