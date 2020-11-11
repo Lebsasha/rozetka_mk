@@ -5,12 +5,10 @@
 
 #include "main.h"
 #include "main_target.h"
-#include <usbd_cdc.h>
 
 
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim3;
-extern USBD_HandleTypeDef hUsbDeviceFS;
 
 void calc_up(struct LED* led);
 
@@ -36,7 +34,7 @@ void ctor_LED(struct LED* led, uint16_t detailyty, volatile uint32_t* pin, char 
     led->curr_step = calc_up;
 }
 
-int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
+void process_cmd(uint8_t* Buf, uint32_t* Len)
 {
     if(*Len)
     {
@@ -48,9 +46,6 @@ int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
             HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
 
     }
-    USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
-    USBD_CDC_ReceivePacket(&hUsbDeviceFS);
-    return (USBD_OK);
 }
 
 void calc_up(struct LED* led)
