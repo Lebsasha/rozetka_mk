@@ -33,9 +33,10 @@ main()
     assert(str_cmp("first on"+sizeof("first ")-1, "on", 2)==0);
     assert(strcmp("first on"+sizeof("first ")-1, "on")==0);
     assert(strcmp("first_on"+sizeof("first_")-1, "on")==0);
+    assert(strlen("first")==sizeof("first")-1);
     u_int8_t* buf="first o";
     char* cmd=(char*)buf;
-    if(strcmp(cmd, "first")>=0)//Fix triggering
+    if(strcmp(cmd, "first")>=0)
     {
         if (strcmp(cmd + sizeof("first ") - 1, "o") == 0)
         {

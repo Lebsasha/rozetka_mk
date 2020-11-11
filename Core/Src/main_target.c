@@ -1,67 +1,70 @@
 #include "main.h"
 #include "main_target.h"
+#include <string.h>
 
 extern TIM_HandleTypeDef htim1;
-extern TIM_HandleTypeDef htim3;
 extern struct LED leds[3];
 
-int str_cmp(const uint8_t*, const char*, size_t);
+int str_cmp(const uint8_t*, const char*);
 
-void toggle_led(const uint8_t* buf, size_t i);
+void toggle_led(const uint8_t* command, size_t i);
 
 void always_glow(struct LED*);
 
 void always_zero(struct LED*);
 
-void calc_up(struct LED* led);
+void calc_up(struct LED*);
 
-void calc_middle(struct LED* led);
+void calc_middle(struct LED*);
 
-void calc_down(struct LED* led);
+void calc_down(struct LED*);
 
-void process_cmd(const uint8_t* buf, const uint32_t* len)
+void process_cmd(const uint8_t* command, const uint32_t* len)
 {
     if (*len)
     {
-        if (str_cmp(buf, "first", sizeof("first") - 1) == 0)
+        if (str_cmp(command, "first") == 0)
         {
-            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-            toggle_led(buf + sizeof("first ") - 1, 0);
+            toggle_led(command + sizeof("first ") - 1, 0);
         }
-        if (str_cmp(buf, "second", sizeof("second") - 1) == 0)
+        if (str_cmp(command, "second") == 0)
         {
-            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-            toggle_led(buf + sizeof("second ") - 1, 1);
+            toggle_led(command + sizeof("second ") - 1, 1);
         }
-        if (str_cmp(buf, "third", sizeof("third") - 1) == 0)
+        if (str_cmp(command, "third") == 0)
         {
-            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-            toggle_led(buf + sizeof("third ") - 1, 2);
+            toggle_led(command + sizeof("third ") - 1, 2);
         }
-        if (buf[0] == '0')
+        if (command[0] == '0')
             HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-        if (buf[0] == '1')
+        if (command[0] == '1')
             HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
     }
 }
 
-void toggle_led(const uint8_t* buf, const size_t i)
+void toggle_led(const uint8_t* command, const size_t i)
 {
-    if (str_cmp(buf, "on", sizeof("on") - 1) == 0)
+    if (str_cmp(command, "on") == 0)
     {
-        HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
         (leds + i)->curr_step = always_glow;
     }
-    if (str_cmp(buf, "off", sizeof("off") - 1) == 0)
+    if (str_cmp(command, "off") == 0)
     {
-        HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
         (leds + i)->curr_step = always_zero;
     }
-    if (str_cmp(buf, "resume", sizeof("resume") - 1) == 0)
+    if (str_cmp(command, "resume") == 0)
     {
-        HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
         (leds + i)->curr_step = calc_up;
     }
+}
+
+void ctor_LED(struct LED* led, uint16_t detailyty, volatile uint32_t* pin, char num)
+{
+    led->pin = pin;
+    led->detailyty = detailyty;
+    led->i = 0;
+    led->num = num;
+    led->curr_step = calc_up;
 }
 
 void always_glow(struct LED* led)
@@ -72,15 +75,6 @@ void always_glow(struct LED* led)
 void always_zero(struct LED* led)
 {
     *led->pin = COUNTER_PERIOD;
-}
-
-void ctor_LED(struct LED* led, uint16_t detailyty, volatile uint32_t* pin, char num)
-{
-    led->pin = pin;
-    led->detailyty = detailyty;
-    led->i = 0;
-    led->num = num;
-    led->curr_step = calc_up;
 }
 
 void calc_up(struct LED* led)
@@ -117,18 +111,17 @@ void my_delay(int mc_s)
 {
     if (mc_s <= 0)
         return;
-    __HAL_TIM_SET_COUNTER(&htim3, 0);
-    while (__HAL_TIM_GET_COUNTER(&htim3) < mc_s)
+    __HAL_TIM_SET_COUNTER(&htim1, 0);
+    while (__HAL_TIM_GET_COUNTER(&htim1) < mc_s)
     {}
 }
 
-int str_cmp(const uint8_t* buf, const char* str, size_t n)
+int str_cmp(const uint8_t* command, const char* str)
 {
-//    size_t n=sizeof(str)-1;
-    ++n;
+    size_t n= strlen(str) + 1;
     while (--n)
     {
-        if (*buf++ != *str++)
+        if (*command++ != *str++)
             return 1;
     }
     return 0;

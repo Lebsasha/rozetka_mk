@@ -57,7 +57,6 @@ static void MX_TIM1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-volatile int i=0;
 const int DETAILYTY_1=100;
 const int DETAILYTY_2=130;
 const int DETAILYTY_3=170;
