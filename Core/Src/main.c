@@ -63,7 +63,7 @@ volatile int i=0;
 const int DETAILYTY_1=100;
 const int DETAILYTY_2=130;
 const int DETAILYTY_3=170;
-struct LED led[3]; //TODO htim3 -> htim1
+struct LED leds[3]; //TODO htim3 -> htim1
 /* USER CODE END 0 */
 
 /**
@@ -106,9 +106,9 @@ int main(void)
  * @note 100 ticks per 10^-4 * DETAILYTY_2 = 1.3 s
  * @note 100 ticks per 10^-4 * DETAILYTY_3 = 1.7 s
  */
-    ctor_LED(led+0, DETAILYTY_1, &(htim1.Instance->CCR3),0);
-    ctor_LED(led+1, DETAILYTY_2, &(htim1.Instance->CCR2),1);
-    ctor_LED(led+2, DETAILYTY_3, &(htim1.Instance->CCR1),2);
+    ctor_LED(leds + 0, DETAILYTY_1, &(htim1.Instance->CCR3), 0);
+    ctor_LED(leds + 1, DETAILYTY_2, &(htim1.Instance->CCR2), 1);
+    ctor_LED(leds + 2, DETAILYTY_3, &(htim1.Instance->CCR1), 2);
     HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);//red
     HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);//blue
     HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);//yellow
@@ -362,9 +362,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 1 */
 if (htim->Instance == TIM3)
 {
-    led[0].curr_step(&led[0]);
-    led[1].curr_step(&led[1]);
-    led[2].curr_step(&led[2]);
+    leds[0].curr_step(&leds[0]);
+    leds[1].curr_step(&leds[1]);
+    leds[2].curr_step(&leds[2]);
 }
   /* USER CODE END Callback 1 */
 }
