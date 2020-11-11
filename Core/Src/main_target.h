@@ -20,6 +20,6 @@ void ctor_LED(struct LED* led, uint16_t detailyty, volatile uint32_t* pin, char 
 
 void my_delay(int mc_s);
 
-void process_cmd(uint8_t* Buf, uint32_t *Len);
+int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len);
 
 #endif //MAIN_TARGET
