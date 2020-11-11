@@ -34,6 +34,20 @@ void ctor_LED(struct LED* led, uint16_t detailyty, volatile uint32_t* pin, char 
     led->curr_step = calc_up;
 }
 
+void process_cmd(uint8_t* Buf, uint32_t* Len)
+{
+    if(Len)
+    {
+        if(Buf[0]=='1')
+        {
+            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+        }
+        if(Buf[0]=='0')
+            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+
+    }
+}
+
 void calc_up(struct LED* led)
 {
     ++led->i;
