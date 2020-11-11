@@ -1,11 +1,5 @@
-#include <limits.h>
-//
-// Created by alexander on 01/11/2020.
-//
-
 #include "main.h"
 #include "main_target.h"
-#include <string.h>
 
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim3;
