@@ -5,6 +5,8 @@
 #ifndef MAIN_TARGET
 #define MAIN_TARGET
 
+#define COUNTER_PERIOD (const uint16_t) 100
+
 struct LED
 {
     volatile uint32_t* pin;

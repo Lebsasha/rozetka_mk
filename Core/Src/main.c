@@ -63,7 +63,9 @@ volatile int i=0;
 const int DETAILYTY_1=100;
 const int DETAILYTY_2=130;
 const int DETAILYTY_3=170;
-struct LED led[3];
+struct LED led[3]; //TODO htim3 -> htim1
+void always_glow(struct LED*);
+void always_zero(struct LED*);
 /* USER CODE END 0 */
 
 /**
@@ -341,6 +343,14 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+void always_glow(struct LED* led)
+{
+    *led->pin=0;
+}
+void always_zero(struct LED* led)
+{
+    *led->pin=COUNTER_PERIOD;
+}
 /* USER CODE END 4 */
 
 /**

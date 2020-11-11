@@ -6,7 +6,6 @@
 #include "main.h"
 #include "main_target.h"
 
-const uint16_t COUNTER_PERIOD=100;
 
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim3;
@@ -39,7 +38,7 @@ void calc_up(struct LED* led)
 {
     ++led->i;
     *led->pin=COUNTER_PERIOD-(COUNTER_PERIOD * (sin((double) (led->i) / led->detailyty * M_PI - M_PI_2) + 1) / 2);
-    if (led->i == led->detailyty)
+    if (led->i == led->detailyty && led->curr_step == calc_up)
     {
         led->curr_step = calc_middle;
         led->i = 0;
@@ -50,7 +49,7 @@ void calc_middle(struct LED* led)
 {
     ++led->i;
     *led->pin=0;
-    if (led->i == led->detailyty)
+    if (led->i == led->detailyty && led->curr_step == calc_middle)
         led->curr_step = calc_down;
 }
 
@@ -61,6 +60,6 @@ void calc_down(struct LED* led)
         *led->pin=COUNTER_PERIOD-(COUNTER_PERIOD * (sin((double) (led->i) / led->detailyty * M_PI - M_PI_2) + 1) / 2);
     else
         *led->pin=COUNTER_PERIOD-0;
-    if (led->i == 0)
+    if (led->i == 0 && led->curr_step == calc_down)
         led->curr_step = calc_up;
 }
