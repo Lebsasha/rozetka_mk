@@ -102,31 +102,24 @@ int main(void)
  * @note 100 ticks per 10^-4 * DETAILYTY_2 = 1.3 s
  * @note 100 ticks per 10^-4 * DETAILYTY_3 = 1.7 s
  */
-    (&htim1)->State = HAL_TIM_STATE_BUSY; //TODO Why ()?
     __HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
-    (&htim1)->State = HAL_TIM_STATE_READY; //TODO Why ()?
-//    HAL_TIM_Base_Start_IT(&htim1);
+    __HAL_TIM_ENABLE(&htim1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
-//      ((((&htim1)->Instance->DIER & ((0x1UL << (0U)))) == ((0x1UL << (0U)))) ? SET : RESET)
       /* TIM Update event */
       if (__HAL_TIM_GET_FLAG(&htim1, TIM_FLAG_UPDATE) != RESET)
       {
           if (__HAL_TIM_GET_IT_SOURCE(&htim1, TIM_IT_UPDATE) != RESET)
           {
-              //((&htim1)->Instance->DIER = ~((0x1UL << (0U))));
-//              ((&htim1)->Instance->SR = ~((0x1UL << (0U))))
-              //__HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);
-              //HAL_Delay(300);
-              //HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+              __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);
+              HAL_Delay(300);
+              HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
           }
       }
-//          ((&htim1)->Instance->SR = ~((0x1UL << (0U))));
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
