@@ -102,21 +102,26 @@ int main(void)
  * @note 100 ticks per 10^-4 * DETAILYTY_2 = 1.3 s
  * @note 100 ticks per 10^-4 * DETAILYTY_3 = 1.7 s
  */
-    TIM1->CR1|=TIM_CR1_CEN;
+    __HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
+    __HAL_TIM_ENABLE(&htim1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
+//      ((((&htim1)->Instance->DIER & ((0x1UL << (0U)))) == ((0x1UL << (0U)))) ? SET : RESET)
       /* TIM Update event */
-      if((htim1.Instance->SR&1U)==1)
+      if (__HAL_TIM_GET_FLAG(&htim1, TIM_FLAG_UPDATE) != RESET)
       {
-          htim1.Instance->SR&=~1U;//-(2U);
-          HAL_Delay(300);
-          HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+          if (__HAL_TIM_GET_IT_SOURCE(&htim1, TIM_IT_UPDATE) != RESET)
+          {
+              __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);
+              HAL_Delay(300);
+              HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+          }
       }
-//          ((&htim1)->Instance->SR = ~((0x1UL << (0U))));
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
