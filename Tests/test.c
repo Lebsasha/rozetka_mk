@@ -36,18 +36,18 @@ main()
     assert(strlen("first")==sizeof("first")-1);
     u_int8_t* buf="first o";
     char* cmd=(char*)buf;
-    if(strcmp(cmd, "first")>=0)
+    //if(strcmp(cmd, "first")>=0)
+    //{
+    //    if (strcmp(cmd + sizeof("first ") - 1, "o") == 0)
+    //    {
+    //        if(usb_ins)
+    //            assert(0);
+    //    }
+    //}
+    if(usb_ins)
+    for (int i=0; i <10000; ++i)
     {
-        if (strcmp(cmd + sizeof("first ") - 1, "o") == 0)
-        {
-            if(usb_ins)
-                assert(0);
-        }
+        system("echo \"0\" > /dev/ttyACM0");
+        system("sleep 0.0001");
     }
-//    if(usb_ins)
-//    for (int i=1; i <100; ++i)
-//    {
-//        system("echo \"0\" > /dev/ttyACM0");
-//        system("sleep 0.0001");
-//    }
 }
