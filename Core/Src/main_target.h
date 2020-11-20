@@ -1,22 +1,22 @@
-//
-// Created by alexander on 01/11/2020.
-//
-
 #ifndef MAIN_TARGET
 #define MAIN_TARGET
 
-enum STEP {UP, LIGHT, DOWN};
+#define COUNTER_PERIOD (const uint16_t) 100
+
 struct LED
 {
-    uint16_t pin;
+    volatile uint32_t* pin;
     uint16_t detailyty;
     uint16_t i;
-    unsigned char counter;
-    unsigned char ampl;
-    void (*curr_step)(struct LED*);
+    char num;
+
+    void (* curr_step)(struct LED*);
 };
 
-void ctor_LED(struct LED* led, int detailyty, int pin);
+void ctor_LED(struct LED* led, uint16_t detailyty, volatile uint32_t* pin, char num);
+
 void my_delay(int mc_s);
+
+void process_cmd(const uint8_t* command, const uint32_t* len);
 
 #endif //MAIN_TARGET

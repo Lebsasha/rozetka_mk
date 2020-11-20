@@ -19,6 +19,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -41,7 +42,6 @@
 
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim1;
-TIM_HandleTypeDef htim3;
 
 /* USER CODE BEGIN PV */
 
@@ -51,18 +51,16 @@ TIM_HandleTypeDef htim3;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM1_Init(void);
-static void MX_TIM3_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-volatile int i=0;
 const int DETAILYTY_1=100;
 const int DETAILYTY_2=130;
 const int DETAILYTY_3=170;
-struct LED led[3];
+struct LED leds[3];
 /* USER CODE END 0 */
 
 /**
@@ -94,34 +92,23 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_TIM1_Init();
-  MX_TIM3_Init();
+  MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 2 */
 
 //assert(1000/MY_FREQ*DETAILYTY_1==1000);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 1);
-    HAL_Delay(200);
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 0);
-    HAL_Delay(500);
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, 1);
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 0);
-    HAL_Delay(500);
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 0);
-    HAL_Delay(500);
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 1);
  /**
  * @note 100 ticks per 10^-4 * DETAILYTY_1 = 1 s
  * @note 100 ticks per 10^-4 * DETAILYTY_2 = 1.3 s
  * @note 100 ticks per 10^-4 * DETAILYTY_3 = 1.7 s
  */
-    ctor_LED(led+0, 100, GPIO_PIN_10);
-    ctor_LED(led+1, 130, GPIO_PIN_9);
-    ctor_LED(led+2, 170, GPIO_PIN_8);
-    HAL_TIM_Base_Start(&htim1);
-    HAL_TIM_Base_Start_IT(&htim3);
+    ctor_LED(leds + 0, DETAILYTY_1, &(htim1.Instance->CCR3), 0);
+    ctor_LED(leds + 1, DETAILYTY_2, &(htim1.Instance->CCR2), 1);
+    ctor_LED(leds + 2, DETAILYTY_3, &(htim1.Instance->CCR1), 2);
+    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);//red
+    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);//blue
+    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);//yellow
+    HAL_TIM_Base_Start_IT(&htim1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -149,6 +136,7 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
@@ -177,6 +165,12 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USB;
+  PeriphClkInit.UsbClockSelection = RCC_USBCLKSOURCE_PLL_DIV1_5;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
+  {
+    Error_Handler();
+  }
 }
 
 /**
@@ -193,14 +187,16 @@ static void MX_TIM1_Init(void)
 
   TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
 
   /* USER CODE BEGIN TIM1_Init 1 */
 
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 71;
+  htim1.Init.Prescaler = 7199;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 65534;
+  htim1.Init.Period = 99;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -213,60 +209,50 @@ static void MX_TIM1_Init(void)
   {
     Error_Handler();
   }
+  if (HAL_TIM_PWM_Init(&htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
   {
     Error_Handler();
   }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 49;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
+  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
+  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
+  sBreakDeadTimeConfig.DeadTime = 0;
+  sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
+  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
+  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
+  if (HAL_TIMEx_ConfigBreakDeadTime(&htim1, &sBreakDeadTimeConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE BEGIN TIM1_Init 2 */
 
   /* USER CODE END TIM1_Init 2 */
-
-}
-
-/**
-  * @brief TIM3 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM3_Init(void)
-{
-
-  /* USER CODE BEGIN TIM3_Init 0 */
-
-  /* USER CODE END TIM3_Init 0 */
-
-  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-
-  /* USER CODE BEGIN TIM3_Init 1 */
-
-  /* USER CODE END TIM3_Init 1 */
-  htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 3;
-  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 1799;
-  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM3_Init 2 */
-
-  /* USER CODE END TIM3_Init 2 */
+  HAL_TIM_MspPostInit(&htim1);
 
 }
 
@@ -288,22 +274,12 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10, GPIO_PIN_RESET);
-
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : PA8 PA9 PA10 */
-  GPIO_InitStruct.Pin = GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PB5 */
   GPIO_InitStruct.Pin = GPIO_PIN_5;
@@ -328,18 +304,18 @@ static void MX_GPIO_Init(void)
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   /* USER CODE BEGIN Callback 0 */
-
-  /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM2) {
-    HAL_IncTick();
+    if (htim->Instance == TIM1)
+    {
+        leds[0].curr_step(&leds[0]);
+        leds[1].curr_step(&leds[1]);
+        leds[2].curr_step(&leds[2]);
+    }
+    /* USER CODE END Callback 0 */
+    if (htim->Instance == TIM2) {
+      HAL_IncTick();
   }
-  /* USER CODE BEGIN Callback 1 */
-if (htim->Instance == TIM3)
-{
-    led[0].curr_step(&led[0]);
-    led[1].curr_step(&led[1]);
-    led[2].curr_step(&led[2]);
-}
+    /* USER CODE BEGIN Callback 1 */
+
   /* USER CODE END Callback 1 */
 }
 
