@@ -105,12 +105,12 @@ int main(void)
  * @note 100 ticks per 10^-4 * DETAILYTY_2 = 1.3 s
  * @note 100 ticks per 10^-4 * DETAILYTY_3 = 1.7 s
  */
-    TIM1->PSC=4-1;
+    TIM1->PSC=40-1;
  TIM1->ARR=18-1;
 
     __HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
     __HAL_TIM_ENABLE(&htim1);
-#define SEND_STRING(string) do{}while(CDC_Transmit_FS((uint8_t*) string, strlen(string)+1)==USBD_BUSY) //TODO sizeof really good there?
+#define SEND_STRING(string) do{}while(CDC_Transmit_FS((uint8_t*) string, sizeof(string))==USBD_BUSY) //TODO sizeof really good there?
 #define SEND_VAR(var_addr) do{}while(CDC_Transmit_FS((uint8_t*) var_addr, sizeof(*var_addr))==USBD_BUSY)
 #define SEND(smthng, size) do{}while(CDC_Transmit_FS((uint8_t*) smthng, size)==USBD_BUSY)
   /* USER CODE END 2 */
@@ -121,20 +121,16 @@ int main(void)
   {
       if (cmd)
       {
+          HAL_Delay(1000);
           char* next_num = NULL;
           int n_size = strtol((char*) cmd, &next_num, 10);
           int packet_size = strtol(next_num, NULL, 10);
           uint8_t* x = (uint8_t*) LONG_STRING;
           uint32_t count = 0;
-          SEND_VAR(&n_size);
-          SEND_VAR(&packet_size);
-          SEND_STRING("Before errno");
           if (errno == ERANGE || packet_size > strlen((char*) x))
           {
-              SEND_STRING("In errno");
               HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
           }
-          SEND_STRING("After errno");
           for (int i = 0; i < n_size; ++i)
           {
               if (__HAL_TIM_GET_FLAG(&htim1, TIM_FLAG_UPDATE) != RESET)
@@ -144,16 +140,14 @@ int main(void)
                   if (count == 0)
                       HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
               }
-              SEND_STRING("In for");
               SEND(x, packet_size);
           }
-          SEND_STRING("After for");
-          HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-          HAL_Delay(300);
           HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
           HAL_Delay(1000);
+          HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+          HAL_Delay(1000);
+          SEND_STRING("\n end");
           SEND_VAR(&count);
-          SEND_STRING("end");
           cmd = NULL;
       }
     /* USER CODE END WHILE */

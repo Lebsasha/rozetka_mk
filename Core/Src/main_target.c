@@ -23,13 +23,9 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
         {
             HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
             CDC_Transmit_FS((uint8_t*) "1 is pressed", sizeof("1 is pressed"));
-            CDC_Transmit_FS((uint8_t*) "11 is pressed", sizeof("11 is pressed"));
         }
     }
 }
-
-unsigned char transm(char* s)
-{ return CDC_Transmit_FS((uint8_t*) s, strlen(s)); }
 
 void my_delay(int mc_s)
 {

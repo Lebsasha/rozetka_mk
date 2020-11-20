@@ -14,8 +14,6 @@ struct LED
     void (* curr_step)(struct LED*);
 };
 
-unsigned char transm(char*);
-
 void my_delay(int mc_s);
 
 void process_cmd(const uint8_t* command, const uint32_t* len);
