@@ -102,8 +102,8 @@ int main(void)
  * @note 100 ticks per 10^-4 * DETAILYTY_2 = 1.3 s
  * @note 100 ticks per 10^-4 * DETAILYTY_3 = 1.7 s
  */
-    //TIM1->PSC=4-1;
- TIM1->ARR*=2;//18-1;
+    TIM1->PSC=4-1;
+ TIM1->ARR=18-1;
     __HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
     __HAL_TIM_ENABLE(&htim1);
 
