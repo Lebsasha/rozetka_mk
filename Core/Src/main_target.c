@@ -7,8 +7,7 @@
 #include <assert.h>
 
 extern TIM_HandleTypeDef htim1;
-
-unsigned char transm(char*);
+extern char* cmd;
 
 void process_cmd(const uint8_t* command, const uint32_t* len)
 {
@@ -16,44 +15,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
     {
         if (*command == '2' && *(command + 1) == '1' && *(command + 2) == '1')
         {
-            char* next_num = NULL;
-            int n_size = strtol((char*) command + 3, &next_num, 10);
-            int packet_size = strtol(next_num, NULL, 10);
-            uint8_t* x = (uint8_t*) "1234567890";//LONG_STRING;
-            uint32_t count = 0;
-            CDC_Transmit_FS((uint8_t*) &n_size, sizeof(n_size));
-            CDC_Transmit_FS((uint8_t*) &packet_size, sizeof(packet_size));
-            transm(x);
-            transm("Before errno");
-            if (errno == ERANGE || packet_size > strlen((char*) x))
-            {
-                transm("In errno");
-//                HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-//                HAL_Delay(200);
-//                HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-            }
-            transm("After errno");
-            for (int i = 0; i < n_size; ++i)
-            {
-                if (__HAL_TIM_GET_FLAG(&htim1, TIM_FLAG_UPDATE) != RESET)
-                {
-                    __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);
-                    ++count;
-//                    if (count == 0)
-//                        HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-                }
-                transm("In for");
-                CDC_Transmit_FS(x, packet_size);
-            }
-            transm("After for");
-            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-//            HAL_Delay(200);
-//            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-//            HAL_Delay(200);
-//            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-//            HAL_Delay(1000);
-            CDC_Transmit_FS((uint8_t*) &count, sizeof(count));
-            CDC_Transmit_FS((uint8_t*) "end", sizeof("end"));
+            cmd=(char*) command+3;
         }
         if (command[0] == '0')
             HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);

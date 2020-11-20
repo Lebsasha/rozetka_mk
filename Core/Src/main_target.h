@@ -1,8 +1,6 @@
 #ifndef MAIN_TARGET
 #define MAIN_TARGET
 
-#define COUNTER_PERIOD (const uint16_t) 100
-
 #define LONG_STRING \
 "12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678"
 
@@ -16,7 +14,7 @@ struct LED
     void (* curr_step)(struct LED*);
 };
 
-void ctor_LED(struct LED* led, uint16_t detailyty, volatile uint32_t* pin, char num);
+unsigned char transm(char*);
 
 void my_delay(int mc_s);
 
