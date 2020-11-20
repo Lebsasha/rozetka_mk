@@ -103,19 +103,18 @@ int main(void)
  * @note 100 ticks per 10^-4 * DETAILYTY_2 = 1.3 s
  * @note 100 ticks per 10^-4 * DETAILYTY_3 = 1.7 s
  */
-    TIM1->PSC=40-1;
+    TIM1->PSC=4-1;
  TIM1->ARR=18-1;
 
     __HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
     __HAL_TIM_ENABLE(&htim1);
-    uint32_t count=sizeof("111 1000 64");
+    uint32_t count=sizeof("211 1000 64");
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-      process_cmd("111 10 64", &count);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
