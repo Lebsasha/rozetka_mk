@@ -24,6 +24,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "main_target.h"
+#include "usbd_cdc_if.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -119,7 +120,8 @@ int main(void)
           if (__HAL_TIM_GET_IT_SOURCE(&htim1, TIM_IT_UPDATE) != RESET)
           {
               __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);
-              HAL_Delay(300);
+              if(HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5)==GPIO_PIN_RESET)
+                  CDC_Transmit_FS("Pressed", sizeof("Pressed"));
               HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
           }
       }
