@@ -1,10 +1,6 @@
 #include "main.h"
 #include "main_target.h"
-#include <string.h>
-#include <stdlib.h>
-#include <errno.h>
 #include <usbd_cdc_if.h>
-#include <assert.h>
 
 extern TIM_HandleTypeDef htim1;
 extern char* cmd;

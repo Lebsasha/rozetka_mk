@@ -18,7 +18,6 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-#include <errno.h>
 #include "main.h"
 #include "usb_device.h"
 
@@ -26,6 +25,7 @@
 /* USER CODE BEGIN Includes */
 #include "main_target.h"
 #include "usbd_cdc_if.h"
+#include <errno.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -64,6 +64,7 @@ const int DETAILYTY_2=130;
 const int DETAILYTY_3=170;
 struct LED leds[3];
 volatile char* cmd=NULL;
+volatile uint32_t count = 0;
 /* USER CODE END 0 */
 
 /**
@@ -110,10 +111,11 @@ int main(void)
 
     __HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
     __HAL_TIM_ENABLE(&htim1);
-#define SEND_STRING(string) do{}while(CDC_Transmit_FS((uint8_t*) string, sizeof(string))==USBD_BUSY) //TODO sizeof really good there?
+#define SEND_STRING(string) do{}while(CDC_Transmit_FS((uint8_t*) string, sizeof(string))==USBD_BUSY)
 #define SEND_VAR(var_addr) do{}while(CDC_Transmit_FS((uint8_t*) var_addr, sizeof(*var_addr))==USBD_BUSY)
 #define SEND(smthng, size) do{}while(CDC_Transmit_FS((uint8_t*) smthng, size)==USBD_BUSY)
   /* USER CODE END 2 */
+//  cmd="221 10 8";
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -126,27 +128,23 @@ int main(void)
           int n_size = strtol((char*) cmd, &next_num, 10);
           int packet_size = strtol(next_num, NULL, 10);
           uint8_t* x = (uint8_t*) LONG_STRING;
-          uint32_t count = 0;
+          uint32_t time=0;
           if (errno == ERANGE || packet_size > strlen((char*) x))
           {
               HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
           }
+          count=0;
           for (int i = 0; i < n_size; ++i)
           {
-              if (__HAL_TIM_GET_FLAG(&htim1, TIM_FLAG_UPDATE) != RESET)
-              {
-                  __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);
-                  ++count;
-                  if (count == 0)
-                      HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-              }
               SEND(x, packet_size);
           }
+          time=count;
           HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
           HAL_Delay(1000);
           HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-          HAL_Delay(1000);
+//          HAL_Delay(1000);
           SEND_STRING("\n end");
+          SEND_VAR(&time);
           SEND_VAR(&count);
           cmd = NULL;
       }
