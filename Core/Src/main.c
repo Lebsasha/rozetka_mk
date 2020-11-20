@@ -107,7 +107,7 @@ int main(void)
  TIM1->ARR=18-1;
     __HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
     __HAL_TIM_ENABLE(&htim1);
-
+    unsigned char count = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -120,8 +120,13 @@ int main(void)
           if (__HAL_TIM_GET_IT_SOURCE(&htim1, TIM_IT_UPDATE) != RESET)
           {
               __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);
-              if(HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5)==GPIO_PIN_RESET)
-                  CDC_Transmit_FS("Pressed", sizeof("Pressed"));
+              if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5) == GPIO_PIN_RESET)
+              {
+                  CDC_Transmit_FS(&count, sizeof(count));
+                  ++count;
+              }
+              else
+                  count=0;
               HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
           }
       }
