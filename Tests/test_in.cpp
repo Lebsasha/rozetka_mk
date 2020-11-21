@@ -28,9 +28,9 @@ int main(int argc, char** argv)
     send_cmd.write(cmd.c_str(), cmd.length());
     send_cmd.flush();
     dev.read(s, packets*size_of_packet+sizeof("\n end")+sizeof(int));
-    std::cout<<(cmd=std::string(s, packets*size_of_packet+5))<<std::endl;
-    int time = strtol(cmd.c_str()+packets*size_of_packet+sizeof("\n end"), nullptr, 10);
-    std::cout<<time<<std::endl;
+    std::cout<<(cmd=std::string(s, packets*size_of_packet+sizeof("\n end")+sizeof(int)))<<std::endl;
+    int time = *reinterpret_cast<int*>(s+packets*size_of_packet+sizeof("\n end"));
+    //int time= (char)(ptr+3)*0xff000000+
     std::ofstream log("res.csv", std::ios_base::out|std::ios_base::app);
-    log<<size_of_packet<<", "<<time/packets<<", "<<time<<", "<<packets;
+    log<<size_of_packet<<", "<< static_cast<double>(packets)*size_of_packet/time<<", "<<time<<", "<<packets<<std::endl;
 }

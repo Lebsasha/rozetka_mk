@@ -1,5 +1,5 @@
 cpp:
-	g++ test.cpp
+	g++ test_in.cpp
 	@#sudo ./a.out
 	./a.out
 	rm a.out
