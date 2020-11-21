@@ -24,7 +24,7 @@ int main(int argc, char** argv)
         std::cout<<"Error"<<std::endl;
         return 1;
     }
-    char s[packets*size_of_packet+100UL];
+    char* s=new char[packets*size_of_packet+100UL];
     send_cmd.write(cmd.c_str(), cmd.length());
     send_cmd.flush();
     dev.read(s, packets*size_of_packet+sizeof("\n end")+sizeof(int));
