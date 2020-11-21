@@ -12,9 +12,10 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
         if (*command == '2' && *(command + 1) == '1' && *(command + 2) == '1')
         {
             cmd=(char*) command+3;
-        }
+        }else
         if (command[0] == '0')
             HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+        else
         if (command[0] == '1')
         {
             HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);

@@ -59,10 +59,6 @@ static void MX_TIM1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-const int DETAILYTY_1=100;
-const int DETAILYTY_2=130;
-const int DETAILYTY_3=170;
-struct LED leds[3];
 volatile char* cmd=NULL;
 volatile uint32_t count = 0;
 /* USER CODE END 0 */
@@ -101,18 +97,12 @@ int main(void)
 
 //assert(1000/MY_FREQ*DETAILYTY_1==1000);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
- /**
- * @note 100 ticks per 10^-4 * DETAILYTY_1 = 1 s
- * @note 100 ticks per 10^-4 * DETAILYTY_2 = 1.3 s
- * @note 100 ticks per 10^-4 * DETAILYTY_3 = 1.7 s
- */
     TIM1->PSC = 40 - 1;
     TIM1->ARR = 18 - 1;
     __HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
     __HAL_TIM_ENABLE(&htim1);
 #define SEND_VAR(var_addr) do{}while(CDC_Transmit_FS((uint8_t*) var_addr, sizeof(*var_addr))==USBD_BUSY)
 /* USER CODE END 2 */
-//  cmd="221 10 8";
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -295,9 +285,6 @@ static void MX_GPIO_Init(void)
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   /* USER CODE BEGIN Callback 0 */
-    if (htim->Instance == TIM1)
-    {
-    }
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM2) {
     HAL_IncTick();
