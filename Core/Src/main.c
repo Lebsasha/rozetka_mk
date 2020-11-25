@@ -124,13 +124,13 @@ int main(void)
           {
               while (CDC_Transmit_FS((uint8_t*) x, packet_size) == USBD_BUSY);
           }
+          while (CDC_Transmit_FS((uint8_t*) ".", sizeof(".") - 1) == USBD_BUSY);
           time=count;
           HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-          HAL_Delay(1000);
+          HAL_Delay(500);
           HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
           while (CDC_Transmit_FS((uint8_t*) "\n end", sizeof("\n end")) == USBD_BUSY);
           SEND_VAR(&time);
-          SEND_VAR(&count);
           cmd = NULL;
       }
     /* USER CODE END WHILE */
