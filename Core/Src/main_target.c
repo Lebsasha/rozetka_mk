@@ -41,8 +41,6 @@ void process_cmd(const uint8_t* command, const uint32_t len)
             HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
             strncpy((char*)data+arrived_length, (char*)command, len);
             arrived_length+=len;
-//            CDC_Transmit_FS((uint8_t*)&len, sizeof(uint32_t));
-//            CDC_Transmit_FS((uint8_t*)&arrived_length, sizeof(arrived_length));
             if(arrived_length>=need_length)
             {
                 if_ping_req=true;
