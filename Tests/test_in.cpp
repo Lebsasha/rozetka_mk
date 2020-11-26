@@ -61,5 +61,8 @@ int process_one_cmd(int packets, int size_of_packet)
     log << size_of_packet << ", " << static_cast<double>(packets * size_of_packet) * 100'000 / time << ", "
         << static_cast<double>(time) / 100'000 << ", "
                                                   "" << packets << std::endl;
+    dev.close();
+    send_cmd.close();
+    log.close();
     return time;
 }
