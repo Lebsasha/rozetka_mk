@@ -7,32 +7,33 @@ int process_one_cmd(int packets, int size_of_packet);
 
 int main(int argc, char** argv)
 {
-    int packets=10000;
-    int size_of_packet=8;
+    int packets = 10000;
+    int size_of_packet = 8;
     std::vector<size_t> sizes;
-    if(argc==3)
+    if (argc == 3)
     {
-        packets=atoi(argv[1]);
-        size_of_packet=atoi(argv[2]);
+        packets = atoi(argv[1]);
+        size_of_packet = atoi(argv[2]);
         return process_one_cmd(packets, size_of_packet);
     }
-    if(argc == 2 || argc >= 4)
+    if (argc == 2 || argc >= 4)
     {
-        for(size_t i=1; i < argc; ++i)
+        for (size_t i = 1; i < argc; ++i)
         {
             sizes.push_back(strtol(argv[i], nullptr, 10));
-            if(errno==ERANGE)
+            if (errno == ERANGE)
                 return 1;
         }
     }
-    for(size_t i: sizes)
-    {
-        std::cout<<"Begin "<<i<<std::endl;
-        if(!process_one_cmd(packets, i))
+    for (int j = 0; j < 10; ++j)
+        for (size_t i: sizes)
         {
-            std::cerr<<"Bad time in "<<i<<std::endl;
+            std::cout << "Begin " << i << std::endl;
+            if (!process_one_cmd(packets, i))
+            {
+                std::cerr << "Bad time in " << i << std::endl;
+            }
         }
-    }
     return 0;
 }
 
@@ -40,24 +41,25 @@ int process_one_cmd(int packets, int size_of_packet)
 {
     std::ifstream dev("/dev/ttyACM0");
     std::ofstream send_cmd("/dev/ttyACM0");
-    if(!dev)
+    if (!dev)
     {
-        std::cerr<<"Error opening file"<<std::endl;
+        std::cerr << "Error opening file" << std::endl;
         exit(1);
     }
-    if(!send_cmd)
+    if (!send_cmd)
     {
-        std::cerr<<"Error opening file"<<std::endl;
+        std::cerr << "Error opening file" << std::endl;
         exit(1);
     }
-    std::string cmd="211 "+std::to_string(packets)+' '+std::to_string(size_of_packet)+' ';
-    char* s=new char[packets*size_of_packet+100UL];
+    std::string cmd = "211 " + std::to_string(packets) + ' ' + std::to_string(size_of_packet) + ' ';
+    char* s = new char[packets * size_of_packet + 100UL];
     send_cmd.write(cmd.c_str(), cmd.length());
     send_cmd.flush();
-    dev.read(s, packets*size_of_packet+sizeof("\n end")+sizeof(".")-1+sizeof(int));
-    int time = *reinterpret_cast<int*>(s+packets*size_of_packet+sizeof("\n end")+sizeof(".")-1);
-    std::ofstream log("res_new.csv", std::ios_base::out|std::ios_base::app);
-    log<<size_of_packet<<", "<< static_cast<double>(packets*size_of_packet)*100'000/time<<", "<< static_cast<double>(time)/100'000<<", "
-                                                                                                                       ""<<packets<<std::endl;
+    dev.read(s, packets * size_of_packet + sizeof("\n end") + sizeof(".") - 1 + sizeof(int));
+    int time = *reinterpret_cast<int*>(s + packets * size_of_packet + sizeof("\n end") + sizeof(".") - 1);
+    std::ofstream log("res_new.csv", std::ios_base::out | std::ios_base::app);
+    log << size_of_packet << ", " << static_cast<double>(packets * size_of_packet) * 100'000 / time << ", "
+        << static_cast<double>(time) / 100'000 << ", "
+                                                  "" << packets << std::endl;
     return time;
 }
