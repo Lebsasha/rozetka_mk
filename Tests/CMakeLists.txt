@@ -5,5 +5,7 @@ set(CMAKE_CXX_STANDARD 14)
 
 add_executable(Tests
 #    test.c
-    test_in.cpp)
-#    test_out.cpp)
+#    test_in.cpp)
+#    test_out.cpp
+    test_ping.cpp
+        )

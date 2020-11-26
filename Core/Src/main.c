@@ -25,7 +25,6 @@
 /* USER CODE BEGIN Includes */
 #include "main_target.h"
 #include "usbd_cdc_if.h"
-#include <errno.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -35,6 +34,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define SEND_VAR(var_addr) do{}while(CDC_Transmit_FS((uint8_t*) var_addr, sizeof(*var_addr))==USBD_BUSY)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -61,10 +61,10 @@ static void MX_TIM1_Init(void);
 /* USER CODE BEGIN 0 */
 volatile char* cmd=NULL;
 volatile uint32_t count = 0;
-extern uint8_t UserTxBufferFS[];
-uint8_t TestBuffer[2048];
-extern char RxBuff[1024];
-extern volatile uint16_t WrPtr;
+extern volatile bool if_ping_req;
+extern volatile size_t need_length;
+extern volatile size_t arrived_length;
+extern volatile uint8_t data[4096];
 /* USER CODE END 0 */
 
 /**
@@ -112,10 +112,7 @@ int main(void)
     TIM1->ARR = 18 - 1;
     __HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
     __HAL_TIM_ENABLE(&htim1);
-    uint8_t tmpl[] = "*#$%^";
-    for (uint16_t i = 0; i < sizeof(TestBuffer); i++)
-    	TestBuffer[i] = tmpl[rand() % (sizeof(tmpl) - 1)];
-
+    uint32_t time=0;
 /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -128,42 +125,38 @@ int main(void)
 	  char* pProc = RxBuff;
       while (1)
       {
-    	  while (*pProc == '\r' ||
-				 *pProc == '\n' ||
-				 *pProc == ' ')
-    		  pProc++;
-
-    	  if (!*pProc)
-    	  {
-    		  break;
-    	  }
-
-		  char* next_num = NULL;
-		  int n_size = strtol((char*)pProc, &next_num, 10);
-		  int packet_size = strtol(next_num, (char**)&pProc, 10);
-		  uint32_t time=0;
-		  if (errno == ERANGE || packet_size > sizeof(TestBuffer))
-		  {
-			  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-			  while (CDC_Transmit_FS((uint8_t*) "Too big packet size\n", sizeof("Too big packet size\n") - 1) == USBD_BUSY);
-			  break;
-		  }
-		  count = 0;
-		  for (int i = 0; i < n_size; ++i)
-		  {
-			  while (CDC_Transmit_FS(TestBuffer, packet_size) == USBD_BUSY);
-		  }
-		  while (CDC_Transmit_FS((uint8_t*) ".", sizeof(".") - 1) == USBD_BUSY);
-		  time = count;
-		  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, 0);
-		  HAL_Delay(100);
-		  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, 1);
-		  int speed = (int)(packet_size * 1e5f * n_size / time);
-		  sendLen += sprintf((char*)UserTxBufferFS + sendLen, "%01d\t%01d\t%01d.%03d\t%01d.%01d\n", n_size, packet_size, (int)(time / 100000), (int)(time / 100 % 1000), speed / 1000, speed /100 % 10);
+          char* next_num = NULL;
+          int n_size = strtol((char*) cmd, &next_num, 10);
+          int packet_size = strtol(next_num, NULL, 10);
+          uint8_t* x = (uint8_t*) LONG_STRING;
+          if (errno == ERANGE || packet_size > strlen((char*) x))
+          {
+              HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+          }
+          count=0;
+          for (int i = 0; i < n_size; ++i)
+          {
+              while (CDC_Transmit_FS((uint8_t*) x, packet_size) == USBD_BUSY);
+          }
+          while (CDC_Transmit_FS((uint8_t*) ".", sizeof(".") - 1) == USBD_BUSY);
+          time=count;
+          HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+          HAL_Delay(500);
+          HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+          while (CDC_Transmit_FS((uint8_t*) "\n end", sizeof("\n end")) == USBD_BUSY);
+          SEND_VAR(&time);
+          cmd = NULL;
       }
-      WrPtr = 0;
-      if (sendLen != 0)
-    	  while (CDC_Transmit_FS(UserTxBufferFS, sendLen) == USBD_BUSY);
+      if(if_ping_req)
+      {
+          while (CDC_Transmit_FS(data, need_length) == USBD_BUSY);
+          time = count;
+          SEND_VAR(&arrived_length);
+          SEND_VAR(&time);
+          arrived_length=0;
+          need_length=0;
+          if_ping_req=false;
+      }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
