@@ -7,4 +7,5 @@ add_executable(Tests
 #    test.c
 #    test_in.cpp)
     test_out.cpp
-#    test_ping.cpp)
+#    test_ping.cpp
+        )

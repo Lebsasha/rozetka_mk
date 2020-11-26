@@ -14,11 +14,11 @@ void process_cmd(const uint8_t* command, const uint32_t len)
         {
             cmd=(char*) command+3;
         }
-        if (*command == '2' && *(command + 1) == '1' && *(command + 2) == '2' && *(command + 4) == 's')//start
+        if (*command == '2' && *(command + 1) == '1' && *(command + 2) == '2' && *(command + 3) == 's')//start
         {
             count=0;
         }
-        if (*command == '2' && *(command + 1) == '1' && *(command + 2) == '2' && *(command + 4) == 'e')//end
+        if (*command == '2' && *(command + 1) == '1' && *(command + 2) == '2' && *(command + 3) == 'e')//end
         {
             int time=count;
             CDC_Transmit_FS((uint8_t*)&time, sizeof(int));
