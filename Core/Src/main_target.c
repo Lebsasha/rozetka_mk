@@ -4,18 +4,28 @@
 
 extern TIM_HandleTypeDef htim1;
 extern char* cmd;
+extern volatile uint32_t count;
 
-void process_cmd(const uint8_t* command, const uint32_t* len)
+void process_cmd(const uint8_t* command, const uint32_t len)
 {
-    if (*len)
+    if (len)
     {
         if (*command == '2' && *(command + 1) == '1' && *(command + 2) == '1')
         {
             cmd=(char*) command+3;
-        }else
+        }
+        if (*command == '2' && *(command + 1) == '1' && *(command + 2) == '2' && *(command + 4) == 's')//start
+        {
+            count=0;
+        }
+        if (*command == '2' && *(command + 1) == '1' && *(command + 2) == '2' && *(command + 4) == 'e')//end
+        {
+            int time=count;
+            CDC_Transmit_FS((uint8_t*)&time, sizeof(int));
+        }
         if (command[0] == '0')
             HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-        else
+
         if (command[0] == '1')
         {
             HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
