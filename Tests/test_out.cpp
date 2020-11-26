@@ -34,12 +34,12 @@ int main(int argc, char** argv)
         int i = 0;
         dev.write(cmd.c_str(), cmd.length());
         dev.flush();
-        while (++i < packets)
+        while (++i < 10000)
         {
-            dev.write(s, size_of_packet);
-            dev.flush();
+            dev._M_write(s, size_of_packet);//_M_write
+            dev.rdbuf()->pubsync();
         }
-        dev.write("212e", cmd.length());
+        dev.write("212e", sizeof("212e"));
         dev.flush();
         read_time.read(reinterpret_cast<char*>(&time), sizeof(int));
         log << size_of_packet << ", " << static_cast<double>(packets * size_of_packet) * 100'000 / time << ", "
