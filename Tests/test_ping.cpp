@@ -21,7 +21,7 @@ int main(int argc, char** argv)
         return 1;
     }
     std::vector<size_t> sizes;
-    std::ofstream log("res_new_ping.csv", std::ios_base::out | std::ios_base::app);
+    std::ofstream log("res_ping_new.csv", std::ios_base::out | std::ios_base::app);
     if (argc > 1)
     {
         for (size_t i = 1; i < argc; ++i)
