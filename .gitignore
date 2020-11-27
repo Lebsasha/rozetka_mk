@@ -58,3 +58,4 @@ cmake-build-debug
 /core
 bin/
 obj/
+*.log
