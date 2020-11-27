@@ -119,11 +119,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  while (!WrPtr)
-		  continue;
-	  int sendLen = sprintf((char*)UserTxBufferFS, "\nPacketsCnt\tPckSize\tTime, s\tSpeed, Kb/s\n");
-	  char* pProc = RxBuff;
-      while (1)
+      if(cmd)
       {
           char* next_num = NULL;
           int n_size = strtol((char*) cmd, &next_num, 10);
@@ -150,8 +146,8 @@ int main(void)
       if(if_ping_req)
       {
           while (CDC_Transmit_FS(data, need_length) == USBD_BUSY);
-          time = count;
           SEND_VAR(&arrived_length);
+          time = count;
           SEND_VAR(&time);
           arrived_length=0;
           need_length=0;

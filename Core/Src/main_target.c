@@ -55,31 +55,6 @@ void process_cmd(const uint8_t* command, const uint32_t len)
             CDC_Transmit_FS((uint8_t*) "1 is pressed", sizeof("1 is pressed"));
         }
     }
-    command[len] = 0;
-	if (WrPtr == 0)
-	{
-		if (command[0] == '0')
-		{
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-			return;
-		}
-		if (command[0] == '1')
-		{
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-			CDC_Transmit_FS((uint8_t*) "1 is pressed\n", sizeof("1 is pressed"));
-			return;
-		}
-		if (*command == '2' && command[1] == '1' && command[2] == '1')
-		{
-			command = command+3;
-			len -= 3;
-		}
-		else
-			return;
-	}
-	memcpy(RxBuff + WrPtr, command, len);
-	WrPtr += len;
-	RxBuff[WrPtr] = 0;
 }
 
 void my_delay(int mc_s)
