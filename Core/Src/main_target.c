@@ -24,7 +24,7 @@ void process_cmd(const uint8_t* command, const uint32_t len)
         } else
         if (*command == '2' && *(command + 1) == '1' && *(command + 2) == '2' && *(command + 3) == 'e')///end
         {
-            int time=count;
+            uint32_t time=count;
             CDC_Transmit_FS((uint8_t*)&time, sizeof(int));
         } else
         if (*command == '2' && *(command + 1) == '1' && *(command + 2) == '3')

@@ -5,7 +5,7 @@ using namespace std;
 int main(int argc, char** argv)
 {
     int packets = 10'000;
-    int time = 0;
+    uint32_t time = 0;
     std::ofstream dev("/dev/ttyACM0");
     std::ifstream read_time("/dev/ttyACM0");
     if(!dev)
@@ -41,7 +41,7 @@ int main(int argc, char** argv)
         }
         dev.write("212e", sizeof("212e"));
         dev.flush();
-        read_time.read(reinterpret_cast<char*>(&time), sizeof(int));
+        read_time.read(reinterpret_cast<char*>(&time), sizeof(uint32_t));
         log << size_of_packet << ", " << static_cast<double>(packets * size_of_packet) * 100'000 / time << ", "
             << static_cast<double>(time) / 100'000 << ", " << packets << std::endl;
     }

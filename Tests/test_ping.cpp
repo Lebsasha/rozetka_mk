@@ -7,7 +7,7 @@
 using namespace std;
 int main(int argc, char** argv)
 {
-    int time = 0;
+    uint32_t time = 0;
     std::ofstream dev("/dev/ttyACM0"); //TODO Add uint32_t
     std::ifstream read_dev("/dev/ttyACM0");
     if(!dev)
@@ -47,9 +47,9 @@ int main(int argc, char** argv)
             read_dev.read(read_s, size_of_packet);
             if(!strcmp(s, read_s))
             {
-                read_dev.read(reinterpret_cast<char*>(&time), sizeof(int));
+                read_dev.read(reinterpret_cast<char*>(&time), sizeof(uint32_t));
                 assert(time==size_of_packet);
-                read_dev.read(reinterpret_cast<char*>(&time), sizeof(int));
+                read_dev.read(reinterpret_cast<char*>(&time), sizeof(uint32_t));
                 log << size_of_packet << ", " << static_cast<double>(size_of_packet) * 100'000 / time << ", "
                     << static_cast<double>(time) / 100'000<< std::endl;
             }

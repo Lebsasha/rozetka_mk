@@ -20,6 +20,8 @@ int main(int argc, char** argv)
     {
         for (size_t i = 1; i < argc; ++i)
         {
+            if(*(argv[i])=='0')
+                break;
             sizes.push_back(strtol(argv[i], nullptr, 10));
             if (errno == ERANGE)
                 return 1;
@@ -55,9 +57,9 @@ int process_one_cmd(int packets, int size_of_packet)
     char* s = new char[packets * size_of_packet + 100UL];
     send_cmd.write(cmd.c_str(), cmd.length());
     send_cmd.flush();
-    dev.read(s, packets * size_of_packet + sizeof("\n end") + sizeof(".") - 1 + sizeof(int));
-    int time = *reinterpret_cast<int*>(s + packets * size_of_packet + sizeof("\n end") + sizeof(".") - 1);
-    std::ofstream log("res_new.csv", std::ios_base::out | std::ios_base::app);
+    dev.read(s, packets * size_of_packet + sizeof("\n end") + sizeof(".") - 1 + sizeof(uint32_t));
+    uint32_t time = *reinterpret_cast<uint32_t*>(s + packets * size_of_packet + sizeof("\n end") + sizeof(".") - 1);
+    std::ofstream log("res_in_new.csv", std::ios_base::out | std::ios_base::app);
     log << size_of_packet << ", " << static_cast<double>(packets * size_of_packet) * 100'000 / time << ", "
         << static_cast<double>(time) / 100'000 << ", "
                                                   "" << packets << std::endl;
