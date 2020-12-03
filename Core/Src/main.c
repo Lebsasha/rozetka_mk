@@ -110,15 +110,21 @@ int main(void)
 
     TIM1->PSC = 40 - 1;
     TIM1->ARR = 18 - 1;
-    __HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
-    __HAL_TIM_ENABLE(&htim1);
+    //__HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
+    //__HAL_TIM_ENABLE(&htim1);
     uint32_t time=0;
-/* USER CODE END 2 */
+  /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    HAL_Delay(2);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 1);
+    HAL_Delay(2);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 0);
+
+    /*
       if(cmd)
       {
           char* next_num = NULL;
@@ -153,6 +159,8 @@ int main(void)
           need_length=0;
           if_ping_req=false;
       }
+    
+    */
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -275,12 +283,22 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
+
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PA10 */
+  GPIO_InitStruct.Pin = GPIO_PIN_10;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PB5 */
   GPIO_InitStruct.Pin = GPIO_PIN_5;
