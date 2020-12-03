@@ -1,0 +1,6 @@
+# depslib dependency file v1.0
+1605899646 source:/home/alexander/STM32CubeIDE/workspace_1.4.0/first_mk/Tests/test_in.cpp
+	<fstream>
+	<iostream>
+	<string>
+

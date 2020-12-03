@@ -61,7 +61,7 @@ extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim2;
 
 /* USER CODE BEGIN EV */
-
+extern volatile uint32_t count;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -220,7 +220,14 @@ void USB_LP_CAN1_RX0_IRQHandler(void)
 void TIM1_UP_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM1_UP_IRQn 0 */
-
+    if (__HAL_TIM_GET_FLAG(&htim1, TIM_FLAG_UPDATE) != RESET)
+    {
+        __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);
+        ++count;
+//        if (count == 0)
+//            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+    }
+    return;
   /* USER CODE END TIM1_UP_IRQn 0 */
   HAL_TIM_IRQHandler(&htim1);
   /* USER CODE BEGIN TIM1_UP_IRQn 1 */
@@ -243,6 +250,5 @@ void TIM2_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
-
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
