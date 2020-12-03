@@ -5,7 +5,9 @@ set(CMAKE_CXX_STANDARD 14)
 
 add_executable(Tests
 #    test.c
-#    test_in.cpp)
+    test_in.cpp
 #    test_out.cpp
-    test_ping.cpp
+#    test_ping.cpp
+#        usb_button_time_reader.cpp
+#       /home/alexander/Documents/University/Comp_architect/Parallel_computation/Lab_2/main.cpp
         )

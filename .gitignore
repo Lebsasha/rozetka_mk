@@ -60,3 +60,4 @@ bin/
 obj/
 *.log
 *.png
+usb_button_time_reader.cpp
