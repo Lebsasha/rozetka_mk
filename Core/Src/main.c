@@ -60,7 +60,7 @@ static void MX_TIM1_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 volatile char* cmd=NULL;
-volatile uint32_t count = 0;
+volatile uint32_t period = 363/2;//(1000-1)/2;
 extern volatile bool if_ping_req;
 extern volatile size_t need_length;
 extern volatile size_t arrived_length;
@@ -107,60 +107,23 @@ int main(void)
       HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, 0);
       HAL_Delay(100);
       HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, 1);
+    HAL_Delay(100);
 
-    TIM1->PSC = 40 - 1;
-    TIM1->ARR = 18 - 1;
-    //__HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
-    //__HAL_TIM_ENABLE(&htim1);
-    uint32_t time=0;
+//    TIM1->PSC = 450 -1;
+//    TIM1->ARR = 8000-1;
+//    __HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
+    HAL_TIM_Base_Start(&htim1);
+//    __HAL_TIM_ENABLE(&htim1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    HAL_Delay(2);
+    my_delay(period);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 1);
-    HAL_Delay(2);
+    my_delay(period);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, 0);
-
-    /*
-      if(cmd)
-      {
-          char* next_num = NULL;
-          int n_size = strtol((char*) cmd, &next_num, 10);
-          int packet_size = strtol(next_num, NULL, 10);
-          uint8_t* x = (uint8_t*) LONG_STRING;
-          if (errno == ERANGE || packet_size > strlen((char*) x))
-          {
-              HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-          }
-          count=0;
-          for (int i = 0; i < n_size; ++i)
-          {
-              while (CDC_Transmit_FS((uint8_t*) x, packet_size) == USBD_BUSY);
-          }
-          while (CDC_Transmit_FS((uint8_t*) ".", sizeof(".") - 1) == USBD_BUSY);
-          time=count;
-          HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-          HAL_Delay(500);
-          HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-          while (CDC_Transmit_FS((uint8_t*) "\n end", sizeof("\n end")) == USBD_BUSY);
-          SEND_VAR(&time);
-          cmd = NULL;
-      }
-      if(if_ping_req)
-      {
-          while (CDC_Transmit_FS(data, need_length) == USBD_BUSY);
-          SEND_VAR(&arrived_length);
-          time = count;
-          SEND_VAR(&time);
-          arrived_length=0;
-          need_length=0;
-          if_ping_req=false;
-      }
-    
-    */
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -238,9 +201,9 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 7199;
+  htim1.Init.Prescaler = 450-1;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 9999;
+  htim1.Init.Period = 8000-1;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;

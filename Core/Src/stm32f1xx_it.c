@@ -223,7 +223,7 @@ void TIM1_UP_IRQHandler(void)
     if (__HAL_TIM_GET_FLAG(&htim1, TIM_FLAG_UPDATE) != RESET)
     {
         __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);
-        ++count;
+//        ++count;
 //        if (count == 0)
 //            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
     }
