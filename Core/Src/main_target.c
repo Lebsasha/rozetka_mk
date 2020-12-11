@@ -1,6 +1,7 @@
 #include "main.h"
 #include "main_target.h"
 #include <string.h>
+#include <stdlib.h>
 
 extern TIM_HandleTypeDef htim1;
 extern struct LED leds[3];
@@ -46,7 +47,12 @@ void toggle_led(const uint8_t* command, const size_t i)
 {
     if (str_cmp(command, "on") == 0)
     {
-        (leds + i)->curr_step = always_glow;
+        if(*(command+sizeof("on")-1)=='f')
+        {
+            uint32_t freq=strtol(command+sizeof("onf ")-1, NULL, 10);
+            (leds+i)->detailyty=40000/freq;
+        }
+        //(leds + i)->curr_step = always_glow;
     }
     if (str_cmp(command, "off") == 0)
     {
@@ -58,9 +64,9 @@ void toggle_led(const uint8_t* command, const size_t i)
     }
 }
 
-void ctor_LED(struct LED* led, uint16_t detailyty, volatile uint32_t* pin, char num)
+void ctor_LED(struct LED* led, uint16_t detailyty, volatile uint32_t* duty_cycle, char num)
 {
-    led->pin = pin;
+    led->duty_cycle = duty_cycle;
     led->detailyty = detailyty;
     led->i = 0;
     led->num = num;
@@ -69,21 +75,21 @@ void ctor_LED(struct LED* led, uint16_t detailyty, volatile uint32_t* pin, char 
 
 void always_glow(struct LED* led)
 {
-    *led->pin = 0;
+    *led->duty_cycle = 0;
 }
 
 void always_zero(struct LED* led)
 {
-    *led->pin = COUNTER_PERIOD;
+    *led->duty_cycle = COUNTER_PERIOD;
 }
 
 void calc_up(struct LED* led)
 {
     ++led->i;
-    *led->pin = COUNTER_PERIOD - (COUNTER_PERIOD * (sin((double) (led->i) / led->detailyty * M_PI - M_PI_2) + 1) / 2);
+    *led->duty_cycle = COUNTER_PERIOD/2.0 - (COUNTER_PERIOD/2.0 * (sin((double) (led->i) * 2*M_PI/led->detailyty)));
     if (led->i == led->detailyty && led->curr_step == calc_up)
     {
-        led->curr_step = calc_middle;
+        //led->curr_step = calc_down;//calc_middle;
         led->i = 0;
     }
 }
@@ -91,7 +97,7 @@ void calc_up(struct LED* led)
 void calc_middle(struct LED* led)
 {
     ++led->i;
-    *led->pin = 0;
+    *led->duty_cycle = 0;
     if (led->i == led->detailyty && led->curr_step == calc_middle)
         led->curr_step = calc_down;
 }
@@ -100,9 +106,9 @@ void calc_down(struct LED* led)
 {
     --led->i;
     if (led->i > 2)
-        *led->pin = COUNTER_PERIOD - (COUNTER_PERIOD * (sin((double) (led->i) / led->detailyty * M_PI - M_PI_2) + 1) / 2);
+        *led->duty_cycle = COUNTER_PERIOD - (COUNTER_PERIOD * (sin((double) (led->i) / led->detailyty * M_PI - M_PI_2) + 1) / 2);
     else
-        *led->pin = COUNTER_PERIOD - 0;
+        *led->duty_cycle = COUNTER_PERIOD - 0;
     if (led->i == 0 && led->curr_step == calc_down)
         led->curr_step = calc_up;
 }
