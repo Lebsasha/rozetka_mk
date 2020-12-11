@@ -1,7 +1,8 @@
 #ifndef MAIN_TARGET
 #define MAIN_TARGET
 
-#define COUNTER_PERIOD htim1.Instance->ARR
+#define COUNTER_PERIOD 1800
+//htim1.Instance->ARR+1
 //(const uint16_t) 100
 
 struct LED

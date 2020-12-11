@@ -57,7 +57,7 @@ static void MX_TIM1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-const int DETAILYTY_1=100;
+const int DETAILYTY_1=40000/500;
 const int DETAILYTY_2=130;
 const int DETAILYTY_3=170;
 struct LED leds[3];
@@ -313,8 +313,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     if (htim->Instance == TIM1)
     {
         leds[0].curr_step(&leds[0]);
-        leds[1].curr_step(&leds[1]);
-        leds[2].curr_step(&leds[2]);
+        //leds[1].curr_step(&leds[1]);
+        //leds[2].curr_step(&leds[2]);
     }
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM2) {

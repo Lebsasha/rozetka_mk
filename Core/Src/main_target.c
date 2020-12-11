@@ -86,7 +86,7 @@ void always_zero(struct LED* led)
 void calc_up(struct LED* led)
 {
     ++led->i;
-    *led->duty_cycle = COUNTER_PERIOD/2.0 - (COUNTER_PERIOD/2.0 * (sin((double) (led->i) * 2*M_PI/led->detailyty)));
+    *led->duty_cycle = COUNTER_PERIOD/2.0f - COUNTER_PERIOD/10.0f * sinf((float) (led->i) * 2*(float)(M_PI)/led->detailyty);
     if (led->i == led->detailyty && led->curr_step == calc_up)
     {
         //led->curr_step = calc_down;//calc_middle;
