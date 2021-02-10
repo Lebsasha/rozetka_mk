@@ -50,6 +50,7 @@ void toggle_led(const uint8_t* command, const size_t i)
         if(*(command+sizeof("on")-1)=='f')
         {
             uint32_t freq=strtol(command+sizeof("onf ")-1, NULL, 10);
+            if(freq>0&&freq<40000)
             (leds+i)->detailyty=40000/freq;
         }
         //(leds + i)->curr_step = always_glow;
@@ -86,7 +87,7 @@ void always_zero(struct LED* led)
 void calc_up(struct LED* led)
 {
     ++led->i;
-    *led->duty_cycle = COUNTER_PERIOD/2.0f - COUNTER_PERIOD/10.0f * sinf((float) (led->i) * 2*(float)(M_PI)/led->detailyty);
+    *led->duty_cycle = COUNTER_PERIOD/2.0f - COUNTER_PERIOD/2.0f * sinf((float) (led->i) * 2*(float)(M_PI)/led->detailyty);
     if (led->i == led->detailyty && led->curr_step == calc_up)
     {
         //led->curr_step = calc_down;//calc_middle;
