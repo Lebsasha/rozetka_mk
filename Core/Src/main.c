@@ -24,6 +24,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "main_target.h"
+#include "usbd_cdc_if.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -33,6 +34,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define SEND_VAR(var_addr) do{}while(CDC_Transmit_FS((uint8_t*) var_addr, sizeof(*var_addr))==USBD_BUSY)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -42,6 +44,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim3;
 
 /* USER CODE BEGIN PV */
 
@@ -51,6 +54,7 @@ TIM_HandleTypeDef htim1;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_TIM3_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -61,6 +65,9 @@ const int DETAILYTY_1=40000/500;
 const int DETAILYTY_2=130;
 const int DETAILYTY_3=170;
 struct LED leds[3];
+volatile uint32_t count=0;
+volatile uint32_t time;
+volatile bool measure_one_sine=false;
 /* USER CODE END 0 */
 
 /**
@@ -93,6 +100,7 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM1_Init();
   MX_USB_DEVICE_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 
 //assert(1000/MY_FREQ*DETAILYTY_1==1000);
@@ -109,17 +117,33 @@ int main(void)
     ctor_LED(leds + 0, DETAILYTY_1, &(htim1.Instance->CCR3), 0);
     ctor_LED(leds + 1, DETAILYTY_2, &(htim1.Instance->CCR2), 1);
     ctor_LED(leds + 2, DETAILYTY_3, &(htim1.Instance->CCR1), 2);
-    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);//red
-    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);//blue
-    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);//yellow
-    HAL_TIM_Base_Start_IT(&htim1);
+    //HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);//red
+    //HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);//blue
+    //HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);//yellow
+    //HAL_TIM_Base_Start_IT(&htim1);
 
+    TIM3->PSC = 40 - 1;
+//    TIM3->ARR = 1;
+    __HAL_TIM_ENABLE_IT(&htim3, TIM_IT_UPDATE);
+    __HAL_TIM_ENABLE(&htim3);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  measure_one_sine=false;
   while (1)
   {
+      if(measure_one_sine)
+      {
+          HAL_Delay(1);
+          uint16_t i = leds[0].i;
+          count = 0;
+          *leds[0].duty_cycle = sinf(i);
+          time=count;
+          HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+          SEND_VAR(&time);
+          measure_one_sine = false;
+      }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -259,6 +283,51 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 2 */
   HAL_TIM_MspPostInit(&htim1);
+
+}
+
+/**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 0;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 1;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
 
 }
 
