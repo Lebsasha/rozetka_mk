@@ -67,7 +67,7 @@ const int DETAILYTY_3=170;
 struct LED leds[3];
 volatile uint32_t count=0;
 volatile uint32_t time;
-volatile bool measure_one_sine=false;
+volatile int measure_one_sine=0;
 /* USER CODE END 0 */
 
 /**
@@ -117,32 +117,42 @@ int main(void)
     ctor_LED(leds + 0, DETAILYTY_1, &(htim1.Instance->CCR3), 0);
     ctor_LED(leds + 1, DETAILYTY_2, &(htim1.Instance->CCR2), 1);
     ctor_LED(leds + 2, DETAILYTY_3, &(htim1.Instance->CCR1), 2);
-    //HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);//red
-    //HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);//blue
-    //HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);//yellow
-    //HAL_TIM_Base_Start_IT(&htim1);
+//    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);//red
+//    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);//blue
+    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);//yellow
 
-    TIM3->PSC = 40 - 1;
+    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+    HAL_Delay(1000);
+    HAL_TIM_Base_Start_IT(&htim1);
+    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+    HAL_Delay(1000);
+    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+    HAL_Delay(1000);
+    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+//    TIM3->PSC = 40 - 1;
 //    TIM3->ARR = 1;
-    __HAL_TIM_ENABLE_IT(&htim3, TIM_IT_UPDATE);
+//    __HAL_TIM_ENABLE_IT(&htim3, TIM_IT_UPDATE);
     __HAL_TIM_ENABLE(&htim3);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  measure_one_sine=false;
+
   while (1)
   {
-      if(measure_one_sine)
+      if(measure_one_sine==3)
       {
-          HAL_Delay(1);
-          uint16_t i = leds[0].i;
-          count = 0;
-          *leds[0].duty_cycle = sinf(i);
-          time=count;
+//          HAL_Delay(1);
+//          uint16_t i = leds[0].i;
+//          count = 0;
+//          __HAL_TIM_SET_COUNTER(&htim3, 0);
+//          *leds[0].duty_cycle = COUNTER_PERIOD/2.0f - COUNTER_PERIOD/2.0f * sinf((float) (leds[0].i) * 2*(float)(M_PI)/leds[0].detailyty);
+//          time=__HAL_TIM_GET_COUNTER(&htim3);
+//          while (__HAL_TIM_GET_COUNTER(&htim1) < mcs)
+//          {}
           HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
           SEND_VAR(&time);
-          measure_one_sine = false;
+          measure_one_sine = 0;
       }
     /* USER CODE END WHILE */
 
@@ -307,7 +317,7 @@ static void MX_TIM3_Init(void)
   htim3.Instance = TIM3;
   htim3.Init.Prescaler = 0;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 1;
+  htim3.Init.Period = 65535;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
@@ -343,11 +353,14 @@ static void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
-  __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
@@ -355,6 +368,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PB12 */
+  GPIO_InitStruct.Pin = GPIO_PIN_12;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PB5 */
   GPIO_InitStruct.Pin = GPIO_PIN_5;

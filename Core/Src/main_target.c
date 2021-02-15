@@ -5,10 +5,11 @@
 
 
 extern TIM_HandleTypeDef htim1;
+extern TIM_HandleTypeDef htim3;
 extern struct LED leds[3];
 extern volatile uint32_t count;
 extern volatile uint32_t time;
-extern volatile bool measure_one_sine;
+extern volatile int measure_one_sine;
 
 int str_cmp(const uint8_t*, const char*);
 
@@ -60,10 +61,10 @@ void toggle_led(const uint8_t* command, const size_t i)
         //(leds + i)->curr_step = always_glow; //TODO Uncomment with else
         if(*(command+(sizeof("on")-1))=='m')/// measure is on
         {
-            uint32_t freq=strtol(command+sizeof("onm ")-1, NULL, 10);
-            if(freq>10&&freq<1000)
-                TIM3->PSC=freq-1;
-            measure_one_sine=true;
+//            uint32_t freq=strtol(command+sizeof("onm ")-1, NULL, 10);
+//            if(freq>10&&freq<1000)
+//                TIM3->PSC=freq-1;
+            measure_one_sine=1;
         }
     }
     if (str_cmp(command, "off") == 0)
@@ -97,13 +98,28 @@ void always_zero(struct LED* led)
 
 void calc_up(struct LED* led)
 {
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 1);
+    if(measure_one_sine==2)
+    {
+        time = __HAL_TIM_GET_COUNTER(&htim3);
+        measure_one_sine=3;
+//        HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_12);
+    }
+    if(measure_one_sine==1)
+    {
+        __HAL_TIM_SET_COUNTER(&htim3, 0);
+        measure_one_sine=2;
+    }
     ++led->i;
-    //*led->duty_cycle = COUNTER_PERIOD/2.0f - COUNTER_PERIOD/2.0f * sinf((float) (led->i) * 2*(float)(M_PI)/led->detailyty);
+    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_12);
+    *led->duty_cycle = COUNTER_PERIOD/2.0f - COUNTER_PERIOD/2.0f * sinf((float) (led->i) * 2*(float)(M_PI)/led->detailyty);
+
     if (led->i == led->detailyty && led->curr_step == calc_up)
     {
         //led->curr_step = calc_down;//calc_middle;
         led->i = 0;
     }
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 0);
 }
 
 void calc_middle(struct LED* led)
