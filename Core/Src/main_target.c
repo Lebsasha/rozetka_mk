@@ -98,28 +98,14 @@ void always_zero(struct LED* led)
 
 void calc_up(struct LED* led)
 {
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 1);
-    if(measure_one_sine==2)
-    {
-        time = __HAL_TIM_GET_COUNTER(&htim3);
-        measure_one_sine=3;
-//        HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_12);
-    }
-    if(measure_one_sine==1)
-    {
-        __HAL_TIM_SET_COUNTER(&htim3, 0);
-        measure_one_sine=2;
-    }
     ++led->i;
-    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_12);
-    *led->duty_cycle = COUNTER_PERIOD/2.0f - COUNTER_PERIOD/2.0f * sinf((float) (led->i) * 2*(float)(M_PI)/led->detailyty);
+    *led->duty_cycle = COUNTER_PERIOD/led->detailyty*led->i;//COUNTER_PERIOD/2.0f - COUNTER_PERIOD/2.0f * sinf((float) (led->i) * 2*(float)(M_PI)/led->detailyty);
 
     if (led->i == led->detailyty && led->curr_step == calc_up)
     {
-        //led->curr_step = calc_down;//calc_middle;
-        led->i = 0;
+        led->curr_step = calc_down;//calc_middle;
+//        led->i = 0;
     }
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 0);
 }
 
 void calc_middle(struct LED* led)
@@ -133,10 +119,11 @@ void calc_middle(struct LED* led)
 void calc_down(struct LED* led)
 {
     --led->i;
-    if (led->i > 2)
-        *led->duty_cycle = COUNTER_PERIOD - (COUNTER_PERIOD * (sin((double) (led->i) / led->detailyty * M_PI - M_PI_2) + 1) / 2);
-    else
-        *led->duty_cycle = COUNTER_PERIOD - 0;
+//    if (led->i > 2)
+        *led->duty_cycle = COUNTER_PERIOD/led->detailyty*led->i;//COUNTER_PERIOD - (COUNTER_PERIOD * (sin((double) (led->i) / led->detailyty *
+        // M_PI - M_PI_2) + 1) / 2);
+//    else
+//        *led->duty_cycle = COUNTER_PERIOD - 0;
     if (led->i == 0 && led->curr_step == calc_down)
         led->curr_step = calc_up;
 }
