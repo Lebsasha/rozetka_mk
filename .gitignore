@@ -57,3 +57,4 @@ Debug/first_mk.list
 cmake-build-debug
 /core
 exp.bin_log
+temp.txt

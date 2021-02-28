@@ -10,6 +10,11 @@ extern struct LED leds[3];
 extern volatile uint32_t count;
 extern volatile uint32_t time;
 extern volatile int measure_one_sine;
+extern const int16_t sine_ampl;//TODO Remove some global vars
+extern const uint16_t arr_size;//TODO Sometime cleanup code
+extern int16_t f_dots[];//TODO Measure 0 and 1
+volatile uint32_t dx=(1024*500<<8)/40000;
+uint32_t curr=0;
 
 int str_cmp(const uint8_t*, const char*);
 
@@ -59,12 +64,9 @@ void toggle_led(const uint8_t* command, const size_t i)
                 (leds+i)->detailyty=40000/freq;
         }
         //(leds + i)->curr_step = always_glow; //TODO Uncomment with else
-        if(*(command+(sizeof("on")-1))=='m')/// measure is on
+        if(*(command+(sizeof("on")-1))=='m')/// music is on
         {
-//            uint32_t freq=strtol(command+sizeof("onm ")-1, NULL, 10);
-//            if(freq>10&&freq<1000)
-//                TIM3->PSC=freq-1;
-            measure_one_sine=1;
+            dx=(1024*500<<8)/40000;
         }
     }
     if (str_cmp(command, "off") == 0)
@@ -98,13 +100,11 @@ void always_zero(struct LED* led)
 
 void calc_up(struct LED* led)
 {
-    ++led->i;
-    *led->duty_cycle = COUNTER_PERIOD/led->detailyty*led->i;//COUNTER_PERIOD/2.0f - COUNTER_PERIOD/2.0f * sinf((float) (led->i) * 2*(float)(M_PI)/led->detailyty);
-
-    if (led->i == led->detailyty && led->curr_step == calc_up)
+    *led->duty_cycle = (uint32_t)(f_dots[curr>>8])*COUNTER_PERIOD/sine_ampl;
+    curr+=dx;
+    if (curr >= arr_size<<8)
     {
-        led->curr_step = calc_down;//calc_middle;
-//        led->i = 0;
+       curr-=arr_size<<8;
     }
 }
 

@@ -66,6 +66,9 @@ struct LED leds[3];
 volatile uint32_t count=0;
 volatile uint32_t time;
 volatile int measure_one_sine=0;
+const int16_t sine_ampl=(1U<<(sizeof(sine_ampl)*8-1))-1;
+const uint16_t arr_size=1024;
+int16_t f_dots[1024];
 /* USER CODE END 0 */
 
 /**
@@ -116,16 +119,21 @@ int main(void)
     ctor_LED(leds + 2, DETAILYTY_3, &(htim1.Instance->CCR1), 2);
 //    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);//red
 //    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);//blue
-    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);///sound
 
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-    HAL_Delay(1000);
+    for(int i=0; i< arr_size; ++i)
+    {
+        f_dots[i]=sine_ampl/2.0 - sine_ampl/2.0 * sin(i* 2*M_PI/arr_size);
+    }
+
+    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);///sound
     HAL_TIM_Base_Start_IT(&htim1);
+
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-    HAL_Delay(1000);
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-    HAL_Delay(1000);
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+    HAL_Delay(2000);
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);
+    HAL_Delay(2000);
+    uint32_t start_time=HAL_GetTick();
 //    TIM3->PSC = 40 - 1;
 //    TIM3->ARR = 1;
 //    __HAL_TIM_ENABLE_IT(&htim3, TIM_IT_UPDATE);
@@ -134,24 +142,13 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-
+  uint16_t notes[]={NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4};
+  uint8_t durations[]={ 4, 8, 8, 4, 4, 4, 4, 4};
+  enum a{FIRSTT, SECONDD};
   while (1)
   {
-      if(measure_one_sine==3)
-      {
-//          HAL_Delay(1);
-//          uint16_t i = leds[0].i;
-//          count = 0;
-//          __HAL_TIM_SET_COUNTER(&htim3, 0);
-//          *leds[0].duty_cycle = COUNTER_PERIOD/2.0f - COUNTER_PERIOD/2.0f * sinf((float) (leds[0].i) * 2*(float)(M_PI)/leds[0].detailyty);
-//          time=__HAL_TIM_GET_COUNTER(&htim3);
-//          while (__HAL_TIM_GET_COUNTER(&htim1) < mcs)
-//          {}
-          HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-//          SEND_VAR(&time);
-          measure_one_sine = 0;
-      }
-    /* USER CODE END WHILE */
+//      play(FIRSTT, notes, durations);
+   /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
   }
@@ -338,6 +335,27 @@ static void MX_GPIO_Init(void)
 //    }
 //}
 /* USER CODE END 4 */
+
+/**
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM2 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  /* USER CODE BEGIN Callback 0 */
+
+  /* USER CODE END Callback 0 */
+  if (htim->Instance == TIM2) {
+    HAL_IncTick();
+  }
+  /* USER CODE BEGIN Callback 1 */
+
+  /* USER CODE END Callback 1 */
+}
 
 /**
   * @brief  This function is executed in case of error occurrence.
