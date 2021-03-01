@@ -91,7 +91,8 @@
 #define NOTE_D8  4699
 #define NOTE_DS8 4978
 
-#define COUNTER_PERIOD 72e6/40000
+#define TONE_FREQ 40000
+#define COUNTER_PERIOD 1800
 //htim1.Instance->ARR+1
 //(const uint16_t) 100
 
@@ -119,6 +120,10 @@ typedef struct Tone_pin
 void make_tone(Tone_pin* tone_pin);
 
 void ctor_LED(struct LED* led, uint16_t detailyty, volatile uint32_t* duty_cycle, char num);
+
+///Play some melody with notes and durations
+/// @param durations - array of !positive! uint8's
+void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n);
 
 void my_delay(int mc_s);
 

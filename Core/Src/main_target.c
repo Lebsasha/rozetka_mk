@@ -13,7 +13,7 @@ extern volatile int measure_one_sine;
 //extern const int16_t sine_ampl;//TODO Remove some global vars
 //extern const uint16_t arr_size;//TODO Sometime cleanup code
 //extern int16_t f_dots[];//TODO Measure 0 and 1
-//volatile uint32_t dx=(1024*500<<8)/40000;
+//volatile uint32_t dx=(1024*500<<8)/TONE_FREQ;
 //uint32_t curr=0;
 
 int str_cmp(const uint8_t*, const char*);
@@ -60,14 +60,14 @@ void toggle_led(const uint8_t* command, const size_t i)
         if(*(command+sizeof("on")-1)=='f')//TODO Add braces
         {
             uint32_t freq=strtol(command+sizeof("onf ")-1, NULL, 10);
-            if(freq>0&&freq<40000)
-                (leds+i)->detailyty=40000/freq;
+            if(freq>0&&freq<TONE_FREQ)
+                (leds+i)->detailyty=TONE_FREQ/freq;
         }
         //(leds + i)->curr_step = always_glow; //TODO Uncomment with else
         if(*(command+(sizeof("on")-1))=='m')/// music is on
         {
             if(*(command+(sizeof("onm")-1))=='0'){}
-//                dx=(1024*500<<8)/40000;
+//                dx=(1024*500<<8)/TONE_FREQ;
         }
     }
     if (str_cmp(command, "off") == 0)
@@ -147,6 +147,21 @@ void make_tone(Tone_pin* tone_pin)
         tone_pin->curr-=tone_pin->arr_size<<8;
     }
 
+}
+
+void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n)
+{
+    volatile uint32_t wait;///TODO remove volatile
+    uint32_t start_tick = HAL_GetTick();
+    for (int i = 0; i<n; ++i)
+    {
+        pin->dx=(pin->arr_size<<8)*notes[i]/TONE_FREQ;
+        wait=1000/durations[i];
+        while ((HAL_GetTick() - start_tick) < wait)
+        {
+        }
+        start_tick+=wait;
+    }
 }
 
 int str_cmp(const uint8_t* command, const char* str)
