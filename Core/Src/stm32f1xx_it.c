@@ -64,6 +64,7 @@ extern TIM_HandleTypeDef htim2;
 /* USER CODE BEGIN EV */
 extern volatile uint32_t count;
 extern struct LED leds[3];
+extern Tone_pin* tone_pins;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -227,8 +228,9 @@ void TIM1_UP_IRQHandler(void)
     if (__HAL_TIM_GET_FLAG(&htim1, TIM_FLAG_UPDATE) != RESET)
     {
         __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);
-        leds[0].curr_step(&leds[0]);
+//        leds[0].curr_step(&leds[0]);
 //        leds[1].curr_step(&leds[1]);
+        make_tone(&tone_pins[0]);
 
 //        if (count == 0)
 //            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);

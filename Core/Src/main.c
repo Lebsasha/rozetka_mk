@@ -69,6 +69,7 @@ volatile int measure_one_sine=0;
 const int16_t sine_ampl=(1U<<(sizeof(sine_ampl)*8-1))-1;
 const uint16_t arr_size=1024;
 int16_t f_dots[1024];
+Tone_pin* tone_pins; /// It is the array of pins that make tones. The first pin is A10 and the second is A9
 /* USER CODE END 0 */
 
 /**
@@ -114,25 +115,25 @@ int main(void)
  * @note 100 ticks per 10^-4 * DETAILYTY_2 = 1.3 s
  * @note 100 ticks per 10^-4 * DETAILYTY_3 = 1.7 s
  */
-    ctor_LED(leds + 0, DETAILYTY_1, &(htim1.Instance->CCR3), 0);
-    ctor_LED(leds + 1, DETAILYTY_2, &(htim1.Instance->CCR2), 1);
-    ctor_LED(leds + 2, DETAILYTY_3, &(htim1.Instance->CCR1), 2);
+//    ctor_LED(leds + 0, DETAILYTY_1, &(htim1.Instance->CCR3), 0);
+//    ctor_LED(leds + 1, DETAILYTY_2, &(htim1.Instance->CCR2), 1);
+//    ctor_LED(leds + 2, DETAILYTY_3, &(htim1.Instance->CCR1), 2);
 //    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);//red
 //    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);//blue
-
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 1);
     for(int i=0; i< arr_size; ++i)
     {
         f_dots[i]=sine_ampl/2.0 - sine_ampl/2.0 * sin(i* 2*M_PI/arr_size);
     }
 
-    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);///sound
-    HAL_TIM_Base_Start_IT(&htim1);
+    /// This lines is ctor for tone_pins
+    Tone_pin tone_pins_init[2]={{&(htim1.Instance->CCR3), f_dots, arr_size, sine_ampl, (1024*500<<8)/40000,0}, {&(htim1.Instance->CCR2), NULL, 0, 0, 0, 0}};
+    tone_pins=tone_pins_init;
 
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-    HAL_Delay(2000);
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);
-    HAL_Delay(2000);
+    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);///start sound
+    HAL_TIM_Base_Start_IT(&htim1);
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 0);
+
     uint32_t start_time=HAL_GetTick();
 //    TIM3->PSC = 40 - 1;
 //    TIM3->ARR = 1;

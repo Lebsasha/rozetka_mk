@@ -91,7 +91,7 @@
 #define NOTE_D8  4699
 #define NOTE_DS8 4978
 
-#define COUNTER_PERIOD 1800
+#define COUNTER_PERIOD 72e6/40000
 //htim1.Instance->ARR+1
 //(const uint16_t) 100
 
@@ -104,6 +104,19 @@ struct LED
 
     void (* curr_step)(struct LED*);
 };
+
+typedef struct Tone_pin
+{
+    volatile uint32_t* duty_cycle;
+    int16_t* f_dots;
+    uint16_t arr_size;
+    int16_t sine_ampl;
+    volatile uint32_t dx;
+    uint32_t curr;
+}Tone_pin;
+
+/// This is the function that handles changes of tone
+void make_tone(Tone_pin* tone_pin);
 
 void ctor_LED(struct LED* led, uint16_t detailyty, volatile uint32_t* duty_cycle, char num);
 

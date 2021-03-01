@@ -10,11 +10,11 @@ extern struct LED leds[3];
 extern volatile uint32_t count;
 extern volatile uint32_t time;
 extern volatile int measure_one_sine;
-extern const int16_t sine_ampl;//TODO Remove some global vars
-extern const uint16_t arr_size;//TODO Sometime cleanup code
-extern int16_t f_dots[];//TODO Measure 0 and 1
-volatile uint32_t dx=(1024*500<<8)/40000;
-uint32_t curr=0;
+//extern const int16_t sine_ampl;//TODO Remove some global vars
+//extern const uint16_t arr_size;//TODO Sometime cleanup code
+//extern int16_t f_dots[];//TODO Measure 0 and 1
+//volatile uint32_t dx=(1024*500<<8)/40000;
+//uint32_t curr=0;
 
 int str_cmp(const uint8_t*, const char*);
 
@@ -66,7 +66,8 @@ void toggle_led(const uint8_t* command, const size_t i)
         //(leds + i)->curr_step = always_glow; //TODO Uncomment with else
         if(*(command+(sizeof("on")-1))=='m')/// music is on
         {
-            dx=(1024*500<<8)/40000;
+            if(*(command+(sizeof("onm")-1))=='0'){}
+//                dx=(1024*500<<8)/40000;
         }
     }
     if (str_cmp(command, "off") == 0)
@@ -100,12 +101,12 @@ void always_zero(struct LED* led)
 
 void calc_up(struct LED* led)
 {
-    *led->duty_cycle = (uint32_t)(f_dots[curr>>8])*COUNTER_PERIOD/sine_ampl;
-    curr+=dx;
-    if (curr >= arr_size<<8)
-    {
-       curr-=arr_size<<8;
-    }
+//    *led->duty_cycle = (uint32_t)(f_dots[curr>>8])*COUNTER_PERIOD/sine_ampl;
+//    curr+=dx;
+//    if (curr >= arr_size<<8)
+//    {
+//       curr-=arr_size<<8;
+//    }
 }
 
 void calc_middle(struct LED* led)
@@ -135,6 +136,17 @@ void my_delay(int mc_s)
     __HAL_TIM_SET_COUNTER(&htim1, 0);
     while (__HAL_TIM_GET_COUNTER(&htim1) < mc_s)
     {}
+}
+
+void make_tone(Tone_pin* tone_pin)
+{
+    *tone_pin->duty_cycle = (uint32_t)(tone_pin->f_dots[tone_pin->curr>>8])*COUNTER_PERIOD/tone_pin->sine_ampl;
+    tone_pin->curr+=tone_pin->dx;
+    if (tone_pin->curr >= tone_pin->arr_size<<8)
+    {
+        tone_pin->curr-=tone_pin->arr_size<<8;
+    }
+
 }
 
 int str_cmp(const uint8_t* command, const char* str)
