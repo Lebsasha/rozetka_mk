@@ -23,6 +23,7 @@
 #include "stm32f1xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "main_target.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -62,6 +63,8 @@ extern TIM_HandleTypeDef htim2;
 
 /* USER CODE BEGIN EV */
 extern volatile uint32_t count;
+extern struct LED leds[3];
+extern Tone_pin* tone_pins;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -220,18 +223,27 @@ void USB_LP_CAN1_RX0_IRQHandler(void)
 void TIM1_UP_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM1_UP_IRQn 0 */
+
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 1);
     if (__HAL_TIM_GET_FLAG(&htim1, TIM_FLAG_UPDATE) != RESET)
     {
         __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);
-//        ++count;
+//        leds[0].curr_step(&leds[0]);
+//        leds[1].curr_step(&leds[1]);
+        make_tone(&tone_pins[0]);
+
 //        if (count == 0)
 //            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 0);
+        return;
     }
-    return;
+
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 1);
   /* USER CODE END TIM1_UP_IRQn 0 */
   HAL_TIM_IRQHandler(&htim1);
   /* USER CODE BEGIN TIM1_UP_IRQn 1 */
 
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 0);
   /* USER CODE END TIM1_UP_IRQn 1 */
 }
 
@@ -250,5 +262,6 @@ void TIM2_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
