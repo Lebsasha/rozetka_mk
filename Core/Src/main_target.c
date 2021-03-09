@@ -139,7 +139,8 @@ void my_delay(int mc_s)
 }
 
 void make_tone(Tone_pin* tone_pin)
-{
+{///This can be optimised
+///TODO Why silence comes when dx==0?
     *tone_pin->duty_cycle = (uint32_t)(tone_pin->f_dots[tone_pin->curr>>8])*COUNTER_PERIOD/tone_pin->sine_ampl;
     tone_pin->curr+=tone_pin->dx;
     if (tone_pin->curr >= tone_pin->arr_size<<8)
@@ -162,6 +163,7 @@ void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n)
         }
         start_tick+=wait;
     }
+    pin->dx=0;
 }
 
 int str_cmp(const uint8_t* command, const char* str)
