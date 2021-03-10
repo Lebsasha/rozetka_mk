@@ -10,6 +10,7 @@ extern struct LED leds[3];
 extern volatile uint32_t count;
 extern volatile uint32_t time;
 extern volatile int measure_one_sine;
+extern Button button;
 //extern const int16_t sine_ampl;//TODO Remove some global vars
 //extern const uint16_t arr_size;//TODO Sometime cleanup code
 //extern int16_t f_dots[];//TODO Measure 0 and 1
@@ -34,6 +35,10 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
 {
     if (*len)//TODO Add elses
     {
+        if(str_cmp(command, "measure")==0)
+        {
+            button.start_time=HAL_GetTick();
+        }
         if (str_cmp(command, "first") == 0)
         {
             toggle_led(command + sizeof("first ") - 1, 0);

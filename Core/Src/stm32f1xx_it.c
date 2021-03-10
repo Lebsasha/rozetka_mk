@@ -59,12 +59,14 @@
 /* External variables --------------------------------------------------------*/
 extern PCD_HandleTypeDef hpcd_USB_FS;
 extern TIM_HandleTypeDef htim1;
+extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim2;
 
 /* USER CODE BEGIN EV */
 extern volatile uint32_t count;
 extern struct LED leds[3];
 extern Tone_pin* tone_pins;
+extern Button button;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -223,7 +225,7 @@ void USB_LP_CAN1_RX0_IRQHandler(void)
 void TIM1_UP_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM1_UP_IRQn 0 */
-
+///TODO Add return; -> nothing would happen
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 1);
     if (__HAL_TIM_GET_FLAG(&htim1, TIM_FLAG_UPDATE) != RESET)
     {
@@ -259,6 +261,30 @@ void TIM2_IRQHandler(void)
   /* USER CODE BEGIN TIM2_IRQn 1 */
 
   /* USER CODE END TIM2_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM3 global interrupt.
+  */
+void TIM3_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM3_IRQn 0 */
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 1);
+    if (__HAL_TIM_GET_FLAG(&htim3, TIM_FLAG_UPDATE) != RESET)
+    {
+        __HAL_TIM_CLEAR_IT(&htim3, TIM_IT_UPDATE);
+        if(HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5)==GPIO_PIN_RESET && button.stop_time==0 && button.start_time!=0)
+        {
+            button.stop_time=HAL_GetTick();
+        }
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 0);
+        return;
+    }
+  /* USER CODE END TIM3_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim3);
+  /* USER CODE BEGIN TIM3_IRQn 1 */
+
+  /* USER CODE END TIM3_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */

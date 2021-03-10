@@ -116,6 +116,15 @@ typedef struct Tone_pin
     uint32_t curr;
 }Tone_pin;
 
+/// If start_time!=0 time is measured.
+/// Then if stop_time!=0 time is sended
+/// Otherwise measuring is off
+typedef struct Button
+{
+    volatile uint32_t start_time;
+    volatile uint32_t stop_time;
+}Button;
+
 /// This is the function that handles changes of tone
 void make_tone(Tone_pin* tone_pin);
 
