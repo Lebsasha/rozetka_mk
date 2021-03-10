@@ -58,3 +58,5 @@ cmake-build-debug
 /core
 exp.bin_log
 temp.txt
+bin/
+obj/
