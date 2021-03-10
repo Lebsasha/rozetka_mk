@@ -158,7 +158,8 @@ int main(void)
           button.start_time=0;
           button.stop_time=0;
       }
-      play(&tone_pins[0], notes_1, durations_1, sizeof(durations_1)/sizeof(durations_1[0]));
+      if(button.start_time!=0)
+        play(&tone_pins[0], notes_1, durations_1, sizeof(durations_1)/sizeof(durations_1[0]));
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
