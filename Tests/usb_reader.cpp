@@ -1,50 +1,56 @@
 #include <iostream>
 #include <fstream>
 #include <cstring>
+#include <thread>
 
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "EndlessLoop"
 using namespace std;
-int calc_mean(const string& i);
+
+volatile bool if_exit=false;
+
+int calc_mean(const string& path);
 void wait();
 int main (int argc, char** argv)
 {
     const char* path="react_time.csv";
-    ofstream stat(path, ios_base::ate|ios_base::out);
+    ofstream stat(path, ios_base::app|ios_base::out);
     const char* command="measure ";
-    char sleep_time[]="sleep  ";
-    char time[64]={'0'};
+    char comp_command[]="sleep  ";
+    char time_buffer[64]={'0'};
     uint32_t speed;
     ofstream dev("/dev/ttyACM0");
     ifstream read_time("/dev/ttyACM0");
-    if(!dev)
+    if(!dev || !read_time)
     {
         std::cout << "Error opening COM file" << std::endl;
         return 1;
     }
-    cout<<"begin ";
-    for(size_t i =0;i<15;++i)
+    std::thread waiter(wait);
+    cout<<"begin ";///TODO Сделать "прозвон"
+    for(size_t i =0;i<7;++i)
     {
-        sleep_time[sizeof(sleep_time)-1-1]=rand()%10+'0';
-        system(sleep_time);
+        comp_command[sizeof(comp_command) - 1 - 1]= rand() % 6 + '0';
+        system(comp_command);
         dev.write(command, strlen(command));
         dev.flush();
-        read_time.read(time, sizeof(uint32_t));
+        read_time.read(time_buffer, sizeof(uint32_t));
         if(!read_time)
     {
         std::cout<<endl<<"Error reading COM file in "<<i<<" iteration"<<std::endl;
-        return 1;
-    }   std::cout<<i<<endl;
-        speed = *reinterpret_cast<uint32_t*>(time);
+        return 2;
+    }
+        speed = *reinterpret_cast<uint32_t*>(time_buffer);
+        std::cout<<i<<' '<<speed<<endl;
         stat << speed << endl;
+        if(if_exit)
+            break;
     }
     cout<<"end"<<endl;
     calc_mean(path);
 }
 
-int calc_mean(const string& i)
+int calc_mean(const string& path)
 {
-    ifstream file(i);
+    ifstream file(path);
     int count=0;
     int num;
     int sum=0;
@@ -54,7 +60,7 @@ int calc_mean(const string& i)
         ++count;
         sum+=num;
     }
-    ofstream m_file("stat_"+i);
+    ofstream m_file("stat_" + path);
     m_file<<(double)(sum)/count<<' '<<(double)(sum)/count<<endl;
     cout<<(double)(sum)/count<<' '<<(double)(sum)/count<<endl;
     return 0;
@@ -62,8 +68,6 @@ int calc_mean(const string& i)
 
 void wait()
 {
-    int i;
-    cin>>i;
-    exit(1);
+    getchar();
+    if_exit=true;
 }
-#pragma clang diagnostic pop
