@@ -95,7 +95,9 @@
 #define COUNTER_PERIOD 1800
 //htim1.Instance->ARR+1
 //(const uint16_t) 100
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 struct LED
 {
     volatile uint32_t* duty_cycle;
@@ -137,5 +139,7 @@ void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n)
 void my_delay(int mc_s);
 
 void process_cmd(const uint8_t* command, const uint32_t* len);
-
+#ifdef __cplusplus
+}
+#endif
 #endif //MAIN_TARGET
