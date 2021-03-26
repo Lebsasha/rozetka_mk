@@ -2,8 +2,84 @@
 #include <fstream>
 #include <cstring>
 #include <thread>
+#include <algorithm>
+#include <cassert>
 
 using namespace std;
+
+enum {CC=0, LenL=1, LenH=2};
+class CommandBuilder
+{
+    static const size_t BUF_SIZE = 1024;
+    char buffer[BUF_SIZE] = {0};
+    size_t length;
+public:
+    CommandBuilder() : length(LenH+1)
+    {
+        buffer[CC]=0x10;
+    }
+
+    void append(const string& s)
+    {
+        return append(s.c_str(), s.length());
+    }
+
+   void append(const char* s, size_t length_s)
+    {
+        assert(length + strlen(s) < BUF_SIZE);
+            strcpy(buffer + length, s);
+            length += strlen(s);
+    }
+
+    template<typename T>
+    void append_var(T var)
+    {
+        assert(length+sizeof(var)<BUF_SIZE);
+        *reinterpret_cast<T*>(buffer + length) = var;
+        length += sizeof(var);
+        buffer[LenL]+=sizeof(var);///TODO!
+    }
+
+    void write(ostream dev)
+    {
+        uint8_t sum=0;
+        for_each(buffer+CC+1, buffer+length, [&sum](char c){sum+=c;});
+        buffer[length]=sum;
+        length+=sizeof(sum);
+        dev.write(buffer, length);
+        dev.flush();
+    }
+};
+
+class CommandReader
+{
+    static const size_t BUF_SIZE = 1024;
+    char buffer[BUF_SIZE] = {0};
+    size_t length{};
+public:
+    CommandReader() : length(0)
+    {}
+
+    char* read(istream dev)
+    {
+        dev.read(buffer, length = LenH+1);/// CC LenL LenH
+        const uint16_t n = (*reinterpret_cast<uint16_t*>(buffer + LenH) << 8) + *reinterpret_cast<uint16_t*>(buffer + LenL);
+        assert(n<BUF_SIZE);
+        dev.read(buffer + length, n);/// DD DD DD ... DD
+        length += n;
+        dev.read(buffer + length, 1); /// SS
+        length+=1;
+        uint8_t sum = 0;
+        for_each(buffer + LenL, buffer + length - 1, [&sum](char c)
+        { sum += c; });
+        if (sum + 42 != buffer[length - 1])
+        {
+            cerr << "SS" << endl;
+            assert(false);
+        }
+        return buffer;
+    }
+};
 
 volatile bool if_exit=false;
 
@@ -61,8 +137,8 @@ int calc_mean(const string& path)
         sum+=num;
     }
     ofstream m_file("stat_" + path);
-    m_file<<(double)(sum)/count<<' '<<(double)(sum)/count<<endl;
-    cout<<(double)(sum)/count<<' '<<(double)(sum)/count<<endl;
+    m_file<<(double)(sum)/count<<endl;
+    cout<<(double)(sum)/count<<endl;
     return 0;
 }
 
