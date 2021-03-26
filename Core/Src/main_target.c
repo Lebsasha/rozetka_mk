@@ -15,7 +15,7 @@ extern Button button;
 //extern const uint16_t arr_size;//TODO Sometime cleanup code
 //extern int16_t f_dots[];//TODO Measure 0 and 1
 //volatile uint32_t dx=(1024*500<<8)/TONE_FREQ;//TODO Move target.h -> Inc
-//uint32_t curr=0;
+//uint32_t curr=0; // TIM_TRGO_UPDATE; TODO View @ref in docs
 
 int str_cmp(const uint8_t*, const char*);
 

@@ -233,6 +233,7 @@ void TIM1_UP_IRQHandler(void)
 //        leds[0].curr_step(&leds[0]);
 //        leds[1].curr_step(&leds[1]);
         make_tone(&tone_pins[0]);
+        make_tone(&tone_pins[1]);
 
 //        if (count == 0)
 //            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);

@@ -131,10 +131,12 @@ int main(void)
     }
 
     /// This lines is ctor for tone_pins
-    Tone_pin tone_pins_init[2]={{&(htim1.Instance->CCR3), f_dots, arr_size, sine_ampl, (arr_size*500<<8)/TONE_FREQ,0}, {&(htim1.Instance->CCR2),NULL, 0, 0, 0, 0}};
-    tone_pins=tone_pins_init;
+    Tone_pin tone_pins_init[2]={{&(htim1.Instance->CCR3), f_dots, arr_size, sine_ampl, (arr_size*NOTE_C4<<8)/TONE_FREQ,0},
+                                {&(htim1.Instance->CCR2),f_dots, arr_size, sine_ampl, (arr_size*NOTE_C5<<8)/TONE_FREQ, 0}};
+    tone_pins=tone_pins_init;///TODO In CubeMX write A9 PWM_TIM
 
-    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);///start sound
+    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);///start sound at A10
+    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);///start sound at A9
     HAL_TIM_Base_Start_IT(&htim1);
     HAL_TIM_Base_Start_IT(&htim3);
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 0);
@@ -273,6 +275,10 @@ static void MX_TIM1_Init(void)
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
   sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
   if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
   {
     Error_Handler();
@@ -328,7 +334,7 @@ static void MX_TIM3_Init(void)
   {
     Error_Handler();
   }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE; //TODO View @ref in docs
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
   {
