@@ -133,12 +133,12 @@ int main(void)
     /// This lines is ctor for tone_pins
     Tone_pin tone_pins_init[2]={{&(htim1.Instance->CCR3), f_dots, arr_size, sine_ampl, (arr_size*NOTE_C4<<8)/TONE_FREQ,0},
                                 {&(htim1.Instance->CCR2),f_dots, arr_size, sine_ampl, (arr_size*NOTE_C5<<8)/TONE_FREQ, 0}};
-    tone_pins=tone_pins_init;///TODO In CubeMX write A9 PWM_TIM
+    tone_pins=tone_pins_init;
 
     HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);///start sound at A10
     HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);///start sound at A9
     HAL_TIM_Base_Start_IT(&htim1);
-    HAL_TIM_Base_Start_IT(&htim3);
+//    HAL_TIM_Base_Start_IT(&htim3);
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 0);
 
 //    TIM3->PSC = 40 - 1;
