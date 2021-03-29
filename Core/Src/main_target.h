@@ -95,6 +95,9 @@
 #define COUNTER_PERIOD 1800
 //htim1.Instance->ARR+1
 //(const uint16_t) 100
+
+#include <assert.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -139,6 +142,25 @@ void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n)
 void my_delay(int mc_s);
 
 void process_cmd(const uint8_t* command, const uint32_t* len);
+
+///@brief this enum points on appropriate indexes in bin. prot.
+///e. g. buffer[CC], ...
+enum
+{
+    CC = 0, LenL = 1, LenH = 2
+};
+
+static const uint8_t SS_OFFSET = 42;
+
+typedef struct CommandWriter///TODO may same as prepare TODO
+{
+    uint8_t* buffer;
+    size_t length;
+    size_t BUF_SIZE;
+} CommandWriter;
+void CommandWriter_ctor(CommandWriter* ptr);
+
+void write(CommandWriter* ptr, char* dev);
 #ifdef __cplusplus
 }
 #endif

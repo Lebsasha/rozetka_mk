@@ -55,26 +55,27 @@ class CommandReader
     size_t length;
     size_t read_lehgth;
 public:
-    CommandReader() : length(0), read_lehgth(0)
+    CommandReader(const uint8_t* string1) : length(0), read_lehgth(0)
     {}
 
     char* read(istream& dev)
     {
-        dev.read(buffer, length = LenH + 1);/// CC LenL LenH
+        dev.read(buffer, LenH + 1);/// CC LenL LenH
         const uint16_t n = (*reinterpret_cast<uint8_t*>(buffer + LenH) << 8) + *reinterpret_cast<uint8_t*>(buffer + LenL);
         assert(n < BUF_SIZE);
+        length =LenH+1;
         dev.read(buffer + length, n);/// DD DD DD ... DD
         length += n;
         dev.read(buffer + length, sizeof (uint8_t)); /// SS
-        length += sizeof (uint8_t);
         uint8_t sum = SS_OFFSET;
-        for_each(buffer + LenL, buffer + length - 1, [&sum](char c)
+        for_each(buffer + LenL, buffer + length, [&sum](char c)
         { sum += c; });
-        if (sum /*+ SS_OFFSET*/ != (uint8_t) buffer[length - 1])///(weak TODO) Why?
+        if (sum /*+ SS_OFFSET*/ != (uint8_t) buffer[length])///(weak TODO) Why?
         {
             cerr << "SS is't correct" << endl;
             assert(false);
         }
+        length += sizeof (uint8_t);
         read_lehgth=LenH+1;
         return buffer;
     }
@@ -107,12 +108,11 @@ int main (int argc, char** argv)
     command.append_var<uint16_t>(500);///Freq
     CommandReader reader;
     char comp_command[]="sleep  ";
-    uint8_t port_rec;
-    uint16_t freq_rec;
-    uint8_t command_rec;
-    ofstream dev("temp.log");
-    ifstream read_time("temp.log");
-    if(!dev || !read_time)
+    uint8_t response;
+    uint8_t command_rec; ///Command received
+    ofstream dev("/dev/ttyACM0");
+    ifstream dev_read("/dev/ttyACM0");
+    if(!dev || !dev_read)
     {
         std::cout << "Error opening COM file" << std::endl;
         return 1;
@@ -121,14 +121,15 @@ int main (int argc, char** argv)
     cout<<"begin ";///TODO Сделать "прозвон"
     for(size_t i =0;i<7;++i)
     {
-        comp_command[sizeof(comp_command) - 1 - 1]= '0';//rand() % 6 + '0';
+        comp_command[sizeof(comp_command) - 1 - 1]= rand() % 6 + '0';
         system(comp_command);
         command.write(dev);
-       reader.read(read_time);
-       reader.get_command(command_rec);
-       reader.get_param(port_rec);
-       reader.get_param(freq_rec);
-        std::cout << i << ' ' << command_rec<<port_rec << freq_rec << endl;
+       reader.read(dev_read);
+        uint8_t get_command = reader.get_command(command_rec);
+        assert(get_command == 0x10);
+        uint8_t param = reader.get_param(response);
+        assert(param == 0);
+        std::cout << i << ' ' << endl;
 //        stat << speed << endl;
         if(if_exit)
             break;

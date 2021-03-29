@@ -73,6 +73,12 @@ const uint16_t arr_size=1024;
 int16_t f_dots[1024];
 Tone_pin* tone_pins; /// It is the array of pins that make tones. The first pin is A10 and the second is A9
 Button button={0, 0};
+
+
+void write(CommandWriter* ptr, char* dev)///In main, USB part
+{
+    while(CDC_Transmit_FS(ptr->buffer, ptr->length) == USBD_BUSY){}
+}
 /* USER CODE END 0 */
 
 /**

@@ -1,77 +1,66 @@
 
-#include <cassert>
-#include <algorithm>
-#include <fstream>
+#include "main.h"
+#include "main_target.h"
 using namespace std;
-///@brief this enum points on appropriate indexes in bin. prot.
-///e. g. buffer[CC], ...
-enum
+
+
+
+
+
+void CommandWriter_ctor(CommandWriter* ptr)
 {
-    CC = 0, LenL = 1, LenH = 2
-};
+    ptr->length=0;
+    ptr->BUF_SIZE=128;
+    ptr->buffer=new uint8_t[ptr->BUF_SIZE];
+}
 
-static const uint8_t SS_OFFSET = 42;
-
-class CommandWriter
+//    template<typename T>
+#define T uint8_t
+void append_var(CommandWriter* ptr, T var)
 {
-    static const size_t BUF_SIZE = 1024;
-    char buffer[BUF_SIZE] = {0};
-    size_t length;
-public:
-    CommandWriter() : length(LenH + 1)
-    {
-        buffer[CC] = 0x10;///TODO enum
-    }
+    assert(ptr->length + sizeof(var) < ptr->BUF_SIZE);
+    *(T*)(ptr->buffer + ptr->length) = var;
+    ptr->length += sizeof(var);
+    ptr->buffer[LenL] += sizeof(var);///TODO!
+}
+#undef T
 
-    template<typename T>
-    void append_var(T var)
-    {
-        assert(length + sizeof(var) < BUF_SIZE);
-        *reinterpret_cast<T*>(buffer + length) = var;
-        length += sizeof(var);
-        buffer[LenL] += sizeof(var);///TODO!
-    }
 
-    void write(ostream& dev)
-    {
-        uint8_t sum = SS_OFFSET;
-        for_each(buffer + CC + 1, buffer + length, [&sum](char c)
-        { sum += c; });
-        buffer[length] = sum;
-        length += sizeof(sum);
-        dev.write(buffer, length);
-        dev.flush();
-    }
-};
+void prepare_for_sending(CommandWriter* ptr, uint8_t command_code, bool if_ok)///TODO
+{
+    ptr->buffer[CC]= command_code + 128 * !if_ok;
+    ptr->buffer[LenL]=0;
+    ptr->buffer[LenH]=0;
+    ptr->length= 1 + 1 + 1;
+    uint8_t sum = SS_OFFSET;
+    for(uint8_t* c = ptr->buffer + CC + 1; c < ptr->buffer + ptr->length; ++c)
+    { sum += *c; }
+    ptr->buffer[LenH + 1]=sum;///SS
+}
 
 class CommandReader
 {
-    static const size_t BUF_SIZE = 1024;
-    char buffer[BUF_SIZE] = {0};
+    uint8_t* buffer;
     size_t length;
     size_t read_lehgth;
 public:
-    CommandReader() : length(0), read_lehgth(0)
-    {}
-
-    char* read(istream& dev)
+    explicit CommandReader(const uint8_t* cmd) : buffer(const_cast<uint8_t*>(cmd)), length(0), read_lehgth(0)
     {
-        dev.read(buffer, length = LenH + 1);/// CC LenL LenH
+//        dev.read(buffer, length = LenH + 1);/// CC LenL LenH
         const uint16_t n = (*reinterpret_cast<uint8_t*>(buffer + LenH) << 8) + *reinterpret_cast<uint8_t*>(buffer + LenL);
-        assert(n < BUF_SIZE);
-        dev.read(buffer + length, n);/// DD DD DD ... DD
+        assert(n < 64);///USB packet size
+//        dev.read(buffer + length, n);/// DD DD DD ... DD
         length += n;
-        dev.read(buffer + length, sizeof (uint8_t)); /// SS
-        length += sizeof (uint8_t);
+//        dev.read(buffer + length, sizeof (uint8_t)); /// SS
         uint8_t sum = SS_OFFSET;
-        for_each(buffer + LenL, buffer + length - 1, [&sum](char c)
-        { sum += c; });
-        if (sum /*+ SS_OFFSET*/ != (uint8_t) buffer[length - 1])///(weak TODO) Why?
+        for(uint8_t* c = buffer + LenL; c < buffer + length; ++c)
+        { sum += *c; }
+        if (sum != (uint8_t) buffer[length])
         {
-            assert(false);
+            assert(false);///TODO Error handle
         }
+        length += sizeof (uint8_t);
         read_lehgth=LenH+1;
-        return buffer;
     }
 
     template<typename T>
@@ -83,14 +72,12 @@ public:
         return param;
     }
 
-    uint8_t get_command(uint8_t& cmd)
+    uint8_t get_command()
     {
-        return cmd=buffer[CC];
+        return buffer[CC];
     }
 };
 extern "C" {
-#include "main.h"
-#include "main_target.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -101,6 +88,7 @@ extern volatile uint32_t count;
 extern volatile uint32_t time;
 extern volatile int measure_one_sine;
 extern Button button;
+extern Tone_pin* tone_pins;
 //extern const int16_t sine_ampl;//TODO Remove some global vars
 //extern const uint16_t arr_size;//TODO Sometime cleanup code
 //extern int16_t f_dots[];//TODO Measure 0 and 1
@@ -125,21 +113,23 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
 {
     if (*len)//TODO Add elses
     {
-        if (str_cmp(command, "measure") == 0)
+        CommandReader reader(command);
+        CommandWriter writer;
+        if(reader.get_command()==0x10)
         {
-            button.start_time = HAL_GetTick();
-        }
-        if (str_cmp(command, "first") == 0)
-        {
-            toggle_led(command + sizeof("first ") - 1, 0);
-        }
-        if (str_cmp(command, "second") == 0)
-        {
-            toggle_led(command + sizeof("second ") - 1, 1);
-        }
-        if (str_cmp(command, "third") == 0)
-        {
-            toggle_led(command + sizeof("third ") - 1, 2);
+            uint8_t port;
+            uint16_t freq;
+            reader.get_param(port);
+            reader.get_param(freq);
+            if(port < 2 && freq < TONE_FREQ/2)
+            {
+                tone_pins[port].dx = (tone_pins[port].arr_size * freq << 8) / TONE_FREQ;
+                prepare_for_sending(&writer, reader.get_command(), true);
+            }
+            else
+            {
+
+            }
         }
         if (command[0] == '0')
             HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
