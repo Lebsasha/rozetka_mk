@@ -1,24 +1,24 @@
-
+#include <string.h>
+#include <stdlib.h>
 #include "main.h"
 #include "main_target.h"
-using namespace std;
-
-
-
-
 
 void CommandWriter_ctor(CommandWriter* ptr)
 {
-    ptr->length=0;
+    ptr->length=1+1+1;///CC, LenH, LenL
     ptr->BUF_SIZE=128;
-    ptr->buffer=new uint8_t[ptr->BUF_SIZE];
+    ptr->buffer= malloc(sizeof(uint8_t)*ptr->BUF_SIZE);///TODO Infinity alloc
+    for (uint8_t* c = ptr->buffer+ptr->BUF_SIZE-1; c >= ptr->buffer; --c)
+    {
+        *c=0;
+    }
 }
 
 //    template<typename T>
 #define T uint8_t
-void append_var(CommandWriter* ptr, T var)
+void append_var_8(CommandWriter* ptr, T var)
 {
-    assert(ptr->length + sizeof(var) < ptr->BUF_SIZE);
+//    assert(ptr->length + sizeof(var) < ptr->BUF_SIZE); ///TODO Error Handle
     *(T*)(ptr->buffer + ptr->length) = var;
     ptr->length += sizeof(var);
     ptr->buffer[LenL] += sizeof(var);///TODO!
@@ -28,58 +28,70 @@ void append_var(CommandWriter* ptr, T var)
 
 void prepare_for_sending(CommandWriter* ptr, uint8_t command_code, bool if_ok)///TODO
 {
-    ptr->buffer[CC]= command_code + 128 * !if_ok;
-    ptr->buffer[LenL]=0;
-    ptr->buffer[LenH]=0;
-    ptr->length= 1 + 1 + 1;
     uint8_t sum = SS_OFFSET;
     for(uint8_t* c = ptr->buffer + CC + 1; c < ptr->buffer + ptr->length; ++c)
     { sum += *c; }
-    ptr->buffer[LenH + 1]=sum;///SS
+    ptr->buffer[ptr->length]=sum;///SS
+    ptr->length+=sizeof(uint8_t);
+    ptr->buffer[CC]= command_code + 128 * !if_ok;/// 128=1<<7
 }
 
-class CommandReader
+typedef struct CommandReader
 {
     uint8_t* buffer;
     size_t length;
     size_t read_lehgth;
-public:
-    explicit CommandReader(const uint8_t* cmd) : buffer(const_cast<uint8_t*>(cmd)), length(0), read_lehgth(0)
+}CommandReader;
+
+    void CommandReader_ctor(CommandReader* ptr, const uint8_t* cmd)
     {
+        ptr->buffer=cmd;
+        ptr->length=0;
+        ptr->read_lehgth=0;
 //        dev.read(buffer, length = LenH + 1);/// CC LenL LenH
-        const uint16_t n = (*reinterpret_cast<uint8_t*>(buffer + LenH) << 8) + *reinterpret_cast<uint8_t*>(buffer + LenL);
-        assert(n < 64);///USB packet size
+        const uint16_t n = (*(uint8_t*)(ptr->buffer + LenH) << 8) + *(uint8_t*)(ptr->buffer + LenL);
+//        assert(n < 64);///USB packet size ///TODO
 //        dev.read(buffer + length, n);/// DD DD DD ... DD
-        length += n;
+        ptr->length += n;
 //        dev.read(buffer + length, sizeof (uint8_t)); /// SS
         uint8_t sum = SS_OFFSET;
-        for(uint8_t* c = buffer + LenL; c < buffer + length; ++c)
+        for(uint8_t* c = ptr->buffer + LenL; c < ptr->buffer + ptr->length; ++c)
         { sum += *c; }
-        if (sum != (uint8_t) buffer[length])
+        if (sum != (uint8_t) ptr->buffer[ptr->length])
         {
-            assert(false);///TODO Error handle
+//            assert(false);///TODO Error handle
         }
-        length += sizeof (uint8_t);
-        read_lehgth=LenH+1;
+ptr->length += sizeof (uint8_t);
+ptr->read_lehgth=LenH+1;
     }
 
-    template<typename T>
-    T get_param(T& param)
+//    template<typename T>
+#ifdef T
+#error T already defined
+#endif
+#define T uint8_t
+    T get_param_8(CommandReader* ptr, T* param)
     {
-        assert(length!=0);
-        param = *reinterpret_cast<T*>(buffer+read_lehgth);
-        read_lehgth+=sizeof(T);
-        return param;
+//        assert(ptr->length!=0);///TODO
+        *param = *(T*)(ptr->buffer+ptr->read_lehgth);
+        ptr->read_lehgth+=sizeof(T);
+        return *param;
     }
+#undef T
+#define T uint16_t
+T get_param_16(CommandReader* ptr, T* param)
+{
+//    assert(ptr->length!=0);///TODO
+    *param = *(T*)(ptr->buffer+ptr->read_lehgth);
+    ptr->read_lehgth+=sizeof(T);
+    return *param;
+}
+#undef T
 
-    uint8_t get_command()
+uint8_t get_command(CommandReader* ptr)
     {
-        return buffer[CC];
+        return ptr->buffer[CC];
     }
-};
-extern "C" {
-#include <string.h>
-#include <stdlib.h>
 
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim3;
@@ -89,6 +101,7 @@ extern volatile uint32_t time;
 extern volatile int measure_one_sine;
 extern Button button;
 extern Tone_pin* tone_pins;
+extern CommandWriter writer;
 //extern const int16_t sine_ampl;//TODO Remove some global vars
 //extern const uint16_t arr_size;//TODO Sometime cleanup code
 //extern int16_t f_dots[];//TODO Measure 0 and 1
@@ -113,22 +126,24 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
 {
     if (*len)//TODO Add elses
     {
-        CommandReader reader(command);
-        CommandWriter writer;
-        if(reader.get_command()==0x10)
+        CommandReader reader;
+        CommandReader_ctor(&reader, command);
+        if(get_command(&reader)==0x10)
         {
             uint8_t port;
             uint16_t freq;
-            reader.get_param(port);
-            reader.get_param(freq);
+            get_param_8(&reader, &port);
+            get_param_16(&reader, &freq);
             if(port < 2 && freq < TONE_FREQ/2)
             {
                 tone_pins[port].dx = (tone_pins[port].arr_size * freq << 8) / TONE_FREQ;
-                prepare_for_sending(&writer, reader.get_command(), true);
+                append_var_8(&writer, 0);
+                prepare_for_sending(&writer, get_command(&reader), true);
             }
             else
             {
-
+append_var_8(&writer, 0);
+                prepare_for_sending(&writer, get_command(&reader), false);
             }
         }
         if (command[0] == '0')
@@ -262,7 +277,4 @@ int str_cmp(const uint8_t* command, const char* str)
             return 1;
     }
     return 0;
-}
-
-///End extern "C"
 }

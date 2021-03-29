@@ -73,11 +73,16 @@ const uint16_t arr_size=1024;
 int16_t f_dots[1024];
 Tone_pin* tone_pins; /// It is the array of pins that make tones. The first pin is A10 and the second is A9
 Button button={0, 0};
+CommandWriter writer;
 
-
-void write(CommandWriter* ptr, char* dev)///In main, USB part
+void send_command(CommandWriter* ptr)///In main, USB part
 {
-    while(CDC_Transmit_FS(ptr->buffer, ptr->length) == USBD_BUSY){}
+    while (CDC_Transmit_FS(ptr->buffer, ptr->length) == USBD_BUSY){}
+    for (uint8_t* c = ptr->buffer + ptr->length - 1; c >= ptr->buffer; --c)
+    {
+        *c = 0;
+    }
+    ptr->length = 1 + 1 + 1;///CC, LenH, LenL
 }
 /* USER CODE END 0 */
 
@@ -146,7 +151,7 @@ int main(void)
     HAL_TIM_Base_Start_IT(&htim1);
 //    HAL_TIM_Base_Start_IT(&htim3);
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 0);
-
+    CommandWriter_ctor(&writer);
 //    TIM3->PSC = 40 - 1;
 //    TIM3->ARR = 1;
 //    __HAL_TIM_ENABLE_IT(&htim3, TIM_IT_UPDATE);
@@ -170,6 +175,10 @@ int main(void)
       {
 //          tone_pins[0].dx=arr_size*500<<8/TONE_FREQ;
           play(&tone_pins[0], notes_1, durations_1, sizeof(durations_1)/sizeof(durations_1[0]));
+      }
+      if(writer.buffer[CC]!=0)
+      {
+          send_command(&writer);
       }
     /* USER CODE END WHILE */
 

@@ -98,9 +98,6 @@
 
 #include <assert.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 struct LED
 {
     volatile uint32_t* duty_cycle;
@@ -145,14 +142,14 @@ void process_cmd(const uint8_t* command, const uint32_t* len);
 
 ///@brief this enum points on appropriate indexes in bin. prot.
 ///e. g. buffer[CC], ...
-enum
+enum Commands
 {
     CC = 0, LenL = 1, LenH = 2
 };
 
-static const uint8_t SS_OFFSET = 42;
+static const uint8_t SS_OFFSET = 42;///TODO Write documentation
 
-typedef struct CommandWriter///TODO may same as prepare TODO
+typedef struct CommandWriter
 {
     uint8_t* buffer;
     size_t length;
@@ -160,8 +157,5 @@ typedef struct CommandWriter///TODO may same as prepare TODO
 } CommandWriter;
 void CommandWriter_ctor(CommandWriter* ptr);
 
-void write(CommandWriter* ptr, char* dev);
-#ifdef __cplusplus
-}
-#endif
+void send_command(CommandWriter* ptr);
 #endif //MAIN_TARGET
