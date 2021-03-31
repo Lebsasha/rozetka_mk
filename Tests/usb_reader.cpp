@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <cstring>
-#include <thread>
+//#include <thread>
 #include <algorithm>
 #include <cassert>
 
@@ -20,13 +20,6 @@ class CommandWriter
 {
     static const size_t BUF_SIZE = 1024;
     char buffer[BUF_SIZE] = {0};
-public:
-    const char* get_buffer() const
-    {
-        return buffer;
-    }
-
-private:
     size_t length;
 public:
     CommandWriter() : length(LenH + 1)
@@ -43,26 +36,30 @@ public:
         buffer[LenL] += sizeof(var);///TODO!
     }
 
-    void write(ostream& dev)
+    void write(ostream& dev) const
+    {
+        dev.write(buffer, length);
+        dev.flush();
+    }
+
+    void prepare_for_sending()
     {
         uint8_t sum = SS_OFFSET;
         for_each(buffer + CC + 1, buffer + length, [&sum](char c)
         { sum += c; });
         buffer[length] = sum;
         length += sizeof(sum);
-        dev.write(buffer, length);
-        dev.flush();
     }
 };
 
 class CommandReader
 {
     static const size_t BUF_SIZE = 1024;
-    char buffer[BUF_SIZE] = {0};
-    size_t length;
+    char buffer[BUF_SIZE] = {0};///TODO char->8_t
+    size_t length;///TODO Проконтролировать на =0 везде
     size_t read_lehgth;
 public:
-    CommandReader(const uint8_t* string1) : length(0), read_lehgth(0)
+    CommandReader() : length(0), read_lehgth(0)
     {}
 
     char* read(istream& dev)
@@ -90,22 +87,22 @@ public:
     template<typename T>
     T get_param(T& param)
     {
-       assert(length!=0);
-       param = *reinterpret_cast<T*>(buffer+read_lehgth);
+       assert(length!=0);///TODO Control hashsum reading here
+       param = *reinterpret_cast<T*>(buffer+read_lehgth);///TODO Write is_empty()
        read_lehgth+=sizeof(T);
         return param;
     }
 
-    uint8_t get_command(uint8_t& cmd)
+    uint8_t get_command(uint8_t& cmd) const
     {
         return cmd=buffer[CC];
     }
 };
 
-volatile bool if_exit=false;
+//volatile bool if_exit=false;
 
 int calc_mean(const string& path);
-void wait();
+//void wait();
 int main (int argc, char** argv)
 {
     const char* path="react_time.csv";
@@ -113,38 +110,40 @@ int main (int argc, char** argv)
     CommandWriter command;
     command.append_var<uint8_t>(0);/// Port TODO ?
     command.append_var<uint16_t>(500);///Freq
+    command.prepare_for_sending();
     CommandReader reader;
     char comp_command[]="sleep  ";
     uint8_t response;
     uint8_t command_rec; ///Command received
     ofstream dev("/dev/ttyACM0");
     ifstream dev_read("/dev/ttyACM0");
-    command.get_buffer();
-    const char* temp="\x10\x03\x00\x00\xF4\x01\x22";
-    cout<<std::boolalpha<<equal(temp, temp+7, command.get_buffer())<<std::flush;
     if(!dev || !dev_read)
     {
         std::cout << "Error opening COM file" << std::endl;
         return 1;
     }
-    std::thread waiter(wait);
+//    std::thread waiter(wait);
     cout<<"begin ";///TODO Сделать "прозвон"
     for(size_t i =0;i<7;++i)
     {
-        comp_command[sizeof(comp_command) - 1 - 1]= rand() % 6 + '0';
+        comp_command[sizeof(comp_command) - 1 - 1] = rand() % 6 + '0';
         system(comp_command);
         command.write(dev);
-       reader.read(dev_read);
+        reader.read(dev_read);
         uint8_t get_command = reader.get_command(command_rec);
         assert(get_command == 0x10);
         uint8_t param = reader.get_param(response);
-        assert(param == 0);
+        assert(param == 1);
         std::cout << i << ' ' << endl;
 //        stat << speed << endl;
-        if(if_exit)
-            break;
+//        if(if_exit)
+//            break;
     }
+
     cout<<"end"<<endl;
+//    if(if_exit)
+//        waiter.join();
+//   waiter.std::thread::~thread();
     //calc_mean(path);
 }
 
@@ -166,8 +165,8 @@ int calc_mean(const string& path)
     return 0;
 }
 
-void wait()
-{
-    getchar();
-    if_exit=true;
-}
+//void wait()
+//{
+//    getchar();
+//    if_exit=true;
+//}

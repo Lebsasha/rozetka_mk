@@ -38,31 +38,34 @@ void prepare_for_sending(CommandWriter* ptr, uint8_t command_code, bool if_ok)//
 
 typedef struct CommandReader
 {
-    uint8_t* buffer;
+    uint8_t* buffer;///TODO Change type?
     size_t length;
     size_t read_lehgth;
 }CommandReader;
 
-    void CommandReader_ctor(CommandReader* ptr, const uint8_t* cmd)
+    bool CommandReader_ctor(CommandReader* ptr, const uint8_t* cmd)
     {
-        ptr->buffer=cmd;
-        ptr->length=0;
+        ptr->buffer=(typeof(ptr->buffer))(cmd);
+        ptr->length=3;
         ptr->read_lehgth=0;
 //        dev.read(buffer, length = LenH + 1);/// CC LenL LenH
         const uint16_t n = (*(uint8_t*)(ptr->buffer + LenH) << 8) + *(uint8_t*)(ptr->buffer + LenL);
-//        assert(n < 64);///USB packet size ///TODO
+        if(n > 64)///USB packet size
+            return false;
 //        dev.read(buffer + length, n);/// DD DD DD ... DD
         ptr->length += n;
 //        dev.read(buffer + length, sizeof (uint8_t)); /// SS
         uint8_t sum = SS_OFFSET;
-        for(uint8_t* c = ptr->buffer + LenL; c < ptr->buffer + ptr->length; ++c)
+        for(uint8_t* c = ptr->buffer + CC+1; c < ptr->buffer + ptr->length; ++c)
         { sum += *c; }
         if (sum != (uint8_t) ptr->buffer[ptr->length])
         {
+            return false;
 //            assert(false);///TODO Error handle
         }
 ptr->length += sizeof (uint8_t);
 ptr->read_lehgth=LenH+1;
+        return true;
     }
 
 //    template<typename T>
@@ -107,7 +110,7 @@ extern CommandWriter writer;
 //extern int16_t f_dots[];//TODO Measure 0 and 1
 //volatile uint32_t dx=(1024*500<<8)/TONE_FREQ;//TODO Move target.h -> Inc
 //uint32_t curr=0; // TIM_TRGO_UPDATE; TODO View @ref in docs
-
+//TODO Reformat code
 int str_cmp(const uint8_t*, const char*);
 
 void toggle_led(const uint8_t* command, size_t i);
@@ -126,24 +129,27 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
 {
     if (*len)//TODO Add elses
     {
-        CommandReader reader;
-        CommandReader_ctor(&reader, command);
-        if(get_command(&reader)==0x10)
+        CommandReader reader;///Доходит
+        if(CommandReader_ctor(&reader, command))
         {
-            uint8_t port;
-            uint16_t freq;
-            get_param_8(&reader, &port);
-            get_param_16(&reader, &freq);
-            if(port < 2 && freq < TONE_FREQ/2)
+            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+            if (get_command(&reader) == 0x10)
             {
-                tone_pins[port].dx = (tone_pins[port].arr_size * freq << 8) / TONE_FREQ;
-                append_var_8(&writer, 0);
-                prepare_for_sending(&writer, get_command(&reader), true);
-            }
-            else
-            {
-append_var_8(&writer, 0);
-                prepare_for_sending(&writer, get_command(&reader), false);
+                uint8_t port;
+                uint16_t freq;
+                get_param_8(&reader, &port);
+                get_param_16(&reader, &freq);
+                if (port < 2 && freq < TONE_FREQ / 2)
+                {
+                    tone_pins[port].dx = (tone_pins[port].arr_size * freq << 8) / TONE_FREQ;
+                    append_var_8(&writer, 1);
+                    prepare_for_sending(&writer, get_command(&reader), true);///Не доходит
+                }
+                else
+                {
+                    append_var_8(&writer, 0);
+                    prepare_for_sending(&writer, get_command(&reader), false);
+                }
             }
         }
         if (command[0] == '0')
