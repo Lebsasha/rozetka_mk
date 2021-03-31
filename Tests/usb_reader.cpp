@@ -20,6 +20,13 @@ class CommandWriter
 {
     static const size_t BUF_SIZE = 1024;
     char buffer[BUF_SIZE] = {0};
+public:
+    const char* get_buffer() const
+    {
+        return buffer;
+    }
+
+private:
     size_t length;
 public:
     CommandWriter() : length(LenH + 1)
@@ -112,6 +119,9 @@ int main (int argc, char** argv)
     uint8_t command_rec; ///Command received
     ofstream dev("/dev/ttyACM0");
     ifstream dev_read("/dev/ttyACM0");
+    command.get_buffer();
+    const char* temp="\x10\x03\x00\x00\xF4\x01\x22";
+    cout<<std::boolalpha<<equal(temp, temp+7, command.get_buffer())<<std::flush;
     if(!dev || !dev_read)
     {
         std::cout << "Error opening COM file" << std::endl;
