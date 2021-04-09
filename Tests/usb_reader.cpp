@@ -18,7 +18,7 @@ enum
 /**
  * 0x1
  * 0x4
- * 0x10 u8|port u16|freq
+ * 0x10 u8|port u8|size u16|freq x3
  * 0x11
  * 0x12
  */
@@ -42,7 +42,7 @@ public:
         *reinterpret_cast<T*>(buffer + length) = var;
         length += sizeof(var);
         assert(buffer[LenL]>=0);
-        buffer[LenL] += sizeof(var);///TODO!
+        buffer[LenL] += sizeof(var);
     }
 
     void write(ostream& dev) const
@@ -112,7 +112,7 @@ public:
     {
        assert(length!=0);
        assert(read_length+3+1!=length);///TODO Mrite the same for mk
-       param = *reinterpret_cast<T*>(buffer + read_length);///ToDo Write is_empty()
+       param = *reinterpret_cast<T*>(buffer + read_length);
        read_length+=sizeof(T);
         return param;
     }
@@ -134,12 +134,12 @@ int main (int , char** )
     CommandWriter command;
     command.set_cmd(0x10);
     command.append_var<uint8_t>(1);/// Port TODO ?
-//    command.append_var<uint8_t>(1);
-    command.append_var<uint16_t>(200);///Freq //TODO +Symmetric array of freqs
+    command.append_var<uint8_t>(2);
+    command.append_var<uint16_t>(200);
+    command.append_var<uint16_t>(800);
     command.prepare_for_sending();
     CommandReader reader;
     char comp_command[]="sleep  ";
-    uint8_t response;
     uint8_t command_rec; ///Command received
     ofstream dev("/dev/ttyACM0");
     ifstream dev_read("/dev/ttyACM0");
@@ -150,19 +150,16 @@ int main (int , char** )
     }
 //    std::thread waiter(wait);
     cout<<"begin ";///TODO Сделать "прозвон"
-    for(size_t i =0;i<7;++i)
+    for(size_t i =0;i<4;++i)
     {
-        comp_command[sizeof(comp_command) - 1 - 1] = rand() % 6 + '0';
+        comp_command[sizeof(comp_command) - 1 - 1] = rand() % 1 + '0';
         system(comp_command);
         command.write(dev);
         reader.read(dev_read);
         uint8_t get_command = reader.get_command(command_rec);
-        assert(get_command == 0x10);
-//        assert(reader.is_empty());//TODO Test this with соответствующими actions in mk
-        uint8_t param = reader.get_param(response);
-        assert(param == 1);
-//        assert(reader.is_empty());
         assert(!reader.is_error());
+        assert(get_command == 0x10);
+        assert(reader.is_empty());
 
         std::cout << i << ' ' << endl;
 //        stat << speed << endl;

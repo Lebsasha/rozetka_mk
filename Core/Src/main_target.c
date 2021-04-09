@@ -7,13 +7,14 @@ void CommandWriter_ctor(CommandWriter* ptr)
 {
     ptr->length=1+1+1;///CC, LenH, LenL
     ptr->BUF_SIZE=128;
-    ptr->buffer= malloc(sizeof(uint8_t)*ptr->BUF_SIZE);///TODO Infinity alloc
+    ptr->buffer= malloc(sizeof(uint8_t)*ptr->BUF_SIZE);///TODO Infinity alloc is bad?
     for (uint8_t* c = ptr->buffer+ptr->BUF_SIZE-1; c >= ptr->buffer; --c)
     {
         *c=0;
     }
 }
 //TODO try with typeof or decltype
+
 //    template<typename T>
 #define T uint8_t
 void append_var_8(CommandWriter* ptr, T var)
@@ -21,12 +22,13 @@ void append_var_8(CommandWriter* ptr, T var)
 //    assert(ptr->length + sizeof(var) < ptr->BUF_SIZE); ///TODO Error Handle
     *(T*)(ptr->buffer + ptr->length) = var;
     ptr->length += sizeof(var);
-    ptr->buffer[LenL] += sizeof(var);///TODO!
+//    assert(ptr->buffer[LenL]<128)///TODO Error Handle
+    ptr->buffer[LenL] += sizeof(var);
 }
 #undef T
 
 
-void prepare_for_sending(CommandWriter* ptr, uint8_t command_code, bool if_ok)///TODO
+void prepare_for_sending(CommandWriter* ptr, uint8_t command_code, bool if_ok)///TODO Delete this todo?
 {
     uint8_t sum = SS_OFFSET;
     for(uint8_t* c = ptr->buffer + CC + 1; c < ptr->buffer + ptr->length; ++c)
@@ -38,7 +40,7 @@ void prepare_for_sending(CommandWriter* ptr, uint8_t command_code, bool if_ok)//
 
 typedef struct CommandReader
 {
-    uint8_t* buffer;///TODO Change type?
+    uint8_t* buffer;
     size_t length;
     size_t read_lehgth;
 }CommandReader;
@@ -48,13 +50,10 @@ typedef struct CommandReader
         ptr->buffer=(typeof(ptr->buffer))(cmd);
         ptr->length=3;
         ptr->read_lehgth=0;
-//        dev.read(buffer, length = LenH + 1);/// CC LenL LenH
         const uint16_t n = (*(uint8_t*)(ptr->buffer + LenH) << 8) + *(uint8_t*)(ptr->buffer + LenL);
         if(n > 64)///USB packet size
             return false;
-//        dev.read(buffer + length, n);/// DD DD DD ... DD
         ptr->length += n;
-//        dev.read(buffer + length, sizeof (uint8_t)); /// SS
         uint8_t sum = SS_OFFSET;
         for(uint8_t* c = ptr->buffer + CC+1; c < ptr->buffer + ptr->length; ++c)
         { sum += *c; }
@@ -68,6 +67,11 @@ ptr->read_lehgth=LenH+1;
         return true;
     }
 
+    bool is_empty(CommandReader* ptr)
+    {
+        return ptr->length==3+1 || ptr->length==0;
+    }
+
 //    template<typename T>
 #ifdef T
 #error T already defined
@@ -75,7 +79,7 @@ ptr->read_lehgth=LenH+1;
 #define T uint8_t
     T get_param_8(CommandReader* ptr, T* param)
     {
-//        assert(ptr->length!=0);///TODO
+//        assert(ptr->length!=0);///TODO Error handle
         *param = *(T*)(ptr->buffer+ptr->read_lehgth);
         ptr->read_lehgth+=sizeof(T);
         return *param;
@@ -84,7 +88,7 @@ ptr->read_lehgth=LenH+1;
 #define T uint16_t
 T get_param_16(CommandReader* ptr, T* param)
 {
-//    assert(ptr->length!=0);///TODO
+//    assert(ptr->length!=0);///TODO Error handle
     *param = *(T*)(ptr->buffer+ptr->read_lehgth);
     ptr->read_lehgth+=sizeof(T);
     return *param;
@@ -111,7 +115,7 @@ extern CommandWriter writer;
 //volatile uint32_t dx=(1024*500<<8)/TONE_FREQ;//TODO Move target.h -> Inc
 //uint32_t curr=0; // TIM_TRGO_UPDATE; TODO View @ref in docs
 //TODO Reformat code
-//TODO Unknown command resend
+//TODO Unknown command resend (if it needed?)
 int str_cmp(const uint8_t*, const char*);
 
 void toggle_led(const uint8_t* command, size_t i);
@@ -130,27 +134,52 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
 {
     if (*len)//TODO Add elses
     {
-        CommandReader reader;///Доходит
+        CommandReader reader;
         if(CommandReader_ctor(&reader, command))
         {
             HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-            if (get_command(&reader) == 0x10)
+            const uint8_t cmd = get_command(&reader);
+            if (cmd == 0x10)
             {
                 uint8_t port;
-                uint16_t freq;
+                uint8_t size;
+                uint16_t freqs[3]={0};
+                uint16_t freq=0;
                 get_param_8(&reader, &port);
-                get_param_16(&reader, &freq);
-                if (port < 2 && freq < TONE_FREQ / 2)
+                get_param_8(&reader, &size);
+                //assert(size<3) //TODO Error Handle
+                for(uint16_t* c=freqs; c < freqs + size; ++c)
+                {
+                    get_param_16(&reader, c);
+                    //assert(*c < TONE_FREQ / 2) //TODO Error handle
+                    freq+=*c;
+                }
+                freq/=size;
+                if (port < 2)
                 {
                     tone_pins[port].dx = (tone_pins[port].arr_size * freq << 8) / TONE_FREQ;
-                    append_var_8(&writer, 1);
-                    prepare_for_sending(&writer, get_command(&reader), true);///Не доходит
+                    prepare_for_sending(&writer, cmd, true);
                 }
                 else
                 {
                     append_var_8(&writer, 0);
-                    prepare_for_sending(&writer, get_command(&reader), false);
+                    prepare_for_sending(&writer, cmd, false);
                 }
+            } else if(cmd == 0x1)
+            {
+                if(is_empty(&reader))
+                {
+                    append_var_8(&writer, 1);
+                    const char* VER="Tone";
+                    for (const char* c = VER; c < VER+4; ++c)//TODO sizeof
+                    {
+                       append_var_8(&writer, *c); 
+                    }
+                    prepare_for_sending(&writer, cmd, true);
+                }
+            } else if(cmd == 0x11)
+            {
+
             }
         }
         if (command[0] == '0')
