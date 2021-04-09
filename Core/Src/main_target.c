@@ -13,7 +13,7 @@ void CommandWriter_ctor(CommandWriter* ptr)
         *c=0;
     }
 }
-
+//TODO try with typeof or decltype
 //    template<typename T>
 #define T uint8_t
 void append_var_8(CommandWriter* ptr, T var)
@@ -111,6 +111,7 @@ extern CommandWriter writer;
 //volatile uint32_t dx=(1024*500<<8)/TONE_FREQ;//TODO Move target.h -> Inc
 //uint32_t curr=0; // TIM_TRGO_UPDATE; TODO View @ref in docs
 //TODO Reformat code
+//TODO Unknown command resend
 int str_cmp(const uint8_t*, const char*);
 
 void toggle_led(const uint8_t* command, size_t i);

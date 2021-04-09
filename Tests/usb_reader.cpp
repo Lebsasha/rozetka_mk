@@ -14,18 +14,26 @@ enum
     CC = 0, LenL = 1, LenH = 2
 };
 
+//enum Commands{Set_tone};
+/**
+ * 0x1
+ * 0x4
+ * 0x10 u8|port u16|freq
+ * 0x11
+ * 0x12
+ */
+uint8_t Commands[]={0x1, 0x4, 0x10, 0x11, 0x12};
+
 static const uint8_t SS_OFFSET = 42;
+static const size_t BUF_SIZE = 64;///USB packet size
 
 class CommandWriter
 {
-    static const size_t BUF_SIZE = 1024;
     char buffer[BUF_SIZE] = {0};
     size_t length;
 public:
     CommandWriter() : length(LenH + 1)
-    {
-        buffer[CC] = 0x10;///TODO enum
-    }
+    {}
 
     template<typename T>
     void append_var(T var)
@@ -33,6 +41,7 @@ public:
         assert(length + sizeof(var) < BUF_SIZE);
         *reinterpret_cast<T*>(buffer + length) = var;
         length += sizeof(var);
+        assert(buffer[LenL]>=0);
         buffer[LenL] += sizeof(var);///TODO!
     }
 
@@ -44,22 +53,28 @@ public:
 
     void prepare_for_sending()
     {
+        assert(buffer[CC]!=0);
         uint8_t sum = SS_OFFSET;
         for_each(buffer + CC + 1, buffer + length, [&sum](char c)
         { sum += c; });
         buffer[length] = sum;
         length += sizeof(sum);
     }
+
+    void set_cmd(const uint8_t cmd)
+    {
+        assert(count(Commands, Commands + sizeof(Commands)/1, cmd)==1);
+        buffer[CC] = cmd;
+    }
 };
 
 class CommandReader
 {
-    static const size_t BUF_SIZE = 1024;
-    char buffer[BUF_SIZE] = {0};///TODO char->8_t
+    char buffer[BUF_SIZE] = {0};
     size_t length;///TODO Проконтролировать на =0 везде
-    size_t read_lehgth;
+    size_t read_length;
 public:
-    CommandReader() : length(0), read_lehgth(0)
+    CommandReader() : length(0), read_length(0)
     {}
 
     char* read(istream& dev)
@@ -76,20 +91,29 @@ public:
         { sum += c; });
         if (sum /*+ SS_OFFSET*/ != (uint8_t) buffer[length])///(weak TODO) Why?
         {
-            cerr << "SS is't correct" << endl;
+            cerr << "SS isn't correct" << endl;
             assert(false);
         }
         length += sizeof (uint8_t);
-        read_lehgth=LenH+1;
+        read_length= LenH + 1;
         return buffer;
     }
 
+    bool is_empty() const
+    {
+        return length==3+1 || length==0;
+    }
+    int is_error() const
+    {
+        return buffer[CC]&(1<<7);
+    }
     template<typename T>
     T get_param(T& param)
     {
-       assert(length!=0);///TODO Control hashsum reading here
-       param = *reinterpret_cast<T*>(buffer+read_lehgth);///TODO Write is_empty()
-       read_lehgth+=sizeof(T);
+       assert(length!=0);
+       assert(read_length+3+1!=length);///TODO Mrite the same for mk
+       param = *reinterpret_cast<T*>(buffer + read_length);///ToDo Write is_empty()
+       read_length+=sizeof(T);
         return param;
     }
 
@@ -103,13 +127,15 @@ public:
 
 int calc_mean(const string& path);
 //void wait();
-int main (int argc, char** argv)
+int main (int , char** )
 {
     const char* path="react_time.csv";
     ofstream stat(path, ios_base::app|ios_base::out);
     CommandWriter command;
-    command.append_var<uint8_t>(0);/// Port TODO ?
-    command.append_var<uint16_t>(500);///Freq
+    command.set_cmd(0x10);
+    command.append_var<uint8_t>(1);/// Port TODO ?
+//    command.append_var<uint8_t>(1);
+    command.append_var<uint16_t>(200);///Freq //TODO +Symmetric array of freqs
     command.prepare_for_sending();
     CommandReader reader;
     char comp_command[]="sleep  ";
@@ -132,8 +158,12 @@ int main (int argc, char** argv)
         reader.read(dev_read);
         uint8_t get_command = reader.get_command(command_rec);
         assert(get_command == 0x10);
+//        assert(reader.is_empty());//TODO Test this with соответствующими actions in mk
         uint8_t param = reader.get_param(response);
         assert(param == 1);
+//        assert(reader.is_empty());
+        assert(!reader.is_error());
+
         std::cout << i << ' ' << endl;
 //        stat << speed << endl;
 //        if(if_exit)
