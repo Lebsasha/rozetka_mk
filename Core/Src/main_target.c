@@ -7,7 +7,6 @@ void CommandWriter_ctor(CommandWriter* ptr)
 {
     ptr->length=1+1+1;///CC, LenH, LenL
     ptr->BUF_SIZE=128;
-    ptr->buffer= malloc(sizeof(uint8_t)*ptr->BUF_SIZE);///TODO Infinity alloc is bad?
     for (uint8_t* c = ptr->buffer+ptr->BUF_SIZE-1; c >= ptr->buffer; --c)
     {
         *c=0;
@@ -27,6 +26,16 @@ void append_var_8(CommandWriter* ptr, T var)
 }
 #undef T
 
+#define T uint16_t
+void append_var_16(CommandWriter* ptr, T var)
+{
+//    assert(ptr->length + sizeof(var) < ptr->BUF_SIZE); ///TODO Error Handle
+    *(T*)(ptr->buffer + ptr->length) = var;
+    ptr->length += sizeof(var);
+//    assert(ptr->buffer[LenL]<128)///TODO Error Handle
+    ptr->buffer[LenL] += sizeof(var);
+}
+#undef T
 
 void prepare_for_sending(CommandWriter* ptr, uint8_t command_code, bool if_ok)///TODO Delete this todo?
 {
@@ -79,7 +88,8 @@ ptr->read_lehgth=LenH+1;
 #define T uint8_t
     T get_param_8(CommandReader* ptr, T* param)
     {
-//        assert(ptr->length!=0);///TODO Error handle
+//        assert(ptr->length!=0);///TODO Error handle x2
+//       assert(read_length+sizeof(T)+1<=length);
         *param = *(T*)(ptr->buffer+ptr->read_lehgth);
         ptr->read_lehgth+=sizeof(T);
         return *param;
@@ -88,7 +98,8 @@ ptr->read_lehgth=LenH+1;
 #define T uint16_t
 T get_param_16(CommandReader* ptr, T* param)
 {
-//    assert(ptr->length!=0);///TODO Error handle
+//        assert(ptr->length!=0);///TODO Error handle x2
+//       assert(read_length+sizeof(T)+1<=length);
     *param = *(T*)(ptr->buffer+ptr->read_lehgth);
     ptr->read_lehgth+=sizeof(T);
     return *param;
@@ -116,6 +127,8 @@ extern CommandWriter writer;
 //uint32_t curr=0; // TIM_TRGO_UPDATE; TODO View @ref in docs
 //TODO Reformat code
 //TODO Unknown command resend (if it needed?)
+//TODO What is restrict
+//TODO If volatile always needed?
 int str_cmp(const uint8_t*, const char*);
 
 void toggle_led(const uint8_t* command, size_t i);
@@ -167,7 +180,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 }
             } else if(cmd == 0x1)
             {
-                if(is_empty(&reader))
+                if(is_empty(&reader))//TODO If needed this if?
                 {
                     append_var_8(&writer, 1);
                     const char* VER="Tone";
@@ -177,6 +190,8 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                     }
                     prepare_for_sending(&writer, cmd, true);
                 }
+                else
+                   prepare_for_sending(&writer, cmd, false);
             } else if(cmd == 0x11)
             {
 
@@ -277,7 +292,7 @@ void my_delay(int mc_s)
 }
 
 void make_tone(Tone_pin* tone_pin)
-{///This can be optimised
+{///TODO This can be optimised
 ///TODO Why silence comes when dx==0?
     *tone_pin->duty_cycle = (uint32_t) (tone_pin->f_dots[tone_pin->curr >> 8]) * COUNTER_PERIOD / tone_pin->sine_ampl;
     tone_pin->curr += tone_pin->dx;

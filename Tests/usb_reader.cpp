@@ -16,11 +16,11 @@ enum
 
 //enum Commands{Set_tone};
 /**
- * 0x1
- * 0x4
- * 0x10 u8|port u8|size u16|freq x3
- * 0x11
- * 0x12
+ * 0x1 -> u8|version u8[]|"string with \0"
+ * 0x4 ->
+ * 0x10 u8|port u8|size u16[1-3]|freq ->
+ * 0x11 u8|port ->
+ * 0x12 -> u16|react_time//TODO this line
  */
 uint8_t Commands[]={0x1, 0x4, 0x10, 0x11, 0x12};
 
@@ -38,17 +38,23 @@ public:
     template<typename T>
     void append_var(T var)
     {
-        assert(length + sizeof(var) < BUF_SIZE);
+        assert(length + sizeof(var) < BUF_SIZE);///Less only (without equal) because we must append CC
         *reinterpret_cast<T*>(buffer + length) = var;
         length += sizeof(var);
-        assert(buffer[LenL]>=0);
         buffer[LenL] += sizeof(var);
     }
 
-    void write(ostream& dev) const
+    void write(ostream& dev)
     {
         dev.write(buffer, length);
         dev.flush();
+        for(char* c=buffer+length-1;c>=buffer;--c)
+        {
+            *c=0;
+        }
+        length=LenH+1;
+//        this->CommandWriter::~CommandWriter();
+//        *this=CommandWriter();
     }
 
     void prepare_for_sending()
@@ -63,7 +69,7 @@ public:
 
     void set_cmd(const uint8_t cmd)
     {
-        assert(count(Commands, Commands + sizeof(Commands)/1, cmd)==1);
+        assert(count(Commands, Commands + sizeof(Commands)/sizeof(uint8_t), cmd)==1);
         buffer[CC] = cmd;
     }
 };
@@ -89,7 +95,7 @@ public:
         uint8_t sum = SS_OFFSET;
         for_each(buffer + LenL, buffer + length, [&sum](char c)
         { sum += c; });
-        if (sum /*+ SS_OFFSET*/ != (uint8_t) buffer[length])///(weak TODO) Why?
+        if (sum /*+ SS_OFFSET*/ != (uint8_t) buffer[length])
         {
             cerr << "SS isn't correct" << endl;
             assert(false);
@@ -111,12 +117,18 @@ public:
     T get_param(T& param)
     {
        assert(length!=0);
-       assert(read_length+3+1!=length);///TODO Mrite the same for mk
+        assert(read_length+sizeof(T)+1<=length);///TODO Mrite the same for mk
        param = *reinterpret_cast<T*>(buffer + read_length);
        read_length+=sizeof(T);
         return param;
     }
 
+    template<typename T>
+    T get_param()
+    {
+       T param;
+        return get_param(param);
+    }
     uint8_t get_command(uint8_t& cmd) const
     {
         return cmd=buffer[CC];
@@ -149,7 +161,7 @@ int main (int , char** )
         return 1;
     }
 //    std::thread waiter(wait);
-    cout<<"begin ";///TODO Сделать "прозвон"
+    cout<<"begin "<<std::flush;///TODO Сделать "прозвон"
     for(size_t i =0;i<4;++i)
     {
         comp_command[sizeof(comp_command) - 1 - 1] = rand() % 1 + '0';

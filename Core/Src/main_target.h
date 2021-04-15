@@ -118,9 +118,9 @@ typedef struct Tone_pin
     uint32_t curr;
 }Tone_pin;
 
-/// If start_time!=0 time is measured.
-/// Then if stop_time!=0 time is sended
-/// Otherwise measuring is off
+/// If start_time!=0 && stop_time==0 time is measured.
+///     Then if stop_time!=0 time is sended
+/// Otherwise (start_time==0) measuring is off
 typedef struct Button
 {
     volatile uint32_t start_time;
@@ -151,7 +151,7 @@ static const uint8_t SS_OFFSET = 42;///TODO Write documentation
 
 typedef struct CommandWriter
 {
-    uint8_t* buffer;
+    uint8_t buffer[128];
     size_t length;
     size_t BUF_SIZE;
 } CommandWriter;
