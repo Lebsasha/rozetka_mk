@@ -144,12 +144,6 @@ int main (int , char** )
     const char* path="react_time.csv";
     ofstream stat(path, ios_base::app|ios_base::out);
     CommandWriter command;
-    command.set_cmd(0x10);
-    command.append_var<uint8_t>(1);/// Port TODO ?
-    command.append_var<uint8_t>(2);
-    command.append_var<uint16_t>(200);
-    command.append_var<uint16_t>(800);
-    command.prepare_for_sending();
     CommandReader reader;
     char comp_command[]="sleep  ";
     uint8_t command_rec; ///Command received
@@ -164,16 +158,27 @@ int main (int , char** )
     cout<<"begin "<<std::flush;///TODO Сделать "прозвон"
     for(size_t i =0;i<4;++i)
     {
-        comp_command[sizeof(comp_command) - 1 - 1] = rand() % 1 + '0';
+        comp_command[sizeof(comp_command) - 1 - 1] = rand() % 5 + '0';
         system(comp_command);
+        const int cmd = 0x11;
+        command.set_cmd(cmd);
+        command.append_var<uint8_t>(0);/// Port
+        command.prepare_for_sending();
         command.write(dev);
         reader.read(dev_read);
-        uint8_t get_command = reader.get_command(command_rec);
         assert(!reader.is_error());
-        assert(get_command == 0x10);
+        assert(reader.get_command(command_rec) == cmd);
         assert(reader.is_empty());
-
-        std::cout << i << ' ' << endl;
+        do
+        {
+            system("sleep 1");
+            command.set_cmd(0x12);
+            command.prepare_for_sending();
+            command.write(dev);
+            reader.read(dev_read);
+        } while (reader.is_error());
+        uint16_t react_time;
+        std::cout << i << ' ' << reader.get_param(react_time)<<endl;
 //        stat << speed << endl;
 //        if(if_exit)
 //            break;

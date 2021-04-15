@@ -158,4 +158,19 @@ typedef struct CommandWriter
 void CommandWriter_ctor(CommandWriter* ptr);
 
 void send_command(CommandWriter* ptr);
+
+
+typedef enum States{Measuring_reaction, Measiring_freq, Sending, Idle}States;
+typedef struct Tester
+{
+    volatile States states;
+    volatile uint16_t freq;
+    volatile uint16_t react_time;
+    volatile uint8_t react_time_size;
+    volatile uint32_t start_time;
+    volatile uint32_t stop_time;
+    volatile uint8_t port;
+}Tester;
+void Tester_ctor(Tester* ptr);
+
 #endif //MAIN_TARGET

@@ -74,6 +74,7 @@ int16_t f_dots[1024];
 Tone_pin* tone_pins; /// It is the array of pins that make tones. The first pin is A10 and the second is A9
 Button button={0, 0};
 CommandWriter writer;
+Tester tester;
 
 void send_command(CommandWriter* ptr)///In main, USB part
 {
@@ -149,9 +150,10 @@ int main(void)
     HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);///start sound at A10
     HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);///start sound at A9
     HAL_TIM_Base_Start_IT(&htim1);
-//    HAL_TIM_Base_Start_IT(&htim3);
+    HAL_TIM_Base_Start_IT(&htim3);
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 0);
     CommandWriter_ctor(&writer);
+    Tester_ctor(&tester);
 //    TIM3->PSC = 40 - 1;
 //    TIM3->ARR = 1;
 //    __HAL_TIM_ENABLE_IT(&htim3, TIM_IT_UPDATE);
@@ -164,12 +166,30 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-      if(button.stop_time!=0)
+      if(tester.stop_time!=0)
       {
-          /*typeof(button.stop_time)*/uint32_t diff=button.stop_time-button.start_time;
-          SEND_VAR(&diff);
-          button.start_time=0;
-          button.stop_time=0;
+//          assert(tester.states==Measuring_reaction);//TODO Error Handling
+              tester.react_time+=tester.stop_time-tester.start_time;
+              tone_pins[tester.port].dx=0;
+          if(tester.react_time_size<2)
+          {
+              HAL_Delay(600);
+              ++tester.react_time_size;
+              tone_pins[tester.port].dx = (tone_pins[tester.port].arr_size * 1000 << 8) / TONE_FREQ;//TODO Вынести в отдельную ф-цию
+              tester.start_time = HAL_GetTick();
+              tester.stop_time = 0;
+          }
+          else
+          {
+              tester.react_time/=3;
+              tester.start_time=0;
+              tester.stop_time=0;
+              tester.react_time_size=0;
+              tester.states=Measiring_freq;
+          }
+      }
+      if(tester.states==Measiring_freq)///TODO Минимальный дискрет; линейный, эксп, небоскр
+      {
       }
       if(button.start_time!=0)
       {

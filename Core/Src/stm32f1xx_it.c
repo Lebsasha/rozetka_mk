@@ -67,6 +67,7 @@ extern volatile uint32_t count;
 extern struct LED leds[3];
 extern Tone_pin* tone_pins;
 extern Button button;
+extern Tester tester;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -274,9 +275,9 @@ void TIM3_IRQHandler(void)
     if (__HAL_TIM_GET_FLAG(&htim3, TIM_FLAG_UPDATE) != RESET)
     {
         __HAL_TIM_CLEAR_IT(&htim3, TIM_IT_UPDATE);
-        if(HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5)==GPIO_PIN_RESET && button.stop_time==0 && button.start_time!=0)
+        if(HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5)==GPIO_PIN_RESET && tester.stop_time==0 && tester.start_time!=0)
         {
-            button.stop_time=HAL_GetTick();
+            tester.stop_time=HAL_GetTick();
         }
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 0);
         return;

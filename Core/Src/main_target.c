@@ -111,6 +111,17 @@ uint8_t get_command(CommandReader* ptr)
         return ptr->buffer[CC];
     }
 
+    void Tester_ctor(Tester* ptr)
+    {
+        ptr->states=Idle;
+        ptr->freq=0;
+        ptr->react_time=0;
+        ptr->react_time_size=0;
+        ptr->start_time=0;
+        ptr->stop_time=0;
+        ptr->port=0;
+    }
+
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim3;
 extern struct LED leds[3];
@@ -120,6 +131,7 @@ extern volatile int measure_one_sine;
 extern Button button;
 extern Tone_pin* tone_pins;
 extern CommandWriter writer;
+extern Tester tester;
 //extern const int16_t sine_ampl;//TODO Remove some global vars
 //extern const uint16_t arr_size;//TODO Sometime cleanup code
 //extern int16_t f_dots[];//TODO Measure 0 and 1
@@ -154,30 +166,35 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
             const uint8_t cmd = get_command(&reader);
             if (cmd == 0x10)
             {
-                uint8_t port;
-                uint8_t size;
-                uint16_t freqs[3]={0};
-                uint16_t freq=0;
-                get_param_8(&reader, &port);
-                get_param_8(&reader, &size);
-                //assert(size<3) //TODO Error Handle
-                for(uint16_t* c=freqs; c < freqs + size; ++c)
+                if(tester.states==Idle)
                 {
-                    get_param_16(&reader, c);
-                    //assert(*c < TONE_FREQ / 2) //TODO Error handle
-                    freq+=*c;
-                }
-                freq/=size;
-                if (port < 2)
-                {
-                    tone_pins[port].dx = (tone_pins[port].arr_size * freq << 8) / TONE_FREQ;
-                    prepare_for_sending(&writer, cmd, true);
+                    uint8_t port;
+                    uint8_t size;
+                    uint16_t freqs[3] = {0};
+                    uint16_t freq = 0;
+                    get_param_8(&reader, &port);
+                    get_param_8(&reader, &size);
+                    //assert(size<3) //TODO Error Handle
+                    for (uint16_t* c = freqs; c < freqs + size; ++c)
+                    {
+                        get_param_16(&reader, c);
+                        //assert(*c < TONE_FREQ / 2) //TODO Error handle
+                        freq += *c;
+                    }
+                    freq /= size;//TODO This isn't correct way. dx1, dx2, dx3 need.
+                    if (port < 2)
+                    {
+                        tone_pins[port].dx = (tone_pins[port].arr_size * freq << 8) / TONE_FREQ;
+                        prepare_for_sending(&writer, cmd, true);
+                    }
+                    else
+                    {
+                        append_var_8(&writer, 0);//TODO Delete this line
+                        prepare_for_sending(&writer, cmd, false);
+                    }
                 }
                 else
-                {
-                    append_var_8(&writer, 0);
-                    prepare_for_sending(&writer, cmd, false);
-                }
+                   prepare_for_sending(&writer, cmd, false);
             } else if(cmd == 0x1)
             {
                 if(is_empty(&reader))//TODO If needed this if?
@@ -186,7 +203,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                     const char* VER="Tone";
                     for (const char* c = VER; c < VER+4; ++c)//TODO sizeof
                     {
-                       append_var_8(&writer, *c); 
+                       append_var_8(&writer, *c);
                     }
                     prepare_for_sending(&writer, cmd, true);
                 }
@@ -194,7 +211,28 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                    prepare_for_sending(&writer, cmd, false);
             } else if(cmd == 0x11)
             {
-
+                if(tester.states==Idle)
+                {
+                    uint8_t port;
+                    get_param_8(&reader, &port);
+                    tester.port = port;
+                    tester.states = Measuring_reaction;
+                    tone_pins[port].dx = (tone_pins[0].arr_size * 1000 << 8) / TONE_FREQ;
+                    tester.start_time = HAL_GetTick();
+                    prepare_for_sending(&writer, cmd, true);
+                }
+                else
+                    prepare_for_sending(&writer, cmd, false);
+            } else if(cmd == 0x12)
+            {
+                if(tester.states==Measiring_freq)
+                {
+                    append_var_16(&writer, tester.react_time);
+                    tester.states=Idle;
+                    prepare_for_sending(&writer, cmd, true);
+                }
+                else
+                    prepare_for_sending(&writer, cmd, false);
             }
         }
         if (command[0] == '0')
