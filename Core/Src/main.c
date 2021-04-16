@@ -143,8 +143,8 @@ int main(void)
     }
 
     /// This lines is ctor for tone_pins
-    Tone_pin tone_pins_init[2]={{&(htim1.Instance->CCR3), f_dots, arr_size, sine_ampl, (arr_size*NOTE_C4<<8)/TONE_FREQ,0},
-                                {&(htim1.Instance->CCR2),f_dots, arr_size, sine_ampl, (arr_size*NOTE_C5<<8)/TONE_FREQ, 0}};
+    Tone_pin tone_pins_init[2]={{&(htim1.Instance->CCR3), f_dots, arr_size, sine_ampl, (arr_size*NOTE_C4<<8)/TONE_FREQ,0,0,0},
+                                {&(htim1.Instance->CCR2),f_dots, arr_size, sine_ampl, (arr_size*NOTE_C5<<8)/TONE_FREQ, 0,0,0}};
     tone_pins=tone_pins_init;
 
     HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);///start sound at A10
@@ -170,12 +170,17 @@ int main(void)
       {
 //          assert(tester.states==Measuring_reaction);//TODO Error Handling
               tester.react_time+=tester.stop_time-tester.start_time;
-              tone_pins[tester.port].dx=0;
+              tone_pins[tester.port].dx[0]=0;
+              tone_pins[tester.port].dx[1]=0;
+              tone_pins[tester.port].dx[2]=0;
           if(tester.react_time_size<2)
           {
               HAL_Delay(600);
               ++tester.react_time_size;
-              tone_pins[tester.port].dx = (tone_pins[tester.port].arr_size * 1000 << 8) / TONE_FREQ;//TODO Вынести в отдельную ф-цию
+              tone_pins[tester.port].dx[0] = (tone_pins[tester.port].arr_size * tester.freq << 8) / TONE_FREQ;//TODO Вынести в отдельную
+              // ф-цию
+              tone_pins[tester.port].dx[1] = 0;///TODO Что будет, если dx[1]=dx[0]
+              tone_pins[tester.port].dx[2] = 0;
               tester.start_time = HAL_GetTick();
               tester.stop_time = 0;
           }

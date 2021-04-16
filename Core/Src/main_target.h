@@ -114,7 +114,7 @@ typedef struct Tone_pin
     int16_t* f_dots;
     uint16_t arr_size;
     int16_t sine_ampl;
-    volatile uint32_t dx;
+    volatile uint32_t dx[3];
     uint32_t curr;
 }Tone_pin;
 
@@ -164,12 +164,13 @@ typedef enum States{Measuring_reaction, Measiring_freq, Sending, Idle}States;
 typedef struct Tester
 {
     volatile States states;
-    volatile uint16_t freq;
+    volatile uint16_t ampl;
     volatile uint16_t react_time;
     volatile uint8_t react_time_size;
     volatile uint32_t start_time;
     volatile uint32_t stop_time;
     volatile uint8_t port;
+    volatile uint16_t freq;
 }Tester;
 void Tester_ctor(Tester* ptr);
 

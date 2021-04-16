@@ -19,8 +19,8 @@ enum
  * 0x1 -> u8|version u8[]|"string with \0"
  * 0x4 ->
  * 0x10 u8|port u8|size u16[1-3]|freq ->
- * 0x11 u8|port ->
- * 0x12 -> u16|react_time//TODO this line
+ * 0x11 u8|port u16|freq ->
+ * 0x12 -> u16|react_time
  */
 uint8_t Commands[]={0x1, 0x4, 0x10, 0x11, 0x12};
 
@@ -53,8 +53,6 @@ public:
             *c=0;
         }
         length=LenH+1;
-//        this->CommandWriter::~CommandWriter();
-//        *this=CommandWriter();
     }
 
     void prepare_for_sending()
@@ -155,30 +153,33 @@ int main (int , char** )
         return 1;
     }
 //    std::thread waiter(wait);
-    cout<<"begin "<<std::flush;///TODO Сделать "прозвон"
+    cout<<"begin "<<std::flush;
     for(size_t i =0;i<4;++i)
     {
         comp_command[sizeof(comp_command) - 1 - 1] = rand() % 5 + '0';
         system(comp_command);
-        const int cmd = 0x11;
+        const int cmd = 0x10;
         command.set_cmd(cmd);
         command.append_var<uint8_t>(0);/// Port
+        command.append_var<uint8_t>(2);
+        command.append_var<uint16_t>(400);
+        command.append_var<uint16_t>(600);
         command.prepare_for_sending();
         command.write(dev);
         reader.read(dev_read);
         assert(!reader.is_error());
         assert(reader.get_command(command_rec) == cmd);
         assert(reader.is_empty());
-        do
-        {
-            system("sleep 1");
-            command.set_cmd(0x12);
-            command.prepare_for_sending();
-            command.write(dev);
-            reader.read(dev_read);
-        } while (reader.is_error());
-        uint16_t react_time;
-        std::cout << i << ' ' << reader.get_param(react_time)<<endl;
+//        do
+//        {
+//            system("sleep 1");
+//            command.set_cmd(0x12);
+//            command.prepare_for_sending();
+//            command.write(dev);
+//            reader.read(dev_read);
+//        } while (reader.is_error());
+//        uint16_t react_time;
+//        std::cout << i << ' ' << reader.get_param(react_time)<<endl;
 //        stat << speed << endl;
 //        if(if_exit)
 //            break;

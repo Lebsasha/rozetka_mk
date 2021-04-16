@@ -12,7 +12,6 @@ void CommandWriter_ctor(CommandWriter* ptr)
         *c=0;
     }
 }
-//TODO try with typeof or decltype
 
 //    template<typename T>
 #define T uint8_t
@@ -51,14 +50,14 @@ typedef struct CommandReader
 {
     uint8_t* buffer;
     size_t length;
-    size_t read_lehgth;
+    size_t read_length;
 }CommandReader;
 
     bool CommandReader_ctor(CommandReader* ptr, const uint8_t* cmd)
     {
         ptr->buffer=(typeof(ptr->buffer))(cmd);
         ptr->length=3;
-        ptr->read_lehgth=0;
+        ptr->read_length=0;
         const uint16_t n = (*(uint8_t*)(ptr->buffer + LenH) << 8) + *(uint8_t*)(ptr->buffer + LenL);
         if(n > 64)///USB packet size
             return false;
@@ -72,7 +71,7 @@ typedef struct CommandReader
 //            assert(false);///TODO Error handle
         }
 ptr->length += sizeof (uint8_t);
-ptr->read_lehgth=LenH+1;
+ptr->read_length= LenH + 1;
         return true;
     }
 
@@ -90,9 +89,13 @@ ptr->read_lehgth=LenH+1;
     {
 //        assert(ptr->length!=0);///TODO Error handle x2
 //       assert(read_length+sizeof(T)+1<=length);
-        *param = *(T*)(ptr->buffer+ptr->read_lehgth);
-        ptr->read_lehgth+=sizeof(T);
-        return *param;
+        T param_l;
+        if (param)
+            *param = *(T*) (ptr->buffer + ptr->read_length);
+        else
+            param_l= *(T*) (ptr->buffer + ptr->read_length);
+        ptr->read_length += sizeof(T);
+        return param ? *param : param_l;
     }
 #undef T
 #define T uint16_t
@@ -100,8 +103,8 @@ T get_param_16(CommandReader* ptr, T* param)
 {
 //        assert(ptr->length!=0);///TODO Error handle x2
 //       assert(read_length+sizeof(T)+1<=length);
-    *param = *(T*)(ptr->buffer+ptr->read_lehgth);
-    ptr->read_lehgth+=sizeof(T);
+    *param = *(T*)(ptr->buffer+ptr->read_length);
+    ptr->read_length+=sizeof(T);
     return *param;
 }
 #undef T
@@ -170,54 +173,41 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 {
                     uint8_t port;
                     uint8_t size;
-                    uint16_t freqs[3] = {0};
                     uint16_t freq = 0;
                     get_param_8(&reader, &port);
                     get_param_8(&reader, &size);
-                    //assert(size<3) //TODO Error Handle
-                    for (uint16_t* c = freqs; c < freqs + size; ++c)
+                    //assert(size<3) //TODO Error Handle x2
+                    //assert(port<2);
+                    for (volatile uint32_t* c =tone_pins[port].dx;c<tone_pins->dx+size;++c)
                     {
-                        get_param_16(&reader, c);
+                        get_param_16(&reader, &freq);
                         //assert(*c < TONE_FREQ / 2) //TODO Error handle
-                        freq += *c;
-                    }
-                    freq /= size;//TODO This isn't correct way. dx1, dx2, dx3 need.
-                    if (port < 2)
-                    {
-                        tone_pins[port].dx = (tone_pins[port].arr_size * freq << 8) / TONE_FREQ;
-                        prepare_for_sending(&writer, cmd, true);
-                    }
-                    else
-                    {
-                        append_var_8(&writer, 0);//TODO Delete this line
-                        prepare_for_sending(&writer, cmd, false);
-                    }
-                }
-                else
-                   prepare_for_sending(&writer, cmd, false);
-            } else if(cmd == 0x1)
-            {
-                if(is_empty(&reader))//TODO If needed this if?
-                {
-                    append_var_8(&writer, 1);
-                    const char* VER="Tone";
-                    for (const char* c = VER; c < VER+4; ++c)//TODO sizeof
-                    {
-                       append_var_8(&writer, *c);
+                        *c=(tone_pins[port].arr_size * freq << 8) / TONE_FREQ;
                     }
                     prepare_for_sending(&writer, cmd, true);
                 }
                 else
                    prepare_for_sending(&writer, cmd, false);
+            } else if(cmd == 0x1)
+            {
+                    append_var_8(&writer, 1);
+                    const char* VER="Tone";
+                    for (const char* c = VER; c <= VER+strlen(VER); ++c)
+                    {
+                       append_var_8(&writer, *c);
+                    }
+                    prepare_for_sending(&writer, cmd, true);
             } else if(cmd == 0x11)
             {
                 if(tester.states==Idle)
                 {
-                    uint8_t port;
-                    get_param_8(&reader, &port);
-                    tester.port = port;
+                    get_param_8(&reader, (uint8_t*)&tester.port);
+                    get_param_16(&reader, (uint16_t*)&tester.freq);
+//                    assert(tester.freq<TONE_FREQ/2); //TODO Error handle
                     tester.states = Measuring_reaction;
-                    tone_pins[port].dx = (tone_pins[0].arr_size * 1000 << 8) / TONE_FREQ;
+                    tone_pins[tester.port].dx[0] = (tone_pins[0].arr_size * tester.freq << 8) / TONE_FREQ;
+                    tone_pins[tester.port].dx[1]=0;
+                    tone_pins[tester.port].dx[2]=0;
                     tester.start_time = HAL_GetTick();
                     prepare_for_sending(&writer, cmd, true);
                 }
@@ -333,7 +323,7 @@ void make_tone(Tone_pin* tone_pin)
 {///TODO This can be optimised
 ///TODO Why silence comes when dx==0?
     *tone_pin->duty_cycle = (uint32_t) (tone_pin->f_dots[tone_pin->curr >> 8]) * COUNTER_PERIOD / tone_pin->sine_ampl;
-    tone_pin->curr += tone_pin->dx;
+    tone_pin->curr += tone_pin->dx[0] + tone_pin->dx[1] + tone_pin->dx[2];
     if (tone_pin->curr >= tone_pin->arr_size << 8)
     {
         tone_pin->curr -= tone_pin->arr_size << 8;
@@ -347,14 +337,14 @@ void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n)
     uint32_t start_tick = HAL_GetTick();
     for (int i = 0; i < n; ++i)
     {
-        pin->dx = (pin->arr_size << 8) * notes[i] / TONE_FREQ;
+        pin->dx[0] = (pin->arr_size << 8) * notes[i] / TONE_FREQ;///TODO dx2, dx3 unneeded in this context?
         wait = 1000 / durations[i];
         while ((HAL_GetTick() - start_tick) < wait)
         {
         }
         start_tick += wait;
     }
-    pin->dx = 0;
+    pin->dx[0] = 0;///TODO Same as upper TODO
 }
 
 int str_cmp(const uint8_t* command, const char* str)
