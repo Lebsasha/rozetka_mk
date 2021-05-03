@@ -322,11 +322,17 @@ void my_delay(int mc_s)
 void make_tone(Tone_pin* tone_pin)
 {///TODO This can be optimised
 ///TODO Why silence comes when dx==0?
-    *tone_pin->duty_cycle = (uint32_t) (tone_pin->f_dots[tone_pin->curr >> 8]) * COUNTER_PERIOD / tone_pin->sine_ampl;
-    tone_pin->curr += tone_pin->dx[0] + tone_pin->dx[1] + tone_pin->dx[2];
-    if (tone_pin->curr >= tone_pin->arr_size << 8)
+    for(int i=0; i<3;++i)
     {
-        tone_pin->curr -= tone_pin->arr_size << 8;
+        if (i == 0)
+            *tone_pin->duty_cycle = (uint32_t) (tone_pin->f_dots[tone_pin->curr[i] >> 8]) * COUNTER_PERIOD / tone_pin->sine_ampl / 3;
+        else
+            *tone_pin->duty_cycle += (uint32_t) (tone_pin->f_dots[tone_pin->curr[i] >> 8]) * COUNTER_PERIOD / tone_pin->sine_ampl / 3;
+        tone_pin->curr[i] += tone_pin->dx[i];
+        if (tone_pin->curr[i] >= tone_pin->arr_size << 8)
+        {
+            tone_pin->curr[i] -= tone_pin->arr_size << 8;
+        }
     }
 
 }

@@ -115,7 +115,7 @@ typedef struct Tone_pin
     uint16_t arr_size;
     int16_t sine_ampl;
     volatile uint32_t dx[3];
-    uint32_t curr;
+    uint32_t curr[3];
 }Tone_pin;
 
 /// If start_time!=0 && stop_time==0 time is measured.
