@@ -4,6 +4,7 @@
 //#include <thread>
 #include <algorithm>
 #include <cassert>
+#include "../Core/Inc/notes.h"
 
 using namespace std;
 
@@ -156,14 +157,14 @@ int main (int , char** )
     cout<<"begin "<<std::flush;
     for(size_t i =0;i<4;++i)
     {
-        comp_command[sizeof(comp_command) - 1 - 1] = rand() % 5 + '0';
+        comp_command[sizeof(comp_command) - 1 - 1] = rand() % 3 + '0';
         system(comp_command);
         const int cmd = 0x10;
         command.set_cmd(cmd);
         command.append_var<uint8_t>(0);/// Port
         command.append_var<uint8_t>(2);
         command.append_var<uint16_t>(400);
-        command.append_var<uint16_t>(600);
+        command.append_var<uint16_t>(800);
         command.prepare_for_sending();
         command.write(dev);
         reader.read(dev_read);

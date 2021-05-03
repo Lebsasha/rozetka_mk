@@ -138,7 +138,7 @@ extern Tester tester;
 //extern const int16_t sine_ampl;//TODO Remove some global vars
 //extern const uint16_t arr_size;//TODO Sometime cleanup code
 //extern int16_t f_dots[];//TODO Measure 0 and 1
-//volatile uint32_t dx=(1024*500<<8)/TONE_FREQ;//TODO Move target.h -> Inc
+//volatile uint32_t dx=(1024*500<<8)/TONE_FREQ;
 //uint32_t curr=0; // TIM_TRGO_UPDATE; TODO View @ref in docs
 //TODO Reformat code
 //TODO Unknown command resend (if it needed?)
