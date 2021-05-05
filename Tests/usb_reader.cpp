@@ -155,16 +155,15 @@ int main (int , char** )
     }
 //    std::thread waiter(wait);
     cout<<"begin "<<std::flush;
-    for(size_t i =0;i<4;++i)
+    for(size_t i =0;i<1;++i)
     {
         comp_command[sizeof(comp_command) - 1 - 1] = rand() % 3 + '0';
         system(comp_command);
         const int cmd = 0x10;
         command.set_cmd(cmd);
-        command.append_var<uint8_t>(0);/// Port
-        command.append_var<uint8_t>(2);
-        command.append_var<uint16_t>(400);
-        command.append_var<uint16_t>(800);
+        command.append_var<uint8_t>(1);/// Port
+        command.append_var<uint8_t>(1);
+        command.append_var<uint16_t>(NOTE_B4);
         command.prepare_for_sending();
         command.write(dev);
         reader.read(dev_read);

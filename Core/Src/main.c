@@ -24,6 +24,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "main_target.h"
+#include <notes.h>
 #include "usbd_cdc_if.h"
 /* USER CODE END Includes */
 
@@ -68,9 +69,6 @@ struct LED leds[3];
 volatile uint32_t count=0;
 volatile uint32_t time;
 volatile int measure_one_sine=0;
-const int16_t sine_ampl=(1U<<(sizeof(sine_ampl)*8-1))-1;
-const uint16_t arr_size=1024;
-int16_t f_dots[1024];
 Tone_pin* tone_pins; /// It is the array of pins that make tones. The first pin is A10 and the second is A9
 Button button={0, 0};
 CommandWriter writer;
@@ -137,14 +135,15 @@ int main(void)
 //    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);//red
 //    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);//blue
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 1);
-    for(int i=0; i< arr_size; ++i)
-    {
-        f_dots[i]=sine_ampl/2.0 - sine_ampl/2.0 * sin(i* 2*M_PI/arr_size);
-    }
 
     /// This lines is ctor for tone_pins
-    Tone_pin tone_pins_init[2]={{&(htim1.Instance->CCR3), f_dots, arr_size, sine_ampl, (arr_size*NOTE_C4<<8)/TONE_FREQ,0,0,0,0,0},
-                                {&(htim1.Instance->CCR2),f_dots, arr_size, sine_ampl, (arr_size*0<<8)/TONE_FREQ, 0,0,0,0,0}};
+    Tone_pin tone_pins_init[2];
+    tone_pin_ctor(&tone_pins_init[0], &(htim1.Instance->CCR3));
+    tone_pins_init[0].dx[0]=freq_to_dx(&tone_pins_init[0], 440);
+    tone_pin_ctor(&tone_pins_init[1], &(htim1.Instance->CCR2));
+    tone_pins_init[1].dx[0]=freq_to_dx(&tone_pins_init[1], 440);
+
+    ///TODO Group all common func-s in "classes"
     tone_pins=tone_pins_init;
 
     HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);///start sound at A10

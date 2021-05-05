@@ -114,17 +114,6 @@ uint8_t get_command(CommandReader* ptr)
         return ptr->buffer[CC];
     }
 
-    void Tester_ctor(Tester* ptr)
-    {
-        ptr->states=Idle;
-        ptr->freq=0;
-        ptr->react_time=0;
-        ptr->react_time_size=0;
-        ptr->start_time=0;
-        ptr->stop_time=0;
-        ptr->port=0;
-    }
-
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim3;
 extern struct LED leds[3];
@@ -144,6 +133,74 @@ extern Tester tester;
 //TODO Unknown command resend (if it needed?)
 //TODO What is restrict
 //TODO If volatile always needed?
+
+
+const int16_t sine_ampl=(1U<<(sizeof(sine_ampl)*8-1))-1;
+const uint16_t arr_size=1024;
+int16_t f_dots[1024];
+
+void tone_pin_ctor(Tone_pin* ptr, volatile uint32_t* CCR)
+{
+    ptr->duty_cycle = CCR;
+    for (int i = 0; i < arr_size; ++i)
+    {
+        f_dots[i] = sine_ampl / 2.0 - sine_ampl / 2.0 * sin(i * 2 * M_PI / arr_size);
+    }
+    ptr->f_dots = f_dots;
+    ptr->arr_size = arr_size;
+    ptr->sine_ampl = sine_ampl;
+    for (size_t i = 0; i < sizeof_arr(ptr->dx); ++i)
+    {
+        ptr->dx[i] = 0;
+        ptr->curr[i] = 0;
+    }
+}
+
+void make_tone(Tone_pin* tone_pin)
+{///TODO This can be optimised
+///TODO Why silence comes when dx==0?
+    for(int i=0; i<3;++i)
+    {
+        if (i == 0)
+            *tone_pin->duty_cycle = (uint32_t) (tone_pin->f_dots[tone_pin->curr[i] >> 8]) * COUNTER_PERIOD / tone_pin->sine_ampl / 3;
+        else
+            *tone_pin->duty_cycle += (uint32_t) (tone_pin->f_dots[tone_pin->curr[i] >> 8]) * COUNTER_PERIOD / tone_pin->sine_ampl / 3;
+        tone_pin->curr[i] += tone_pin->dx[i];
+        if (tone_pin->curr[i] >= tone_pin->arr_size << 8)
+        {
+            tone_pin->curr[i] -= tone_pin->arr_size << 8;
+        }
+    }
+}
+
+void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n)
+{
+    volatile uint32_t wait;///TODO remove volatile
+    uint32_t start_tick = HAL_GetTick();
+    for (int i = 0; i < n; ++i)
+    {
+        pin->dx[0] = (pin->arr_size << 8) * notes[i] / TONE_FREQ;///TODO dx2, dx3 unneeded in this context?
+        wait = 1000 / durations[i];
+        while ((HAL_GetTick() - start_tick) < wait)
+        {
+        }
+        start_tick += wait;
+    }
+    pin->dx[0] = 0;///TODO Same as upper TODO
+}
+
+
+void Tester_ctor(Tester* ptr)
+{
+    ptr->states=Idle;
+    ptr->freq=0;
+    ptr->react_time=0;
+    ptr->react_time_size=0;
+    ptr->start_time=0;
+    ptr->stop_time=0;
+    ptr->port=0;
+}
+
 int str_cmp(const uint8_t*, const char*);
 
 void toggle_led(const uint8_t* command, size_t i);
@@ -178,7 +235,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                     get_param_8(&reader, &size);
                     //assert(size<3) //TODO Error Handle x2
                     //assert(port<2);
-                    for (volatile uint32_t* c =tone_pins[port].dx;c<tone_pins->dx+size;++c)
+                    for (volatile uint32_t* c =tone_pins[port].dx;c<tone_pins[port].dx+size;++c)
                     {
                         get_param_16(&reader, &freq);
                         //assert(*c < TONE_FREQ / 2) //TODO Error handle
@@ -317,40 +374,6 @@ void my_delay(int mc_s)
     __HAL_TIM_SET_COUNTER(&htim1, 0);
     while (__HAL_TIM_GET_COUNTER(&htim1) < mc_s)
     {}
-}
-
-void make_tone(Tone_pin* tone_pin)
-{///TODO This can be optimised
-///TODO Why silence comes when dx==0?
-    for(int i=0; i<3;++i)
-    {
-        if (i == 0)
-            *tone_pin->duty_cycle = (uint32_t) (tone_pin->f_dots[tone_pin->curr[i] >> 8]) * COUNTER_PERIOD / tone_pin->sine_ampl / 3;
-        else
-            *tone_pin->duty_cycle += (uint32_t) (tone_pin->f_dots[tone_pin->curr[i] >> 8]) * COUNTER_PERIOD / tone_pin->sine_ampl / 3;
-        tone_pin->curr[i] += tone_pin->dx[i];
-        if (tone_pin->curr[i] >= tone_pin->arr_size << 8)
-        {
-            tone_pin->curr[i] -= tone_pin->arr_size << 8;
-        }
-    }
-
-}
-
-void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n)
-{
-    volatile uint32_t wait;///TODO remove volatile
-    uint32_t start_tick = HAL_GetTick();
-    for (int i = 0; i < n; ++i)
-    {
-        pin->dx[0] = (pin->arr_size << 8) * notes[i] / TONE_FREQ;///TODO dx2, dx3 unneeded in this context?
-        wait = 1000 / durations[i];
-        while ((HAL_GetTick() - start_tick) < wait)
-        {
-        }
-        start_tick += wait;
-    }
-    pin->dx[0] = 0;///TODO Same as upper TODO
 }
 
 int str_cmp(const uint8_t* command, const char* str)

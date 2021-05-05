@@ -3,11 +3,13 @@
 
 #define TONE_FREQ 40000
 #define COUNTER_PERIOD 1800
+#define freq_to_dx(tone_pin_ptr, freq)  ((tone_pin_ptr)->arr_size*(freq)<<8)/TONE_FREQ
+#define sizeof_arr(arr) sizeof(arr)/sizeof((arr)[0])
 //htim1.Instance->ARR+1
 //(const uint16_t) 100
 
 #include "notes.h"
-#include <assert.h>
+//#include <assert.h>
 
 struct LED
 {
@@ -19,15 +21,28 @@ struct LED
     void (* curr_step)(struct LED*);
 };
 
+void ctor_LED(struct LED* led, uint16_t detailyty, volatile uint32_t* duty_cycle, char num);
+
+
 typedef struct Tone_pin
 {
     volatile uint32_t* duty_cycle;
     int16_t* f_dots;
-    uint16_t arr_size;
-    int16_t sine_ampl;
+    uint16_t arr_size;///TODO Maybe inline?
+    int16_t sine_ampl;///TODO Maybe inline?
     volatile uint32_t dx[3];
     uint32_t curr[3];
 }Tone_pin;
+
+void tone_pin_ctor(Tone_pin* ptr, volatile uint32_t*);
+
+/// This is the function that handles changes of tone
+void make_tone(Tone_pin* tone_pin);
+
+///Play some melody with notes and durations
+/// @param durations - array of !positive! uint8's
+void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n);
+
 
 /// If start_time!=0 && stop_time==0 time is measured.
 ///     Then if stop_time!=0 time is sended
@@ -37,15 +52,6 @@ typedef struct Button
     volatile uint32_t start_time;
     volatile uint32_t stop_time;
 }Button;
-
-/// This is the function that handles changes of tone
-void make_tone(Tone_pin* tone_pin);
-
-void ctor_LED(struct LED* led, uint16_t detailyty, volatile uint32_t* duty_cycle, char num);
-
-///Play some melody with notes and durations
-/// @param durations - array of !positive! uint8's
-void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n);
 
 void my_delay(int mc_s);
 
@@ -66,6 +72,7 @@ typedef struct CommandWriter
     size_t length;
     size_t BUF_SIZE;
 } CommandWriter;
+
 void CommandWriter_ctor(CommandWriter* ptr);
 
 void send_command(CommandWriter* ptr);
