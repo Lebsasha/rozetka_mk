@@ -14,27 +14,18 @@ void CommandWriter_ctor(CommandWriter* ptr)
 }
 
 //    template<typename T>
-#define T uint8_t
-void append_var_8(CommandWriter* ptr, T var)
-{
-//    assert(ptr->length + sizeof(var) < ptr->BUF_SIZE); ///TODO Error Handle
-    *(T*)(ptr->buffer + ptr->length) = var;
-    ptr->length += sizeof(var);
-//    assert(ptr->buffer[LenL]<128)///TODO Error Handle
-    ptr->buffer[LenL] += sizeof(var);
+#define def_append_var(size) void append_var_##size(CommandWriter* ptr, uint##size##_t var) \
+{\
+    *(uint##size##_t*)(ptr->buffer + ptr->length) = var;\
+    ptr->length += sizeof(var);\
+    ptr->buffer[LenL] += sizeof(var);\
 }
-#undef T
+///TODO If todos below are need in this context?
+//    assert(ptr->length + sizeof(var) < ptr->BUF_SIZE); ///TODO Error Handle
+//    assert(ptr->buffer[LenL]<128)   ///TODO Error Handle
 
-#define T uint16_t
-void append_var_16(CommandWriter* ptr, T var)
-{
-//    assert(ptr->length + sizeof(var) < ptr->BUF_SIZE); ///TODO Error Handle
-    *(T*)(ptr->buffer + ptr->length) = var;
-    ptr->length += sizeof(var);
-//    assert(ptr->buffer[LenL]<128)///TODO Error Handle
-    ptr->buffer[LenL] += sizeof(var);
-}
-#undef T
+def_append_var(8);
+def_append_var(16);
 
 void prepare_for_sending(CommandWriter* ptr, uint8_t command_code, bool if_ok)///TODO Delete this todo?
 {
@@ -57,7 +48,6 @@ typedef struct CommandReader
     {
         ptr->buffer=(typeof(ptr->buffer))(cmd);
         ptr->length=3;
-        ptr->read_length=0;
         const uint16_t n = (*(uint8_t*)(ptr->buffer + LenH) << 8) + *(uint8_t*)(ptr->buffer + LenL);
         if(n > 64)///USB packet size
             return false;
@@ -68,7 +58,6 @@ typedef struct CommandReader
         if (sum != (uint8_t) ptr->buffer[ptr->length])
         {
             return false;
-//            assert(false);///TODO Error handle
         }
 ptr->length += sizeof (uint8_t);
 ptr->read_length= LenH + 1;
@@ -81,33 +70,16 @@ ptr->read_length= LenH + 1;
     }
 
 //    template<typename T>
-#ifdef T
-#error T already defined
-#endif
-#define T uint8_t
-    T get_param_8(CommandReader* ptr, T* param)
-    {
-//        assert(ptr->length!=0);///TODO Error handle x2
-//       assert(read_length+sizeof(T)+1<=length);
-        T param_l;
-        if (param)
-            *param = *(T*) (ptr->buffer + ptr->read_length);
-        else
-            param_l= *(T*) (ptr->buffer + ptr->read_length);
-        ptr->read_length += sizeof(T);
-        return param ? *param : param_l;
-    }
-#undef T
-#define T uint16_t
-T get_param_16(CommandReader* ptr, T* param)
-{
-//        assert(ptr->length!=0);///TODO Error handle x2
-//       assert(read_length+sizeof(T)+1<=length);
-    *param = *(T*)(ptr->buffer+ptr->read_length);
-    ptr->read_length+=sizeof(T);
-    return *param;
+#define def_get_param(size) bool get_param_##size(CommandReader* ptr, uint##size##_t* param)\
+{\
+    if(ptr->length==0 || !(ptr->read_length+sizeof(*param)+1<=ptr->length))\
+         return false;\
+    *param = *(uint##size##_t*)(ptr->buffer+ptr->read_length);\
+    ptr->read_length+=sizeof(*param);\
+    return true;\
 }
-#undef T
+def_get_param(8);
+def_get_param(16);
 
 uint8_t get_command(CommandReader* ptr)
     {
@@ -133,7 +105,7 @@ extern Tester tester;
 //TODO Unknown command resend (if it needed?)
 //TODO What is restrict
 //TODO If volatile always needed?
-
+//TODO Change notes
 
 const int16_t sine_ampl=(1U<<(sizeof(sine_ampl)*8-1))-1;
 const uint16_t arr_size=1024;
@@ -215,6 +187,17 @@ void calc_middle(struct LED*);
 
 void calc_down(struct LED*);
 
+#ifdef NDEBUG
+#define my_assert(cond) ((void)0)
+#else
+#define my_assert(cond) do{if(!(cond)) \
+{                                   \
+    assertion_failed(#cond, cmd);   \
+    return;                         \
+}}while(false)
+#endif
+void assertion_failed(const char*, uint8_t cmd);
+
 void process_cmd(const uint8_t* command, const uint32_t* len)
 {
     if (*len)//TODO Add elses
@@ -226,25 +209,22 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
             const uint8_t cmd = get_command(&reader);
             if (cmd == 0x10)
             {
-                if(tester.states==Idle)
-                {
+                my_assert(tester.states==Idle);
                     uint8_t port;
-                    uint8_t size;
+//                    uint8_t size;
                     uint16_t freq = 0;
                     get_param_8(&reader, &port);
-                    get_param_8(&reader, &size);
-                    //assert(size<3) //TODO Error Handle x2
-                    //assert(port<2);
-                    for (volatile uint32_t* c =tone_pins[port].dx;c<tone_pins[port].dx+size;++c)
+//                    get_param_8(&reader, &size);
+//                    my_assert(size<=sizeof_arr(tone_pins->dx)); //TODO Error Handle x2
+                    my_assert(port<2);
+                    for (volatile uint32_t* c =tone_pins[port].dx;c<tone_pins[port].dx+sizeof_arr(tone_pins->dx);++c)
                     {
-                        get_param_16(&reader, &freq);
-                        //assert(*c < TONE_FREQ / 2) //TODO Error handle
+                        if(!get_param_16(&reader, &freq))
+                            freq = 0;
+                        my_assert(freq <= 3400); //TODO Error handle
                         *c=(tone_pins[port].arr_size * freq << 8) / TONE_FREQ;
                     }
                     prepare_for_sending(&writer, cmd, true);
-                }
-                else
-                   prepare_for_sending(&writer, cmd, false);
             } else if(cmd == 0x1)
             {
                     append_var_8(&writer, 1);
@@ -287,6 +267,19 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
         if (command[0] == '1')
             HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
     }
+}
+
+void assertion_failed(const char* cond, const uint8_t cmd)
+{
+    writer.length=3;///clean writer if I already have appended something; replacement of CommandWriter_ctor for optimisation purposes
+    size_t length = strlen(cond)+3+1+1>=writer.BUF_SIZE?writer.BUF_SIZE-3-1-1 : strlen(cond);///3 - 3 bytes: CC, LenL, LenH; 1 - checksum
+    ///  byte; 1 - size of '\0'
+    for (const char* c = cond; c < cond + length; ++c)
+    {
+        append_var_8(&writer, *c);
+    }
+    append_var_8(&writer, '\0');
+    prepare_for_sending(&writer, cmd, false);
 }
 
 void toggle_led(const uint8_t* command, const size_t i)

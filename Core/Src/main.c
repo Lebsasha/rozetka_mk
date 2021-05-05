@@ -139,9 +139,9 @@ int main(void)
     /// This lines is ctor for tone_pins
     Tone_pin tone_pins_init[2];
     tone_pin_ctor(&tone_pins_init[0], &(htim1.Instance->CCR3));
-    tone_pins_init[0].dx[0]=freq_to_dx(&tone_pins_init[0], 440);
+    tone_pins_init[0].dx[0]=freq_to_dx(&tone_pins_init[0], NOTE_A4);//A4 == 440 Hz
     tone_pin_ctor(&tone_pins_init[1], &(htim1.Instance->CCR2));
-    tone_pins_init[1].dx[0]=freq_to_dx(&tone_pins_init[1], 440);
+    tone_pins_init[1].dx[0]=freq_to_dx(&tone_pins_init[1], NOTE_A4);
 
     ///TODO Group all common func-s in "classes"
     tone_pins=tone_pins_init;

@@ -19,9 +19,12 @@ enum
 /**
  * 0x1 -> u8|version u8[]|"string with \0"
  * 0x4 ->
- * 0x10 u8|port u8|size u16[1-3]|freq ->
+ * 0x10 u8|port u16[]|freq ->
  * 0x11 u8|port u16|freq ->
  * 0x12 -> u16|react_time
+ *
+ * Error in command CC:
+ * CC ... -> 0x80(128)+CC u8[]|"string with \0" ///TODO Не так, как в стандарте!
  */
 uint8_t Commands[]={0x1, 0x4, 0x10, 0x11, 0x12};
 
@@ -116,7 +119,7 @@ public:
     T get_param(T& param)
     {
        assert(length!=0);
-        assert(read_length+sizeof(T)+1<=length);///TODO Mrite the same for mk
+        assert(read_length+sizeof(T)+1<=length);
        param = *reinterpret_cast<T*>(buffer + read_length);
        read_length+=sizeof(T);
         return param;
@@ -161,15 +164,30 @@ int main (int , char** )
         system(comp_command);
         const int cmd = 0x10;
         command.set_cmd(cmd);
-        command.append_var<uint8_t>(1);/// Port
-        command.append_var<uint8_t>(1);
-        command.append_var<uint16_t>(NOTE_B4);
+        command.append_var<uint8_t>(0);/// Port
+//        command.append_var<uint8_t>(3);
+        command.append_var<uint16_t>(NOTE_C4);
+        command.append_var<uint16_t>(NOTE_E4);
+        command.append_var<uint16_t>(NOTE_G4);
         command.prepare_for_sending();
         command.write(dev);
         reader.read(dev_read);
-        assert(!reader.is_error());
-        assert(reader.get_command(command_rec) == cmd);
-        assert(reader.is_empty());
+        if (!reader.is_error())
+        {
+            assert(reader.get_command(command_rec) == cmd);
+            assert(reader.is_empty());
+        }
+        else
+        {
+            cout<<"error: ";
+            char c=0;
+            do
+            {
+                reader.get_param(c);
+                cout<<c;
+            } while (c);
+            cout<<endl;
+        }
 //        do
 //        {
 //            system("sleep 1");
