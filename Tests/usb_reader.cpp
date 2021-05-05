@@ -19,9 +19,12 @@ enum
 /**
  * 0x1 -> u8|version u8[]|"string with \0"
  * 0x4 ->
- * 0x10 u8|port u16[]|freq ->
- * 0x11 u8|port u16|freq ->
+ * 0x10 u8|port u16[]|freqs ->
+ * @note freqs preserve 1 digit after point with help of fixed point, i. e. if you pass 300,6 Hz it will transmit and set in mk 300,6 Hz
+ * 0x11 u8|port u16[]|freqs ->
+ * @note same as 0x10 note///TODO
  * 0x12 -> u16|react_time
+ * @note react_time in ms
  *
  * Error in command CC:
  * CC ... -> 0x80(128)+CC u8[]|"string with \0" ///TODO Не так, как в стандарте!
@@ -71,7 +74,7 @@ public:
 
     void set_cmd(const uint8_t cmd)
     {
-        assert(count(Commands, Commands + sizeof(Commands)/sizeof(uint8_t), cmd)==1);
+        assert(count(Commands, Commands + sizeof(Commands)/sizeof(Commands[0]), cmd)==1);
         buffer[CC] = cmd;
     }
 };
@@ -164,11 +167,11 @@ int main (int , char** )
         system(comp_command);
         const int cmd = 0x10;
         command.set_cmd(cmd);
-        command.append_var<uint8_t>(0);/// Port
+        command.append_var<uint8_t>(1);/// Port
 //        command.append_var<uint8_t>(3);
-        command.append_var<uint16_t>(NOTE_C4);
-        command.append_var<uint16_t>(NOTE_E4);
-        command.append_var<uint16_t>(NOTE_G4);
+        command.append_var<uint16_t>(NOTE_C4*10);
+        command.append_var<uint16_t>(NOTE_E4*10);
+        command.append_var<uint16_t>(NOTE_G4*10);
         command.prepare_for_sending();
         command.write(dev);
         reader.read(dev_read);

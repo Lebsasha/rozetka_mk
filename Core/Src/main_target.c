@@ -221,8 +221,8 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                     {
                         if(!get_param_16(&reader, &freq))
                             freq = 0;
-                        my_assert(freq <= 3400); //TODO Error handle
-                        *c=(tone_pins[port].arr_size * freq << 8) / TONE_FREQ;
+                        my_assert(freq <= 3400*10); //TODO Error handle
+                        *c=freq_to_dx(&tone_pins[port], freq)/10;
                     }
                     prepare_for_sending(&writer, cmd, true);
             } else if(cmd == 0x1)
