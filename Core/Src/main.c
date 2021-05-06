@@ -155,7 +155,7 @@ int main(void)
               ++tester.react_time_size;
               for (size_t i = 0; i < sizeof_arr(tester.freq); ++i)
               {
-                  tone_pins[tester.port].dx[i] = freq_to_dx(&tone_pins[tester.port], tester.freq[i]) / 10;
+                  tone_pins[tester.port].dx[i] = freq_to_dx(&tone_pins[tester.port], tester.freq[i]);
               }
               tester.button.start_time = HAL_GetTick();
               tester.button.stop_time = 0;

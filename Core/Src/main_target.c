@@ -112,7 +112,8 @@ void tone_pin_ctor(Tone_pin* ptr, volatile uint32_t* CCR)
     }
     ptr->f_dots = f_dots;
     ptr->arr_size = arr_size;
-    ptr->sine_ampl = sine_ampl;
+//    ptr->sine_ampl = sine_ampl;
+    ptr->volume = 0;
     for (size_t i = 0; i < sizeof_arr(ptr->dx); ++i)
     {
         ptr->dx[i] = 0;
@@ -134,6 +135,7 @@ void make_tone(Tone_pin* tone_pin)
             tone_pin->curr[i] -= arr_size << 8;
         }
     }
+    *tone_pin->duty_cycle=(*tone_pin->duty_cycle*tone_pin->volume)>>8;
 }
 
 void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n)
@@ -190,9 +192,12 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
             {
                 my_assert(tester.states == Idle);
                 uint8_t port;
-                uint16_t freq = 0;
                 get_param_8(&reader, &port);
                 my_assert(port < 2);
+                uint8_t volume = 0;
+                get_param_8(&reader, &volume);
+                tone_pins[port].volume=volume;
+                uint16_t freq = 0;
                 for (volatile uint32_t* c = tone_pins[port].dx; c < tone_pins[port].dx + sizeof_arr(tone_pins->dx); ++c)
                 {
                     if (!get_param_16(&reader, &freq))
@@ -220,16 +225,17 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 my_assert(tester.states == Idle);
                 get_param_8(&reader, (uint8_t*) &tester.port);
                 my_assert(tester.port < 2);
+                get_param_8(&reader, &tone_pins[tester.port].volume);
                 for (volatile uint16_t* freq = tester.freq; freq < tester.freq + sizeof_arr(tester.freq); ++freq)
                 {
                     if (!get_param_16(&reader, (uint16_t*) freq))
                         *freq = 0;
-                    my_assert(*freq <= 3400 * 10);
+                    my_assert(*freq <= 3400);
                 }
                 tester.states = Measuring_reaction;
                 for (size_t i = 0; i < sizeof_arr(tester.freq); ++i)
                 {
-                    tone_pins[tester.port].dx[i] = freq_to_dx(&tone_pins[tester.port], tester.freq[i]) / 10;
+                    tone_pins[tester.port].dx[i] = freq_to_dx(&tone_pins[tester.port], tester.freq[i]);
                 }
                 tester.button.start_time = HAL_GetTick();
                 prepare_for_sending(&writer, cmd, true);
