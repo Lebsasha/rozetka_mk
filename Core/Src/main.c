@@ -169,6 +169,10 @@ int main(void)
       }
       if (tester.states == Measiring_freq)///TODO Минимальный дискрет; линейный, эксп, небоскр
       {
+          tester.ampl=9;
+          tester.temp=5;
+          tester.states=Sending;
+          goto ss;
           for (size_t i = 0; i < sizeof_arr(tester.freq); ++i)
               tone_pins[tester.port].dx[i] = freq_to_dx(&tone_pins[tester.port], tester.freq[i]);
           uint16_t x;
@@ -197,6 +201,7 @@ int main(void)
           for (volatile uint32_t* c = tone_pins[tester.port].dx; c < tone_pins[tester.port].dx + sizeof_arr(tone_pins[tester.port].dx); ++c)
               *c = 0;
       }
+      ss:
       if (writer.buffer[CC] != 0)
       {
           send_command(&writer);

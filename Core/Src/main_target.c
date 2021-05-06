@@ -247,6 +247,8 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                     append_var_16(&writer, tester.react_time);
                     append_var_16(&writer, tester.temp);
                     append_var_8(&writer, tester.ampl);
+                    tester.react_time=0;
+                    tester.ampl=0;
                     tester.states = Idle;
                     prepare_for_sending(&writer, cmd, true);
                 }
