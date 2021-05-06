@@ -1,7 +1,5 @@
 #include <iostream>
 #include <fstream>
-#include <cstring>
-//#include <thread>
 #include <algorithm>
 #include <cassert>
 #include "../Core/Inc/notes.h"
@@ -15,7 +13,6 @@ enum
     CC = 0, LenL = 1, LenH = 2
 };
 
-//enum Commands{Set_tone};
 /**
  * 0x1 -> u8|version u8[]|"string with \0"
  * 0x4 ->
@@ -26,7 +23,7 @@ enum
  * 0x12 -> u16|react_time
  * @note react_time in ms
  *
- * Error in command CC:
+ * If error in command CC:
  * CC ... -> 0x80(128)+CC u8[]|"string with \0" ///TODO Не так, как в стандарте!
  */
 uint8_t Commands[]={0x1, 0x4, 0x10, 0x11, 0x12};
@@ -82,7 +79,7 @@ public:
 class Command_reader
 {
     char buffer[BUF_SIZE] = {0};
-    size_t length;///TODO Проконтролировать на =0 везде
+    size_t length;
     size_t read_length;
 public:
     Command_reader() : length(0), read_length(0)
@@ -100,7 +97,7 @@ public:
         uint8_t sum = SS_OFFSET;
         for_each(buffer + LenL, buffer + length, [&sum](char c)
         { sum += c; });
-        if (sum /*+ SS_OFFSET*/ != (uint8_t) buffer[length])
+        if (sum != (uint8_t) buffer[length])
         {
             cerr << "SS isn't correct" << endl;
             assert(false);
@@ -121,29 +118,25 @@ public:
     template<typename T>
     T get_param(T& param)
     {
-       assert(length!=0);
-        assert(read_length+sizeof(T)+1<=length);
-       param = *reinterpret_cast<T*>(buffer + read_length);
-       read_length+=sizeof(T);
+        assert(length != 0);
+        assert(read_length + sizeof(T) + 1 <= length);
+        param = *reinterpret_cast<T*>(buffer + read_length);
+        read_length += sizeof(T);
         return param;
     }
 
     template<typename T>
     T get_param()
     {
-       T param;
+        T param;
         return get_param(param);
     }
-    uint8_t get_command(uint8_t& cmd) const
+    uint8_t get_command() const
     {
-        return cmd=buffer[CC];
+        return buffer[CC];
     }
 };
 
-//volatile bool if_exit=false;
-
-int calc_mean(const string& path);
-//void wait();
 int main (int , char** )
 {
     const char* path="react_time.csv";
@@ -151,7 +144,6 @@ int main (int , char** )
     Command_writer writer;
     Command_reader reader;
     char comp_command[]="sleep  ";
-    uint8_t command_rec; ///Command received
     ofstream dev("/dev/ttyACM0");
     ifstream dev_read("/dev/ttyACM0");
     if(!dev || !dev_read)
@@ -159,11 +151,10 @@ int main (int , char** )
         std::cout << "Error opening COM file" << std::endl;
         return 1;
     }
-//    std::thread waiter(wait);
     cout<<"begin "<<std::flush;
-    for(size_t i =0;i<1;++i)
+    for(size_t i =0;i<3;++i)
     {
-        comp_command[sizeof(comp_command) - 1 - 1] = rand() % 2 + '0';
+        comp_command[sizeof(comp_command) - 1 - 1] = rand() % 3 + '0';
         system(comp_command);
         const int cmd = 0x11;
         writer.set_cmd(cmd);
@@ -177,7 +168,6 @@ int main (int , char** )
         reader.read(dev_read);
         if (!reader.is_error())
         {
-            assert(reader.get_command(command_rec) == cmd);
             assert(reader.is_empty());
         }
         else
@@ -191,48 +181,20 @@ int main (int , char** )
             } while (c);
             cout<<endl;
         }
-        do
+        if (cmd == 0x11)
         {
-            system("sleep 1");
-            writer.set_cmd(0x12);
-            writer.prepare_for_sending();
-            writer.write(dev);
-            reader.read(dev_read);
-        } while (reader.is_error());
-        uint16_t react_time;
-        std::cout << i << ' ' << reader.get_param(react_time)<<endl;
-//        stat << speed << endl;
-//        if(if_exit)
-//            break;
+            do
+            {
+                system("sleep 1");
+                writer.set_cmd(0x12);
+                writer.prepare_for_sending();
+                writer.write(dev);
+                reader.read(dev_read);
+            } while (reader.is_error());
+            uint16_t react_time;
+            std::cout << i << ' ' << reader.get_param(react_time) << endl;
+        }
     }
 
     cout<<"end"<<endl;
-//    if(if_exit)
-//        waiter.join();
-//   waiter.std::thread::~thread();
-    //calc_mean(path);
 }
-
-int calc_mean(const string& path)
-{
-    ifstream file(path);
-    int count=0;
-    int num;
-    int sum=0;
-    while (file)
-    {
-        file>>num;
-        ++count;
-        sum+=num;
-    }
-    ofstream m_file("stat_" + path);
-    m_file<<(double)(sum)/count<<endl;
-    cout<<(double)(sum)/count<<endl;
-    return 0;
-}
-
-//void wait()
-//{
-//    getchar();
-//    if_exit=true;
-//}

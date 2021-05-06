@@ -5,24 +5,9 @@
 #define COUNTER_PERIOD 1800
 #define freq_to_dx(tone_pin_ptr, freq)  (((tone_pin_ptr)->arr_size*(freq)<<8)/TONE_FREQ)
 #define sizeof_arr(arr) (sizeof(arr)/sizeof((arr)[0]))
-//htim1.Instance->ARR+1
-//(const uint16_t) 100
 
 #include "notes.h"
 //#include <assert.h>
-
-struct LED
-{
-    volatile uint32_t* duty_cycle;
-    volatile uint16_t detailyty;
-    uint16_t i;
-    char num;
-
-    void (* curr_step)(struct LED*);
-};
-
-void ctor_LED(struct LED* led, uint16_t detailyty, volatile uint32_t* duty_cycle, char num);
-
 
 typedef struct Tone_pin
 {
@@ -53,10 +38,6 @@ typedef struct Button
     volatile uint32_t stop_time;
 }Button;
 
-void my_delay(int mc_s);
-
-void process_cmd(const uint8_t* command, const uint32_t* len);
-
 ///@brief this enum points on appropriate indexes in bin. prot.
 ///e. g. buffer[CC], ...
 enum Commands
@@ -66,16 +47,16 @@ enum Commands
 
 static const uint8_t SS_OFFSET = 42;///TODO Write documentation
 
-typedef struct CommandWriter
+typedef struct Command_writer
 {
     uint8_t buffer[128];
     size_t length;
     size_t BUF_SIZE;
-} CommandWriter;
+} Command_writer;
 
-void CommandWriter_ctor(CommandWriter* ptr);
+void Command_writer_ctor(Command_writer* ptr);
 
-void send_command(CommandWriter* ptr);
+void send_command(Command_writer* ptr);
 
 
 typedef enum States{Measuring_reaction, Measiring_freq, Sending, Idle}States;
@@ -85,11 +66,14 @@ typedef struct Tester
     volatile uint16_t ampl;
     volatile uint16_t react_time;
     volatile uint8_t react_time_size;
-    volatile uint32_t start_time;
-    volatile uint32_t stop_time;
+    Button button;
     volatile uint8_t port;
     volatile uint16_t freq[sizeof_arr(((Tone_pin*)(NULL))->dx)];
 }Tester;
 void Tester_ctor(Tester* ptr);
 
+
+void process_cmd(const uint8_t* command, const uint32_t* len);
+
+void my_delay(int mc_s);
 #endif //MAIN_TARGET

@@ -35,7 +35,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define SEND_VAR(var_addr) do{}while(CDC_Transmit_FS((uint8_t*) var_addr, sizeof(*var_addr))==USBD_BUSY)
+#define SEND_VAR(var_addr) do{}while(CDC_Transmit_FS((uint8_t*) (var_addr), sizeof(*(var_addr)))==USBD_BUSY)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -62,19 +62,11 @@ static void MX_TIM3_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-const int DETAILYTY_1=TONE_FREQ/500;
-const int DETAILYTY_2=130;
-const int DETAILYTY_3=170;
-struct LED leds[3];
-volatile uint32_t count=0;
-volatile uint32_t time;
-volatile int measure_one_sine=0;
 Tone_pin* tone_pins; /// It is the array of pins that make tones. The first pin is A10 and the second is A9
-Button button={0, 0};
-CommandWriter writer;
+Command_writer writer;
 Tester tester;
 
-void send_command(CommandWriter* ptr)///In main, USB part
+void send_command(Command_writer* ptr)///In main, USB part
 {
     while (CDC_Transmit_FS(ptr->buffer, ptr->length) == USBD_BUSY){}
     for (uint8_t* c = ptr->buffer + ptr->length - 1; c >= ptr->buffer; --c)
@@ -82,6 +74,7 @@ void send_command(CommandWriter* ptr)///In main, USB part
         *c = 0;
     }
     ptr->length = 1 + 1 + 1;///CC, LenH, LenL
+    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
 }
 /* USER CODE END 0 */
 
@@ -124,16 +117,7 @@ int main(void)
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
     HAL_Delay(200);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
- /**
- * @note 100 ticks per 10^-4 * DETAILYTY_1 = 1 s
- * @note 100 ticks per 10^-4 * DETAILYTY_2 = 1.3 s
- * @note 100 ticks per 10^-4 * DETAILYTY_3 = 1.7 s
- */
-//    ctor_LED(leds + 0, DETAILYTY_1, &(htim1.Instance->CCR3), 0);
-//    ctor_LED(leds + 1, DETAILYTY_2, &(htim1.Instance->CCR2), 1);
-//    ctor_LED(leds + 2, DETAILYTY_3, &(htim1.Instance->CCR1), 2);
-//    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);//red
-//    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);//blue
+
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 1);
 
     /// This lines is ctor for tone_pins
@@ -143,7 +127,6 @@ int main(void)
     tone_pin_ctor(&tone_pins_init[1], &(htim1.Instance->CCR2));
     tone_pins_init[1].dx[0]=freq_to_dx(&tone_pins_init[1], NOTE_A4);
 
-    ///TODO Group all common func-s in "classes"
     tone_pins=tone_pins_init;
 
     HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);///start sound at A10
@@ -151,12 +134,8 @@ int main(void)
     HAL_TIM_Base_Start_IT(&htim1);
     HAL_TIM_Base_Start_IT(&htim3);
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 0);
-    CommandWriter_ctor(&writer);
+    Command_writer_ctor(&writer);
     Tester_ctor(&tester);
-//    TIM3->PSC = 40 - 1;
-//    TIM3->ARR = 1;
-//    __HAL_TIM_ENABLE_IT(&htim3, TIM_IT_UPDATE);
-//    __HAL_TIM_ENABLE(&htim3);
   uint16_t notes_1[]={NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4};
   uint8_t durations_1[]={4, 8, 8, 4, 4, 4, 4, 4};
   /* USER CODE END 2 */
@@ -165,40 +144,35 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-      if(tester.stop_time!=0&&tester.states==Measuring_reaction)
+      if (tester.button.stop_time != 0 && tester.states == Measuring_reaction)
       {
-              tester.react_time+=tester.stop_time-tester.start_time;
-              for (volatile uint32_t* c =tone_pins[tester.port].dx;c<tone_pins[tester.port].dx+sizeof_arr(tone_pins->dx);++c)
-                *c=0;
-          if(tester.react_time_size<2)
+          tester.react_time += tester.button.stop_time - tester.button.start_time;
+          for (volatile uint32_t* c = tone_pins[tester.port].dx; c < tone_pins[tester.port].dx + sizeof_arr(tone_pins->dx); ++c)
+              *c = 0;
+          if (tester.react_time_size < 2)
           {
               HAL_Delay(600);
               ++tester.react_time_size;
-              for(size_t i=0; i<sizeof_arr(tester.freq);++i)
+              for (size_t i = 0; i < sizeof_arr(tester.freq); ++i)
               {
-                  tone_pins[tester.port].dx[i]=freq_to_dx(&tone_pins[tester.port], tester.freq[i])/10;
+                  tone_pins[tester.port].dx[i] = freq_to_dx(&tone_pins[tester.port], tester.freq[i]) / 10;
               }
-              tester.start_time = HAL_GetTick();
-              tester.stop_time = 0;
+              tester.button.start_time = HAL_GetTick();
+              tester.button.stop_time = 0;
           }
           else
           {
-              tester.react_time/=3;
-              tester.start_time=0;
-              tester.stop_time=0;
-              tester.react_time_size=0;
-              tester.states=Measiring_freq;
+              tester.react_time /= 3;
+              tester.button.start_time = 0;
+              tester.button.stop_time = 0;
+              tester.react_time_size = 0;
+              tester.states = Measiring_freq;
           }
       }
-      if(tester.states==Measiring_freq)///TODO Минимальный дискрет; линейный, эксп, небоскр
+      if (tester.states == Measiring_freq)///TODO Минимальный дискрет; линейный, эксп, небоскр
       {
       }
-      if(button.start_time!=0)
-      {
-//          tone_pins[0].dx=arr_size*500<<8/TONE_FREQ;
-          play(&tone_pins[0], notes_1, durations_1, sizeof(durations_1)/sizeof(durations_1[0]));
-      }
-      if(writer.buffer[CC]!=0)
+      if (writer.buffer[CC] != 0)
       {
           send_command(&writer);
       }
