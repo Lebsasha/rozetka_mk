@@ -16,8 +16,8 @@ typedef struct Tone_pin
     uint16_t arr_size;///TODO Maybe inline?
 //    int16_t sine_ampl;///TODO Maybe inline?
     uint8_t volume;
-    volatile uint32_t dx[5];
-    uint32_t curr[5];
+    volatile uint32_t dx[3];
+    uint32_t curr[3];
 }Tone_pin;
 
 void tone_pin_ctor(Tone_pin* ptr, volatile uint32_t*);
@@ -31,7 +31,7 @@ void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n)
 
 
 /// If start_time!=0 && stop_time==0 time is measured.
-///     Then if stop_time!=0 time is sended
+///     Then if stop_time!=0 time has been measured
 /// Otherwise (start_time==0) measuring is off
 typedef struct Button
 {
@@ -64,10 +64,11 @@ typedef enum States{Measuring_reaction, Measiring_freq, Sending, Idle}States;
 typedef struct Tester
 {
     volatile States states;
-    volatile uint16_t ampl;
+    volatile uint8_t ampl;
     volatile uint16_t react_time;
     volatile uint8_t react_time_size;
     Button button;
+    volatile uint16_t temp;
     volatile uint8_t port;
     volatile uint16_t freq[sizeof_arr(((Tone_pin*)(NULL))->dx)];
 }Tester;

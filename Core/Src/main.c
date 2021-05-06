@@ -154,9 +154,7 @@ int main(void)
               HAL_Delay(600);
               ++tester.react_time_size;
               for (size_t i = 0; i < sizeof_arr(tester.freq); ++i)
-              {
                   tone_pins[tester.port].dx[i] = freq_to_dx(&tone_pins[tester.port], tester.freq[i]);
-              }
               tester.button.start_time = HAL_GetTick();
               tester.button.stop_time = 0;
           }
@@ -171,7 +169,33 @@ int main(void)
       }
       if (tester.states == Measiring_freq)///TODO Минимальный дискрет; линейный, эксп, небоскр
       {
+          for (size_t i = 0; i < sizeof_arr(tester.freq); ++i)
+              tone_pins[tester.port].dx[i] = freq_to_dx(&tone_pins[tester.port], tester.freq[i]);
+          uint16_t x;
+          const uint16_t mseconds_to_max = 2000;
+          const uint8_t max_volume = 40;
+          tester.button.start_time = HAL_GetTick();
+          while (1)
+          {
+              x = HAL_GetTick() - tester.button.start_time;
+              tone_pins[tester.port].volume = max_volume * x / mseconds_to_max;
+              if (tester.button.stop_time != 0)
+              {
+                  uint16_t elapsed_time = tester.button.stop_time - tester.button.start_time - tester.react_time;
+                  tester.temp=elapsed_time;
+                  tester.ampl = max_volume * elapsed_time / mseconds_to_max;
+                  break;
+              }
+              if (x > mseconds_to_max)
+              {
+                  tester.ampl = -2;
+                  break;
+              }
+//              HAL_Delay(40);
+          }
           tester.states=Sending;
+          for (volatile uint32_t* c = tone_pins[tester.port].dx; c < tone_pins[tester.port].dx + sizeof_arr(tone_pins[tester.port].dx); ++c)
+              *c = 0;
       }
       if (writer.buffer[CC] != 0)
       {

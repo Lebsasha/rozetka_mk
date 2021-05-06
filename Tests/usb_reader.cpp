@@ -19,7 +19,7 @@ enum
  * 0x10 u8|port u8|volume u16[]|freqs ->
  * @note freqs preserve 1 digit after point with help of fixed point, i. e. if you pass 300,6 Hz it will transmit and set in mk 300,6 Hz
  * 0x11 u8|port u8|volume u16[]|freqs ->
- * 0x12 -> u16|react_time
+ * 0x12 -> u16|react_time u8|ampl
  * @note react_time in ms
  *
  * If error in command CC:
@@ -46,7 +46,7 @@ public:
         length += sizeof(var);
         buffer[LenL] += sizeof(var);
     }
-
+//TODO Припаять "кнопку"
     void write(ostream& dev)
     {
         dev.write(buffer, length);
@@ -151,17 +151,18 @@ int main (int , char** )
         return 1;
     }
     cout<<"begin "<<std::flush;
-    for(size_t i =0;i<3;++i)
+    for(size_t i =0;i<10;++i)
     {
-        comp_command[sizeof(comp_command) - 1 - 1] = rand() % 5 + '0';
+        comp_command[sizeof(comp_command) - 1 - 1] = rand() % 6 + '0';
         system(comp_command);
         const int cmd = 0x11;
         writer.set_cmd(cmd);
-        writer.append_var<uint8_t>(0);/// Port
-        writer.append_var<uint8_t>(30);
+        writer.append_var<uint8_t>(1);/// Port
+        writer.append_var<uint8_t>(50);
         writer.append_var<uint16_t>((NOTE_C4));
         writer.append_var<uint16_t>(NOTE_E4);
         writer.append_var<uint16_t>(NOTE_G4);
+//        writer.append_var<uint16_t>((NOTE_C5));
         writer.prepare_for_sending();
         writer.write(dev);
         reader.read(dev_read);
@@ -191,7 +192,7 @@ int main (int , char** )
                 reader.read(dev_read);
             } while (reader.is_error());
             uint16_t react_time;
-            std::cout << i << ' ' << reader.get_param(react_time) << endl;
+            std::cout << i << ' ' << reader.get_param(react_time) << ", el_time "<<reader.get_param<uint16_t>()<<", Ampl: "<<(int)reader.get_param<uint8_t>()<<endl;
         }
     }
 

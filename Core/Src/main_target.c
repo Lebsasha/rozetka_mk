@@ -232,11 +232,11 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                         *freq = 0;
                     my_assert(*freq <= 3400);
                 }
-                tester.states = Measuring_reaction;
                 for (size_t i = 0; i < sizeof_arr(tester.freq); ++i)
                 {
                     tone_pins[tester.port].dx[i] = freq_to_dx(&tone_pins[tester.port], tester.freq[i]);
                 }
+                tester.states = Measuring_reaction;
                 tester.button.start_time = HAL_GetTick();
                 prepare_for_sending(&writer, cmd, true);
             }
@@ -245,6 +245,8 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 if(tester.states == Sending)
                 {
                     append_var_16(&writer, tester.react_time);
+                    append_var_16(&writer, tester.temp);
+                    append_var_8(&writer, tester.ampl);
                     tester.states = Idle;
                     prepare_for_sending(&writer, cmd, true);
                 }
