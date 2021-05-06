@@ -15,8 +15,8 @@ typedef struct Tone_pin
     int16_t* f_dots;
     uint16_t arr_size;///TODO Maybe inline?
     int16_t sine_ampl;///TODO Maybe inline?
-    volatile uint32_t dx[3];
-    uint32_t curr[3];
+    volatile uint32_t dx[5];
+    uint32_t curr[5];
 }Tone_pin;
 
 void tone_pin_ctor(Tone_pin* ptr, volatile uint32_t*);

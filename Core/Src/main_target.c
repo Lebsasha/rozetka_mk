@@ -125,13 +125,13 @@ void make_tone(Tone_pin* tone_pin)
     for(int i=0; i<sizeof_arr(tone_pin->dx);++i)
     {
         if (i == 0)
-            *tone_pin->duty_cycle = (uint32_t) (tone_pin->f_dots[tone_pin->curr[i] >> 8]) * COUNTER_PERIOD / tone_pin->sine_ampl / sizeof_arr(tone_pin->dx);
+            *tone_pin->duty_cycle = (uint32_t) (tone_pin->f_dots[tone_pin->curr[i] >> 8]) * COUNTER_PERIOD / sine_ampl / sizeof_arr(tone_pin->dx);
         else
-            *tone_pin->duty_cycle += (uint32_t) (tone_pin->f_dots[tone_pin->curr[i] >> 8]) * COUNTER_PERIOD / tone_pin->sine_ampl / sizeof_arr(tone_pin->dx);
+            *tone_pin->duty_cycle += (uint32_t) (tone_pin->f_dots[tone_pin->curr[i] >> 8]) * COUNTER_PERIOD / sine_ampl / sizeof_arr(tone_pin->dx);
         tone_pin->curr[i] += tone_pin->dx[i];
-        if (tone_pin->curr[i] >= tone_pin->arr_size << 8)
+        if (tone_pin->curr[i] >= arr_size << 8)
         {
-            tone_pin->curr[i] -= tone_pin->arr_size << 8;
+            tone_pin->curr[i] -= arr_size << 8;
         }
     }
 }

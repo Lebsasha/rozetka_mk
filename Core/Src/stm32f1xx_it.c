@@ -223,15 +223,14 @@ void USB_LP_CAN1_RX0_IRQHandler(void)
 void TIM1_UP_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM1_UP_IRQn 0 */
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 1);
-    if (__HAL_TIM_GET_FLAG(&htim1, TIM_FLAG_UPDATE) != RESET)
-    {
+//    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 1);
+    GPIOB->BSRR=GPIO_PIN_12;
         __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);
         make_tone(&tone_pins[0]);
         make_tone(&tone_pins[1]);
-        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 0);
+//        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 0);
+    GPIOB->BSRR=(uint32_t)GPIO_PIN_12<<16U;
         return;
-    }
 
   /* USER CODE END TIM1_UP_IRQn 0 */
   HAL_TIM_IRQHandler(&htim1);
