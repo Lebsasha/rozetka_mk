@@ -147,7 +147,7 @@ int main(void)
       if (tester.button.stop_time != 0 && tester.states == Measuring_reaction)
       {
           tester.react_time += tester.button.stop_time - tester.button.start_time;
-          for (volatile uint32_t* c = tone_pins[tester.port].dx; c < tone_pins[tester.port].dx + sizeof_arr(tone_pins->dx); ++c)
+          for (volatile uint32_t* c = tone_pins[tester.port].dx; c < tone_pins[tester.port].dx + sizeof_arr(tone_pins[tester.port].dx); ++c)
               *c = 0;
           if (tester.react_time_size < 2)
           {
@@ -171,6 +171,7 @@ int main(void)
       }
       if (tester.states == Measiring_freq)///TODO Минимальный дискрет; линейный, эксп, небоскр
       {
+          tester.states=Sending;
       }
       if (writer.buffer[CC] != 0)
       {

@@ -198,7 +198,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 get_param_8(&reader, &volume);
                 tone_pins[port].volume=volume;
                 uint16_t freq = 0;
-                for (volatile uint32_t* c = tone_pins[port].dx; c < tone_pins[port].dx + sizeof_arr(tone_pins->dx); ++c)
+                for (volatile uint32_t* c = tone_pins[port].dx; c < tone_pins[port].dx + sizeof_arr(tone_pins[port].dx); ++c)
                 {
                     if (!get_param_16(&reader, &freq))
                         freq = 0;
@@ -242,7 +242,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
             }
             else if (cmd == 0x12)
             {
-                if(tester.states == Measiring_freq)
+                if(tester.states == Sending)
                 {
                     append_var_16(&writer, tester.react_time);
                     tester.states = Idle;
@@ -250,6 +250,21 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 }
                 else
                     prepare_for_sending(&writer, cmd, false);
+            }
+            else if (cmd == 0x4)
+            {
+                tester.states=Idle;
+
+                for (volatile uint32_t* c = tone_pins[tester.port].dx; c < tone_pins[tester.port].dx + sizeof_arr(tone_pins[tester.port].dx); ++c)
+                    *c = 0;
+                tone_pins[tester.port].volume=0;
+
+                tester.ampl=0;
+                tester.react_time=0;
+                tester.react_time_size=0;
+                tester.button.start_time=0;
+                tester.button.stop_time=0;
+                prepare_for_sending(&writer, cmd, true);
             }
             else
                 assertion_failed("Command not recognised", cmd);
