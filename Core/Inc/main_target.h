@@ -3,8 +3,8 @@
 
 #define TONE_FREQ 40000
 #define COUNTER_PERIOD 1800
-#define freq_to_dx(tone_pin_ptr, freq)  ((tone_pin_ptr)->arr_size*(freq)<<8)/TONE_FREQ
-#define sizeof_arr(arr) sizeof(arr)/sizeof((arr)[0])
+#define freq_to_dx(tone_pin_ptr, freq)  (((tone_pin_ptr)->arr_size*(freq)<<8)/TONE_FREQ)
+#define sizeof_arr(arr) (sizeof(arr)/sizeof((arr)[0]))
 //htim1.Instance->ARR+1
 //(const uint16_t) 100
 
@@ -88,7 +88,7 @@ typedef struct Tester
     volatile uint32_t start_time;
     volatile uint32_t stop_time;
     volatile uint8_t port;
-    volatile uint16_t freq;
+    volatile uint16_t freq[sizeof_arr(((Tone_pin*)(NULL))->dx)];
 }Tester;
 void Tester_ctor(Tester* ptr);
 

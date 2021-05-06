@@ -165,21 +165,19 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-      if(tester.stop_time!=0)
+      if(tester.stop_time!=0&&tester.states==Measuring_reaction)
       {
-//          assert(tester.states==Measuring_reaction);//TODO Error Handling
               tester.react_time+=tester.stop_time-tester.start_time;
-              tone_pins[tester.port].dx[0]=0;
-              tone_pins[tester.port].dx[1]=0;
-              tone_pins[tester.port].dx[2]=0;
+              for (volatile uint32_t* c =tone_pins[tester.port].dx;c<tone_pins[tester.port].dx+sizeof_arr(tone_pins->dx);++c)
+                *c=0;
           if(tester.react_time_size<2)
           {
               HAL_Delay(600);
               ++tester.react_time_size;
-              tone_pins[tester.port].dx[0] = (tone_pins[tester.port].arr_size * tester.freq << 8) / TONE_FREQ;//TODO Вынести в отдельную
-              // ф-цию
-              tone_pins[tester.port].dx[1] = 0;///TODO Что будет, если dx[1]=dx[0]
-              tone_pins[tester.port].dx[2] = 0;
+              for(size_t i=0; i<sizeof_arr(tester.freq);++i)
+              {
+                  tone_pins[tester.port].dx[i]=freq_to_dx(&tone_pins[tester.port], tester.freq[i])/10;
+              }
               tester.start_time = HAL_GetTick();
               tester.stop_time = 0;
           }

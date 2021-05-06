@@ -22,7 +22,7 @@ enum
  * 0x10 u8|port u16[]|freqs ->
  * @note freqs preserve 1 digit after point with help of fixed point, i. e. if you pass 300,6 Hz it will transmit and set in mk 300,6 Hz
  * 0x11 u8|port u16[]|freqs ->
- * @note same as 0x10 note///TODO
+ * @note same as 0x10 note
  * 0x12 -> u16|react_time
  * @note react_time in ms
  *
@@ -34,12 +34,12 @@ uint8_t Commands[]={0x1, 0x4, 0x10, 0x11, 0x12};
 static const uint8_t SS_OFFSET = 42;
 static const size_t BUF_SIZE = 64;///USB packet size
 
-class CommandWriter
+class Command_writer
 {
     char buffer[BUF_SIZE] = {0};
     size_t length;
 public:
-    CommandWriter() : length(LenH + 1)
+    Command_writer() : length(LenH + 1)
     {}
 
     template<typename T>
@@ -79,13 +79,13 @@ public:
     }
 };
 
-class CommandReader
+class Command_reader
 {
     char buffer[BUF_SIZE] = {0};
     size_t length;///TODO Проконтролировать на =0 везде
     size_t read_length;
 public:
-    CommandReader() : length(0), read_length(0)
+    Command_reader() : length(0), read_length(0)
     {}
 
     char* read(istream& dev)
@@ -148,8 +148,8 @@ int main (int , char** )
 {
     const char* path="react_time.csv";
     ofstream stat(path, ios_base::app|ios_base::out);
-    CommandWriter command;
-    CommandReader reader;
+    Command_writer writer;
+    Command_reader reader;
     char comp_command[]="sleep  ";
     uint8_t command_rec; ///Command received
     ofstream dev("/dev/ttyACM0");
@@ -163,17 +163,17 @@ int main (int , char** )
     cout<<"begin "<<std::flush;
     for(size_t i =0;i<1;++i)
     {
-        comp_command[sizeof(comp_command) - 1 - 1] = rand() % 3 + '0';
+        comp_command[sizeof(comp_command) - 1 - 1] = rand() % 2 + '0';
         system(comp_command);
-        const int cmd = 0x10;
-        command.set_cmd(cmd);
-        command.append_var<uint8_t>(1);/// Port
-//        command.append_var<uint8_t>(3);
-        command.append_var<uint16_t>(NOTE_C4*10);
-        command.append_var<uint16_t>(NOTE_E4*10);
-        command.append_var<uint16_t>(NOTE_G4*10);
-        command.prepare_for_sending();
-        command.write(dev);
+        const int cmd = 0x11;
+        writer.set_cmd(cmd);
+        writer.append_var<uint8_t>(1);/// Port
+//        writer.append_var<uint8_t>(3);
+        writer.append_var<uint16_t>((NOTE_C4) * 10);
+        writer.append_var<uint16_t>(NOTE_E4 * 10);
+        writer.append_var<uint16_t>(NOTE_G4 * 10);
+        writer.prepare_for_sending();
+        writer.write(dev);
         reader.read(dev_read);
         if (!reader.is_error())
         {
@@ -191,16 +191,16 @@ int main (int , char** )
             } while (c);
             cout<<endl;
         }
-//        do
-//        {
-//            system("sleep 1");
-//            command.set_cmd(0x12);
-//            command.prepare_for_sending();
-//            command.write(dev);
-//            reader.read(dev_read);
-//        } while (reader.is_error());
-//        uint16_t react_time;
-//        std::cout << i << ' ' << reader.get_param(react_time)<<endl;
+        do
+        {
+            system("sleep 1");
+            writer.set_cmd(0x12);
+            writer.prepare_for_sending();
+            writer.write(dev);
+            reader.read(dev_read);
+        } while (reader.is_error());
+        uint16_t react_time;
+        std::cout << i << ' ' << reader.get_param(react_time)<<endl;
 //        stat << speed << endl;
 //        if(if_exit)
 //            break;

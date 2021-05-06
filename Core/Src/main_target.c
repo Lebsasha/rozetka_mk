@@ -106,6 +106,7 @@ extern Tester tester;
 //TODO What is restrict
 //TODO If volatile always needed?
 //TODO Change notes
+//TODO If it safe uint* = volatile uint*?
 
 const int16_t sine_ampl=(1U<<(sizeof(sine_ampl)*8-1))-1;
 const uint16_t arr_size=1024;
@@ -131,12 +132,12 @@ void tone_pin_ctor(Tone_pin* ptr, volatile uint32_t* CCR)
 void make_tone(Tone_pin* tone_pin)
 {///TODO This can be optimised
 ///TODO Why silence comes when dx==0?
-    for(int i=0; i<3;++i)
+    for(int i=0; i<sizeof_arr(tone_pin->dx);++i)
     {
         if (i == 0)
-            *tone_pin->duty_cycle = (uint32_t) (tone_pin->f_dots[tone_pin->curr[i] >> 8]) * COUNTER_PERIOD / tone_pin->sine_ampl / 3;
+            *tone_pin->duty_cycle = (uint32_t) (tone_pin->f_dots[tone_pin->curr[i] >> 8]) * COUNTER_PERIOD / tone_pin->sine_ampl / sizeof_arr(tone_pin->dx);
         else
-            *tone_pin->duty_cycle += (uint32_t) (tone_pin->f_dots[tone_pin->curr[i] >> 8]) * COUNTER_PERIOD / tone_pin->sine_ampl / 3;
+            *tone_pin->duty_cycle += (uint32_t) (tone_pin->f_dots[tone_pin->curr[i] >> 8]) * COUNTER_PERIOD / tone_pin->sine_ampl / sizeof_arr(tone_pin->dx);
         tone_pin->curr[i] += tone_pin->dx[i];
         if (tone_pin->curr[i] >= tone_pin->arr_size << 8)
         {
@@ -165,7 +166,8 @@ void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n)
 void Tester_ctor(Tester* ptr)
 {
     ptr->states=Idle;
-    ptr->freq=0;
+    for (volatile uint16_t* freq =ptr->freq; freq < ptr->freq + sizeof_arr(ptr->freq); ++freq)///TODO ASK If this const in < good?
+                *freq=0;
     ptr->react_time=0;
     ptr->react_time_size=0;
     ptr->start_time=0;
@@ -211,18 +213,18 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
             {
                 my_assert(tester.states==Idle);
                     uint8_t port;
-//                    uint8_t size;
                     uint16_t freq = 0;
                     get_param_8(&reader, &port);
-//                    get_param_8(&reader, &size);
-//                    my_assert(size<=sizeof_arr(tone_pins->dx)); //TODO Error Handle x2
                     my_assert(port<2);
                     for (volatile uint32_t* c =tone_pins[port].dx;c<tone_pins[port].dx+sizeof_arr(tone_pins->dx);++c)
                     {
                         if(!get_param_16(&reader, &freq))
                             freq = 0;
-                        my_assert(freq <= 3400*10); //TODO Error handle
+                        my_assert(freq <= 3400*10);
+                        if (freq<16384)
                         *c=freq_to_dx(&tone_pins[port], freq)/10;
+                        else
+                            *c=freq_to_dx(&tone_pins[port],(uint64_t) freq)/10;
                     }
                     prepare_for_sending(&writer, cmd, true);
             } else if(cmd == 0x1)
@@ -236,30 +238,28 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                     prepare_for_sending(&writer, cmd, true);
             } else if(cmd == 0x11)
             {
-                if(tester.states==Idle)
-                {
+                my_assert(tester.states==Idle);
                     get_param_8(&reader, (uint8_t*)&tester.port);
-                    get_param_16(&reader, (uint16_t*)&tester.freq);
-//                    assert(tester.freq<TONE_FREQ/2); //TODO Error handle
+                my_assert(tester.port<2);
+                for (volatile uint16_t* freq =tester.freq; freq < tester.freq + sizeof_arr(tester.freq); ++freq)
+                {
+                    if(!get_param_16(&reader, (uint16_t*) freq))
+                        *freq = 0;
+                    my_assert(*freq <= 3400 * 10);
+                }
                     tester.states = Measuring_reaction;
-                    tone_pins[tester.port].dx[0] = (tone_pins[0].arr_size * tester.freq << 8) / TONE_FREQ;
-                    tone_pins[tester.port].dx[1]=0;
-                    tone_pins[tester.port].dx[2]=0;
+                for(size_t i=0; i<sizeof_arr(tester.freq);++i)
+                {
+                    tone_pins[tester.port].dx[i]=freq_to_dx(&tone_pins[tester.port], tester.freq[i])/10;
+                }
                     tester.start_time = HAL_GetTick();
                     prepare_for_sending(&writer, cmd, true);
-                }
-                else
-                    prepare_for_sending(&writer, cmd, false);
             } else if(cmd == 0x12)
             {
-                if(tester.states==Measiring_freq)
-                {
+                my_assert(tester.states==Measiring_freq);
                     append_var_16(&writer, tester.react_time);
                     tester.states=Idle;
                     prepare_for_sending(&writer, cmd, true);
-                }
-                else
-                    prepare_for_sending(&writer, cmd, false);
             }
         }
         if (command[0] == '0')
@@ -271,9 +271,8 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
 
 void assertion_failed(const char* cond, const uint8_t cmd)
 {
-    writer.length=3;///clean writer if I already have appended something; replacement of CommandWriter_ctor for optimisation purposes
-    size_t length = strlen(cond)+3+1+1>=writer.BUF_SIZE?writer.BUF_SIZE-3-1-1 : strlen(cond);///3 - 3 bytes: CC, LenL, LenH; 1 - checksum
-    ///  byte; 1 - size of '\0'
+    writer.length=3;///clean writer if I already have appended something; it is replacement of CommandWriter_ctor() call for optimisation purposes
+    size_t length = strlen(cond)+3+1+1>=writer.BUF_SIZE?writer.BUF_SIZE-3-1-1 : strlen(cond);///3 - 3 bytes: CC, LenL, LenH; 1 - checksum byte; 1 - size of '\0'
     for (const char* c = cond; c < cond + length; ++c)
     {
         append_var_8(&writer, *c);
