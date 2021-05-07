@@ -138,8 +138,6 @@ int main(void)
     Tester_ctor(&tester);
     uint16_t notes_1[] = {NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4};
     uint8_t durations_1[] = {4, 8, 8, 4, 4, 4, 4, 4};
-    const uint16_t mseconds_to_max = 2000;
-    const uint8_t max_volume = 40;
     uint16_t prev_volume=0;
   /* USER CODE END 2 */
 
@@ -182,13 +180,13 @@ int main(void)
               {
                   if(tester.button.stop_time!=1)
                   {
-                      uint16_t elapsed_time = tester.button.stop_time - tester.button.start_time - tester.react_time;
-                      tester.temp = elapsed_time;
-                      tester.ampl = max_volume * elapsed_time / mseconds_to_max;
+                      uint16_t elapsed_time = tester.button.stop_time - tester.button.start_time - tester.react_time;//TODO inline
+                      tester.elapsed_time = elapsed_time;
+                      tester.ampl = tester.MAX_VOLUME * elapsed_time / tester.MSECONDS_TO_MAX;
                   }
                   else
                   {
-                      tester.temp = 0;
+                      tester.elapsed_time = 0;
                       tester.ampl = 0;
                   }
                   tone_pins[tester.port].volume=prev_volume;

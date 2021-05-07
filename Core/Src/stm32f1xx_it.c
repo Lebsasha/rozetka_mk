@@ -266,14 +266,12 @@ void TIM3_IRQHandler(void)
             tester.button.stop_time=HAL_GetTick();
         }
 
-        const uint16_t mseconds_to_max = 2000;
-        const uint16_t max_volume = 12000;
         static uint16_t x=0;
         if (tester.states == Measiring_freq)
         {
             x = HAL_GetTick() - tester.button.start_time;
-            tone_pins[tester.port].volume = max_volume * x / mseconds_to_max;
-            if (x >= mseconds_to_max)
+            tone_pins[tester.port].volume = tester.MAX_VOLUME * x / tester.MSECONDS_TO_MAX;
+            if (x >= tester.MSECONDS_TO_MAX)
             {
                 tester.button.stop_time=1;
 //                x=0;

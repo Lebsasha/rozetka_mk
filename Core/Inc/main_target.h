@@ -64,13 +64,15 @@ typedef enum States{Measuring_reaction, Measiring_freq, Sending, Idle}States;
 typedef struct Tester
 {
     volatile States states;
-    volatile typeof(((Tone_pin*)NULL)->volume) ampl;
+    volatile uint16_t freq[sizeof_arr(((Tone_pin*)(NULL))->dx)];
     volatile uint16_t react_time;
     volatile uint8_t react_time_size;
     Button button;
-    volatile uint16_t temp;
     volatile uint8_t port;
-    volatile uint16_t freq[sizeof_arr(((Tone_pin*)(NULL))->dx)];
+    volatile typeof(((Tone_pin*)NULL)->volume) ampl;
+    volatile uint16_t elapsed_time;
+    uint16_t MSECONDS_TO_MAX;///const
+    uint16_t MAX_VOLUME;///const
 }Tester;
 void Tester_ctor(Tester* ptr);
 

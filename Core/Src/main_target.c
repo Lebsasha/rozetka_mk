@@ -166,6 +166,8 @@ void Tester_ctor(Tester* ptr)
     ptr->button.start_time = 0;
     ptr->button.stop_time = 0;
     ptr->port=0;
+    ptr->MSECONDS_TO_MAX=2000;
+    ptr->MAX_VOLUME=6000;
 }
 
 #ifdef NDEBUG
@@ -225,6 +227,8 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 get_param_8(&reader, (uint8_t*) &tester.port);
                 my_assert(tester.port < 2);
                 get_param_16(&reader, &tone_pins[tester.port].volume);
+                get_param_16(&reader, &tester.MAX_VOLUME);
+                get_param_16(&reader, &tester.MSECONDS_TO_MAX);
                 for (volatile uint16_t* freq = tester.freq; freq < tester.freq + sizeof_arr(tester.freq); ++freq)
                 {
                     if (!get_param_16(&reader, (uint16_t*) freq))
@@ -244,7 +248,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 if(tester.states == Sending)
                 {
                     append_var_16(&writer, tester.react_time);
-                    append_var_16(&writer, tester.temp);
+                    append_var_16(&writer, tester.elapsed_time);
                     append_var_8(&writer, tester.ampl);
                     tester.react_time=0;
                     tester.ampl=0;

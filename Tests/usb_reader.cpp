@@ -160,6 +160,8 @@ int main (int , char** )
         writer.set_cmd(cmd);
         writer.append_var<uint8_t>(1);/// Port
         writer.append_var<uint16_t>(10000);
+        writer.append_var<uint16_t>(2000);
+        writer.append_var<uint16_t>(6000);
 //        writer.append_var<uint16_t>((NOTE_C4)*10);
 //        writer.append_var<uint16_t>(NOTE_E4*10);
         writer.append_var<uint16_t>(NOTE_G4);
