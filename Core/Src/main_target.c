@@ -97,7 +97,8 @@ extern Tester tester;
 //TODO What is restrict
 //TODO If volatile always needed?
 //TODO Change notes
-//TODO If it safe uint* = volatile uint*?
+//TODO Remove {} in appropriate for's
+//TODO ASK if main() is bisy, is it good for usb
 
 const int16_t sine_ampl = (1U << (sizeof(sine_ampl) * 8 - 1)) - 1;
 const uint16_t arr_size = 1024;
@@ -123,7 +124,7 @@ void tone_pin_ctor(Tone_pin* ptr, volatile uint32_t* CCR)
 
 void make_tone(Tone_pin* tone_pin)
 {
-    for(int i=0; i<sizeof_arr(tone_pin->dx);++i)
+    for(uint8_t i=0; i<(uint8_t)sizeof_arr(tone_pin->dx);++i)
     {
         if (i == 0)
             *tone_pin->duty_cycle = (uint32_t) (tone_pin->f_dots[tone_pin->curr[i] >> 8]) * COUNTER_PERIOD / sine_ampl / sizeof_arr(tone_pin->dx);

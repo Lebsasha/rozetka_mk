@@ -136,8 +136,11 @@ int main(void)
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 0);
     Command_writer_ctor(&writer);
     Tester_ctor(&tester);
-  uint16_t notes_1[]={NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4};
-  uint8_t durations_1[]={4, 8, 8, 4, 4, 4, 4, 4};
+    uint16_t notes_1[] = {NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4};
+    uint8_t durations_1[] = {4, 8, 8, 4, 4, 4, 4, 4};
+    const uint16_t mseconds_to_max = 2000;
+    const uint8_t max_volume = 40;
+    uint8_t prev_volume=0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -164,44 +167,36 @@ int main(void)
               tester.button.start_time = 0;
               tester.button.stop_time = 0;
               tester.react_time_size = 0;
+
+              HAL_Delay(800);
+              prev_volume=tone_pins[tester.port].volume;
+              for (size_t i = 0; i < sizeof_arr(tester.freq); ++i)
+                  tone_pins[tester.port].dx[i] = freq_to_dx(&tone_pins[tester.port], tester.freq[i]);
               tester.states = Measiring_freq;
+              tester.button.start_time = HAL_GetTick();
           }
       }
       if (tester.states == Measiring_freq)///TODO Минимальный дискрет; линейный, эксп, небоскр
       {
           tester.ampl=9;
           tester.temp=5;
-          tester.states=Sending;
-          goto ss;
-          for (size_t i = 0; i < sizeof_arr(tester.freq); ++i)
-              tone_pins[tester.port].dx[i] = freq_to_dx(&tone_pins[tester.port], tester.freq[i]);
-          uint16_t x;
-          const uint16_t mseconds_to_max = 2000;
-          const uint8_t max_volume = 40;
-          tester.button.start_time = HAL_GetTick();
-          while (1)
-          {
-              x = HAL_GetTick() - tester.button.start_time;
-              tone_pins[tester.port].volume = max_volume * x / mseconds_to_max;
+//          tester.states=Sending;
+//          goto temp_label;
               if (tester.button.stop_time != 0)
               {
                   uint16_t elapsed_time = tester.button.stop_time - tester.button.start_time - tester.react_time;
-                  tester.temp=elapsed_time;
+                  tester.temp = elapsed_time;
                   tester.ampl = max_volume * elapsed_time / mseconds_to_max;
-                  break;
+//                  break;
+                  tone_pins[tester.port].volume=prev_volume;
+                  for (volatile uint32_t* c = tone_pins[tester.port].dx; c < tone_pins[tester.port].dx + sizeof_arr(tone_pins[tester.port].dx); ++c)
+                      *c = 0;
+                  tester.button.start_time=0;
+                  tester.button.stop_time=0;
+                  tester.states=Sending;
               }
-              if (x > mseconds_to_max)
-              {
-                  tester.ampl = -2;
-                  break;
-              }
-//              HAL_Delay(40);
-          }
-          tester.states=Sending;
-          for (volatile uint32_t* c = tone_pins[tester.port].dx; c < tone_pins[tester.port].dx + sizeof_arr(tone_pins[tester.port].dx); ++c)
-              *c = 0;
       }
-      ss:
+      temp_label:
       if (writer.buffer[CC] != 0)
       {
           send_command(&writer);

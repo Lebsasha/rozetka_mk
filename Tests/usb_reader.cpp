@@ -47,6 +47,7 @@ public:
         buffer[LenL] += sizeof(var);
     }
 //TODO Припаять "кнопку"
+//TODO Write release conf with Tests
     void write(ostream& dev)
     {
         dev.write(buffer, length);
@@ -158,10 +159,10 @@ int main (int , char** )
         const int cmd = 0x11;
         writer.set_cmd(cmd);
         writer.append_var<uint8_t>(1);/// Port
-        writer.append_var<uint8_t>(50);
-        writer.append_var<uint16_t>((NOTE_C4));
-        writer.append_var<uint16_t>(NOTE_E4);
-        writer.append_var<uint16_t>(NOTE_G4);
+        writer.append_var<uint8_t>(30);
+//        writer.append_var<uint16_t>((NOTE_C4)*10);
+//        writer.append_var<uint16_t>(NOTE_E4*10);
+        writer.append_var<uint16_t>(NOTE_G4);///FIXME El_time same for some period, react_time no
 //        writer.append_var<uint16_t>((NOTE_C5));
         writer.prepare_for_sending();
         writer.write(dev);
@@ -169,6 +170,19 @@ int main (int , char** )
         if (!reader.is_error())
         {
             assert(reader.is_empty());
+            if (cmd == 0x11)
+            {
+                do
+                {
+                    system("sleep 1");
+                    writer.set_cmd(0x12);
+                    writer.prepare_for_sending();
+                    writer.write(dev);
+                    reader.read(dev_read);
+                } while (reader.is_error());
+                uint16_t react_time;
+                std::cout << i << ' ' << reader.get_param(react_time) << ", el_time "<<reader.get_param<uint16_t>()<<", Ampl: "<<(int)reader.get_param<uint8_t>()<<endl;
+            }
         }
         else
         {
@@ -181,19 +195,7 @@ int main (int , char** )
             } while (c);
             cout<<endl;
         }
-        if (cmd == 0x11)
-        {
-            do
-            {
-                system("sleep 1");
-                writer.set_cmd(0x12);
-                writer.prepare_for_sending();
-                writer.write(dev);
-                reader.read(dev_read);
-            } while (reader.is_error());
-            uint16_t react_time;
-            std::cout << i << ' ' << reader.get_param(react_time) << ", el_time "<<reader.get_param<uint16_t>()<<", Ampl: "<<(int)reader.get_param<uint8_t>()<<endl;
-        }
+        //TODO Спросить про Clock tree; Vref, etc.,
     }
 
     cout<<"end"<<endl;
