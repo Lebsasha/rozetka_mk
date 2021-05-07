@@ -275,7 +275,7 @@ void TIM3_IRQHandler(void)
             tone_pins[tester.port].volume = max_volume * x / mseconds_to_max;
             if (x >= mseconds_to_max)
             {
-                tester.button.stop_time=HAL_GetTick();
+                tester.button.stop_time=1;
 //                x=0;
             }
         }

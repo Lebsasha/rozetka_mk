@@ -184,9 +184,17 @@ int main(void)
 //          goto temp_label;
               if (tester.button.stop_time != 0)
               {
-                  uint16_t elapsed_time = tester.button.stop_time - tester.button.start_time - tester.react_time;
-                  tester.temp = elapsed_time;
-                  tester.ampl = max_volume * elapsed_time / mseconds_to_max;
+                  if(tester.button.stop_time!=1)
+                  {
+                      uint16_t elapsed_time = tester.button.stop_time - tester.button.start_time - tester.react_time;
+                      tester.temp = elapsed_time;
+                      tester.ampl = max_volume * elapsed_time / mseconds_to_max;
+                  }
+                  else
+                  {
+                      tester.temp = 0;
+                      tester.ampl = 0;
+                  }
 //                  break;
                   tone_pins[tester.port].volume=prev_volume;
                   for (volatile uint32_t* c = tone_pins[tester.port].dx; c < tone_pins[tester.port].dx + sizeof_arr(tone_pins[tester.port].dx); ++c)
@@ -194,6 +202,7 @@ int main(void)
                   tester.button.start_time=0;
                   tester.button.stop_time=0;
                   tester.states=Sending;
+
               }
       }
       temp_label:

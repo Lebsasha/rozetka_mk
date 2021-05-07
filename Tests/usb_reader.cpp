@@ -154,7 +154,7 @@ int main (int , char** )
     cout<<"begin "<<std::flush;
     for(size_t i =0;i<10;++i)
     {
-        comp_command[sizeof(comp_command) - 1 - 1] = rand() % 6 + '0';
+        comp_command[sizeof(comp_command) - 1 - 1] = rand() % 4 + '0';
         system(comp_command);
         const int cmd = 0x11;
         writer.set_cmd(cmd);
@@ -162,7 +162,7 @@ int main (int , char** )
         writer.append_var<uint8_t>(30);
 //        writer.append_var<uint16_t>((NOTE_C4)*10);
 //        writer.append_var<uint16_t>(NOTE_E4*10);
-        writer.append_var<uint16_t>(NOTE_G4);///FIXME El_time same for some period, react_time no
+        writer.append_var<uint16_t>(NOTE_G4);
 //        writer.append_var<uint16_t>((NOTE_C5));
         writer.prepare_for_sending();
         writer.write(dev);
