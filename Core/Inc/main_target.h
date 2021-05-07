@@ -15,7 +15,7 @@ typedef struct Tone_pin
     int16_t* f_dots;
     uint16_t arr_size;///TODO Maybe inline?
 //    int16_t sine_ampl;///TODO Maybe inline?
-    uint8_t volume;
+    uint16_t volume;
     volatile uint32_t dx[3];
     uint32_t curr[3];
 }Tone_pin;
@@ -64,7 +64,7 @@ typedef enum States{Measuring_reaction, Measiring_freq, Sending, Idle}States;
 typedef struct Tester
 {
     volatile States states;
-    volatile uint8_t ampl;
+    volatile typeof(((Tone_pin*)NULL)->volume) ampl;
     volatile uint16_t react_time;
     volatile uint8_t react_time_size;
     Button button;

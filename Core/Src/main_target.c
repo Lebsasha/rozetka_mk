@@ -136,7 +136,7 @@ void make_tone(Tone_pin* tone_pin)
             tone_pin->curr[i] -= arr_size << 8;
         }
     }
-    *tone_pin->duty_cycle=(*tone_pin->duty_cycle*tone_pin->volume)>>8;
+    *tone_pin->duty_cycle=(*tone_pin->duty_cycle*tone_pin->volume)>>16;
 }
 
 void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n)
@@ -195,9 +195,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 uint8_t port;
                 get_param_8(&reader, &port);
                 my_assert(port < 2);
-                uint8_t volume = 0;
-                get_param_8(&reader, &volume);
-                tone_pins[port].volume=volume;
+                get_param_16(&reader, &tone_pins[port].volume);
                 uint16_t freq = 0;
                 for (volatile uint32_t* c = tone_pins[port].dx; c < tone_pins[port].dx + sizeof_arr(tone_pins[port].dx); ++c)
                 {
@@ -226,7 +224,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 my_assert(tester.states == Idle);
                 get_param_8(&reader, (uint8_t*) &tester.port);
                 my_assert(tester.port < 2);
-                get_param_8(&reader, &tone_pins[tester.port].volume);
+                get_param_16(&reader, &tone_pins[tester.port].volume);
                 for (volatile uint16_t* freq = tester.freq; freq < tester.freq + sizeof_arr(tester.freq); ++freq)
                 {
                     if (!get_param_16(&reader, (uint16_t*) freq))

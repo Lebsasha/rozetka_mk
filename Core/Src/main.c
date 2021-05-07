@@ -140,7 +140,7 @@ int main(void)
     uint8_t durations_1[] = {4, 8, 8, 4, 4, 4, 4, 4};
     const uint16_t mseconds_to_max = 2000;
     const uint8_t max_volume = 40;
-    uint8_t prev_volume=0;
+    uint16_t prev_volume=0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -178,10 +178,6 @@ int main(void)
       }
       if (tester.states == Measiring_freq)///TODO Минимальный дискрет; линейный, эксп, небоскр
       {
-          tester.ampl=9;
-          tester.temp=5;
-//          tester.states=Sending;
-//          goto temp_label;
               if (tester.button.stop_time != 0)
               {
                   if(tester.button.stop_time!=1)
@@ -195,7 +191,6 @@ int main(void)
                       tester.temp = 0;
                       tester.ampl = 0;
                   }
-//                  break;
                   tone_pins[tester.port].volume=prev_volume;
                   for (volatile uint32_t* c = tone_pins[tester.port].dx; c < tone_pins[tester.port].dx + sizeof_arr(tone_pins[tester.port].dx); ++c)
                       *c = 0;
@@ -205,7 +200,6 @@ int main(void)
 
               }
       }
-      temp_label:
       if (writer.buffer[CC] != 0)
       {
           send_command(&writer);

@@ -16,9 +16,9 @@ enum
 /**
  * 0x1 -> u8|version u8[]|"string with \0"
  * 0x4 ->
- * 0x10 u8|port u8|volume u16[]|freqs ->
+ * 0x10 u8|port u16|volume u16[]|freqs ->
  * @note freqs preserve 1 digit after point with help of fixed point, i. e. if you pass 300,6 Hz it will transmit and set in mk 300,6 Hz
- * 0x11 u8|port u8|volume u16[]|freqs ->
+ * 0x11 u8|port u16|volume u16[]|freqs ->
  * 0x12 -> u16|react_time u8|ampl
  * @note react_time in ms
  *
@@ -159,7 +159,7 @@ int main (int , char** )
         const int cmd = 0x11;
         writer.set_cmd(cmd);
         writer.append_var<uint8_t>(1);/// Port
-        writer.append_var<uint8_t>(30);
+        writer.append_var<uint16_t>(10000);
 //        writer.append_var<uint16_t>((NOTE_C4)*10);
 //        writer.append_var<uint16_t>(NOTE_E4*10);
         writer.append_var<uint16_t>(NOTE_G4);

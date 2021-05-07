@@ -267,7 +267,7 @@ void TIM3_IRQHandler(void)
         }
 
         const uint16_t mseconds_to_max = 2000;
-        const uint8_t max_volume = 40;
+        const uint16_t max_volume = 12000;
         static uint16_t x=0;
         if (tester.states == Measiring_freq)
         {
