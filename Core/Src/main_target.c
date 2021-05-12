@@ -6,11 +6,10 @@
 void Command_writer_ctor(Command_writer* ptr)
 {
     ptr->length = 1 + 1 + 1;///CC, LenH, LenL
-    ptr->BUF_SIZE = 128;
-    for (uint8_t* c = ptr->buffer + ptr->BUF_SIZE - 1; c >= ptr->buffer; --c)
-    {
-        *c = 0;
-    }
+    ptr->BUF_SIZE = 128;///Can be changed if needed, but with appropriate changes with buffer array
+    ptr->buffer[CC]=0;
+    ptr->buffer[LenL]=0;
+    ptr->buffer[LenH]=0;
 }
 
 //    template<typename T>
@@ -20,7 +19,7 @@ void Command_writer_ctor(Command_writer* ptr)
     ptr->length += sizeof(var);\
     ptr->buffer[LenL] += sizeof(var);\
 }
-///TODO If todos below are need in this context?
+///TODO ASK If todos below are need in this context?
 //    assert(ptr->length + sizeof(var) < ptr->BUF_SIZE); ///TODO Error Handle
 //    assert(ptr->buffer[LenL]<128)   ///TODO Error Handle
 
@@ -34,7 +33,7 @@ void prepare_for_sending(Command_writer* ptr, uint8_t command_code, bool if_ok)
     { sum += *c; }
     ptr->buffer[ptr->length]=sum;///SS
     ptr->length+=sizeof(uint8_t);
-    ptr->buffer[CC]= command_code + 128 * !if_ok;/// 128=1<<7
+    ptr->buffer[CC]= command_code + 128 * !if_ok;/// 128==1<<7
 }
 
 typedef struct Command_reader
@@ -98,7 +97,7 @@ extern Tester tester;
 //TODO If volatile always needed?
 //TODO Change notes
 //TODO Remove {} in appropriate for's
-//TODO ASK if main() is bisy, is it good for usb
+//TODO ASK if main() is busy, is it good for usb
 
 const int16_t sine_ampl = (1U << (sizeof(sine_ampl) * 8 - 1)) - 1;
 const uint16_t arr_size = 1024;
@@ -139,13 +138,13 @@ void make_tone(Tone_pin* tone_pin)
     *tone_pin->duty_cycle=(*tone_pin->duty_cycle*tone_pin->volume)>>16;
 }
 
-void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n)
+void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n)//TODO ASK If this needed
 {
     volatile uint32_t wait;///TODO try remove volatile
     uint32_t start_tick = HAL_GetTick();
     for (int i = 0; i < n; ++i)
     {
-        pin->dx[0] = (pin->arr_size << 8) * notes[i] / TONE_FREQ;
+        pin->dx[0] = freq_to_dx(pin, notes[i]);
         wait = 1000 / durations[i];
         while ((HAL_GetTick() - start_tick) < wait)
         {
@@ -166,8 +165,8 @@ void Tester_ctor(Tester* ptr)
     ptr->button.start_time = 0;
     ptr->button.stop_time = 0;
     ptr->port=0;
-    ptr->MSECONDS_TO_MAX=2000;
-    ptr->MAX_VOLUME=6000;
+    ptr->mseconds_to_max=2000;
+    ptr->max_volume=6000;
 }
 
 #ifdef NDEBUG
@@ -189,26 +188,29 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
         Command_reader reader;
         if(Command_reader_ctor(&reader, command))
         {
-            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+            HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
             const uint8_t cmd = get_command(&reader);
-            if (cmd == 0x10)
+            if (cmd == 0x10)///todo think about /10 for this command
             {
                 my_assert(tester.states == Idle);
                 uint8_t port;
                 get_param_8(&reader, &port);
                 my_assert(port < 2);
-                get_param_16(&reader, &tone_pins[port].volume);
+                uint16_t volume;
+                get_param_16(&reader, &volume);
+                tone_pins[port].volume=0;
                 uint16_t freq = 0;
                 for (volatile uint32_t* c = tone_pins[port].dx; c < tone_pins[port].dx + sizeof_arr(tone_pins[port].dx); ++c)
                 {
                     if (!get_param_16(&reader, &freq))
                         freq = 0;
                     my_assert(freq <= 3400 * 10);
-                    if (freq < 16384)
+                    if (freq < 16384)///Control uint32_t overflow
                         *c = freq_to_dx(&tone_pins[port], freq) / 10;
                     else
                         *c = freq_to_dx(&tone_pins[port], (uint64_t) freq) / 10;
                 }
+                tone_pins[port].volume=volume;
                 prepare_for_sending(&writer, cmd, true);
             }
             else if (cmd == 0x1)
@@ -226,9 +228,11 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 my_assert(tester.states == Idle);
                 get_param_8(&reader, (uint8_t*) &tester.port);
                 my_assert(tester.port < 2);
-                get_param_16(&reader, &tone_pins[tester.port].volume);
-                get_param_16(&reader, &tester.MAX_VOLUME);
-                get_param_16(&reader, &tester.MSECONDS_TO_MAX);
+                uint16_t volume;
+                get_param_16(&reader, &volume);
+                tone_pins[tester.port].volume=0;
+                get_param_16(&reader, (uint16_t*) &tester.max_volume);
+                get_param_16(&reader, (uint16_t*) &tester.mseconds_to_max);
                 for (volatile uint16_t* freq = tester.freq; freq < tester.freq + sizeof_arr(tester.freq); ++freq)
                 {
                     if (!get_param_16(&reader, (uint16_t*) freq))
@@ -239,6 +243,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 {
                     tone_pins[tester.port].dx[i] = freq_to_dx(&tone_pins[tester.port], tester.freq[i]);
                 }
+                tone_pins[tester.port].volume=volume;
                 tester.states = Measuring_reaction;
                 tester.button.start_time = HAL_GetTick();
                 prepare_for_sending(&writer, cmd, true);
@@ -249,7 +254,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 {
                     append_var_16(&writer, tester.react_time);
                     append_var_16(&writer, tester.elapsed_time);
-                    append_var_8(&writer, tester.ampl);
+                    append_var_16(&writer, tester.ampl);
                     tester.react_time=0;
                     tester.ampl=0;
                     tester.states = Idle;
@@ -261,16 +266,16 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
             else if (cmd == 0x4)
             {
                 tester.states=Idle;
-
+                tone_pins[tester.port].volume=0;
                 for (volatile uint32_t* c = tone_pins[tester.port].dx; c < tone_pins[tester.port].dx + sizeof_arr(tone_pins[tester.port].dx); ++c)
                     *c = 0;
-                tone_pins[tester.port].volume=0;
+                tester.button.start_time=0;
 
+                ///next 4 lines not necessary but maybe needed in some cases
+                tester.button.stop_time=0;
                 tester.ampl=0;
                 tester.react_time=0;
                 tester.react_time_size=0;
-                tester.button.start_time=0;
-                tester.button.stop_time=0;
                 prepare_for_sending(&writer, cmd, true);
             }
             else

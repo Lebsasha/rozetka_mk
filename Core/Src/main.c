@@ -69,12 +69,11 @@ Tester tester;
 void send_command(Command_writer* ptr)///In main, USB part
 {
     while (CDC_Transmit_FS(ptr->buffer, ptr->length) == USBD_BUSY){}
-    for (uint8_t* c = ptr->buffer + ptr->length - 1; c >= ptr->buffer; --c)
-    {
-        *c = 0;
-    }
+    ptr->buffer[CC]=0;
+    ptr->buffer[LenL]=0;
+    ptr->buffer[LenH]=0;
     ptr->length = 1 + 1 + 1;///CC, LenH, LenL
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 }
 /* USER CODE END 0 */
 
@@ -111,11 +110,11 @@ int main(void)
   MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 
-//assert(1000/MY_FREQ*DETAILYTY_1==1000);
+    HAL_Delay(300);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-    HAL_Delay(200);
+    HAL_Delay(400);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-    HAL_Delay(200);
+    HAL_Delay(400);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
 
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 1);
@@ -133,12 +132,12 @@ int main(void)
     HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);///start sound at A9
     HAL_TIM_Base_Start_IT(&htim1);
     HAL_TIM_Base_Start_IT(&htim3);
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 0);
     Command_writer_ctor(&writer);
     Tester_ctor(&tester);
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 0);
     uint16_t notes_1[] = {NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4};
     uint8_t durations_1[] = {4, 8, 8, 4, 4, 4, 4, 4};
-    uint16_t prev_volume=0;
+    uint16_t prev_volume;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -173,23 +172,23 @@ int main(void)
               tester.react_time_size = 0;
 
               HAL_Delay(300);
-              prev_volume = tone_pins[tester.port].volume;
               tone_pins[tester.port].volume=0;
               for (size_t i = 0; i < sizeof_arr(tester.freq); ++i)
                   tone_pins[tester.port].dx[i] = freq_to_dx(&tone_pins[tester.port], tester.freq[i]);
+              ///volume now controlled by TIM3 interrupt therefore volume=prev_volume not needed
               HAL_Delay(400);
-              tester.states = Measiring_freq;
+              tester.states = Measuring_freq;
               tester.button.start_time = HAL_GetTick();
           }
       }
-      if (tester.states == Measiring_freq)///TODO Минимальный дискрет; линейный, эксп, небоскр
+      if (tester.states == Measuring_freq)///TODO ASK Минимальный дискрет; линейный, эксп, небоскр
       {
           if (tester.button.stop_time != 0)
           {
               if (tester.button.stop_time != 1)
               {
                   tester.elapsed_time = tester.button.stop_time - tester.button.start_time - tester.react_time;
-                  tester.ampl = tester.MAX_VOLUME * tester.elapsed_time / tester.MSECONDS_TO_MAX;
+                  tester.ampl = tester.max_volume * tester.elapsed_time / tester.mseconds_to_max;
               }
               else
               {

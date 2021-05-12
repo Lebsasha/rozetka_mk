@@ -5,15 +5,15 @@
 #define COUNTER_PERIOD 1800
 #define freq_to_dx(tone_pin_ptr, freq)  (((tone_pin_ptr)->arr_size*(freq)<<8)/TONE_FREQ)
 #define sizeof_arr(arr) (sizeof(arr)/sizeof((arr)[0]))
+#define static_access(type) ((type*)NULL)
 
 #include "notes.h"
-//#include <assert.h>
 
 typedef struct Tone_pin
 {
     volatile uint32_t* duty_cycle;
     int16_t* f_dots;
-    uint16_t arr_size;///TODO Maybe inline?
+    uint16_t arr_size;///TODO Maybe inline? Yes, i can define this and change freq_dx and f_dots[arr_size]
 //    int16_t sine_ampl;///TODO Maybe inline?
     uint16_t volume;
     volatile uint32_t dx[3];
@@ -39,7 +39,7 @@ typedef struct Button
     volatile uint32_t stop_time;
 }Button;
 
-///@brief this enum points on appropriate indexes in bin. prot.
+///@brief this enum points on appropriate indexes in binary protocol
 ///e. g. buffer[CC], ...
 enum Commands
 {
@@ -60,19 +60,19 @@ void Command_writer_ctor(Command_writer* ptr);
 void send_command(Command_writer* ptr);
 
 
-typedef enum States{Measuring_reaction, Measiring_freq, Sending, Idle}States;
+typedef enum States{Measuring_reaction, Measuring_freq, Sending, Idle}States;
 typedef struct Tester
 {
     volatile States states;
-    volatile uint16_t freq[sizeof_arr(((Tone_pin*)(NULL))->dx)];
+    volatile uint16_t freq[sizeof_arr(static_access(Tone_pin)->dx)];
     volatile uint16_t react_time;
     volatile uint8_t react_time_size;
     Button button;
     volatile uint8_t port;
-    volatile typeof(((Tone_pin*)NULL)->volume) ampl;
+    volatile typeof(static_access(Tone_pin)->volume) ampl;
     volatile uint16_t elapsed_time;
-    volatile uint16_t MSECONDS_TO_MAX;///const
-    volatile uint16_t MAX_VOLUME;///const
+    volatile uint16_t mseconds_to_max;
+    volatile typeof(static_access(Tone_pin)->volume) max_volume;
 }Tester;
 void Tester_ctor(Tester* ptr);
 

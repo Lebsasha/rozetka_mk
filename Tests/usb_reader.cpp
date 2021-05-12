@@ -1,7 +1,9 @@
 #include <iostream>
+#include <string>
 #include <fstream>
 #include <algorithm>
 #include <cassert>
+#include <sstream>
 #include "../Core/Inc/notes.h"
 
 using namespace std;
@@ -46,6 +48,7 @@ public:
         length += sizeof(var);
         buffer[LenL] += sizeof(var);
     }
+//TODO Test 0x4
 //TODO Припаять "кнопку"
 //TODO Write release conf with Tests
     void write(ostream& dev)
@@ -111,7 +114,7 @@ public:
     {
         return length==3+1 || length==0;
     }
-    int is_error() const
+    uint8_t is_error() const
     {
         return buffer[CC]&(1<<7);
     }
@@ -139,11 +142,11 @@ public:
 
 int main (int , char** )
 {
-    const char* path="react_time.csv";
+    const char* path="react_time.log";
     ofstream stat(path, ios_base::app|ios_base::out);
     Command_writer writer;
     Command_reader reader;
-    char comp_command[]="sleep  ";
+    char comp_command[]="sleep x";///x will be replaced with number
     ofstream dev("/dev/ttyACM0");
     ifstream dev_read("/dev/ttyACM0");
     if(!dev || !dev_read)
@@ -152,20 +155,23 @@ int main (int , char** )
         return 1;
     }
     cout<<"begin "<<std::flush;
-    for(size_t i =0;i<10;++i)
+    for(size_t i =0;i<4;++i)
     {
         comp_command[sizeof(comp_command) - 1 - 1] = rand() % 4 + '0';
         system(comp_command);
-        const int cmd = 0x11;
+        const int cmd = 0x10;
         writer.set_cmd(cmd);
-        writer.append_var<uint8_t>(1);/// Port
-        writer.append_var<uint16_t>(10000);
-        writer.append_var<uint16_t>(2000);
-        writer.append_var<uint16_t>(6000);
-//        writer.append_var<uint16_t>((NOTE_C4)*10);
-//        writer.append_var<uint16_t>(NOTE_E4*10);
-        writer.append_var<uint16_t>(NOTE_G4);
-//        writer.append_var<uint16_t>((NOTE_C5));
+        writer.append_var<uint8_t>(0);/// Port
+        writer.append_var<uint16_t>(5000);
+//        writer.append_var<uint16_t>(1000);///max_vol
+//        writer.append_var<uint16_t>(10000);///msecs
+        writer.append_var<uint16_t>((NOTE_C4)*10);
+        if (i>=1)
+        writer.append_var<uint16_t>(NOTE_E4*10);
+        if(i>=2)
+        writer.append_var<uint16_t>(NOTE_G4*10);
+        if (i>=3)
+        writer.append_var<uint16_t>((NOTE_C5)*10);
         writer.prepare_for_sending();
         writer.write(dev);
         reader.read(dev_read);
@@ -183,7 +189,10 @@ int main (int , char** )
                     reader.read(dev_read);
                 } while (reader.is_error());
                 uint16_t react_time;
-                std::cout << i << ' ' << reader.get_param(react_time) << ", el_time "<<reader.get_param<uint16_t>()<<", ampl: "<<(int)reader.get_param<uint8_t>()<<endl;
+                ostringstream temp;
+                temp << i << ", react_time " << reader.get_param(react_time) << ", el_time "<<reader.get_param<uint16_t>()<<", ampl "<<(int)reader.get_param<uint16_t>()<<endl;
+                cout<<temp.str();
+                stat<<temp.str();
             }
         }
         else
