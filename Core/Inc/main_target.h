@@ -71,8 +71,8 @@ typedef struct Tester
     volatile uint8_t port;
     volatile typeof(((Tone_pin*)NULL)->volume) ampl;
     volatile uint16_t elapsed_time;
-    uint16_t MSECONDS_TO_MAX;///const
-    uint16_t MAX_VOLUME;///const
+    volatile uint16_t MSECONDS_TO_MAX;///const
+    volatile uint16_t MAX_VOLUME;///const
 }Tester;
 void Tester_ctor(Tester* ptr);
 

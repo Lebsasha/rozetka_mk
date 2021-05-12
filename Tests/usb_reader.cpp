@@ -18,12 +18,12 @@ enum
  * 0x4 ->
  * 0x10 u8|port u16|volume u16[]|freqs ->
  * @note freqs preserve 1 digit after point with help of fixed point, i. e. if you pass 300,6 Hz it will transmit and set in mk 300,6 Hz
- * 0x11 u8|port u16|volume u16[]|freqs ->
+ * 0x11 u8|port u16|volume u16|MAX_VOLUME u16|MSECONDS_TO_MAX u16[]|freqs ->
  * 0x12 -> u16|react_time u8|ampl
  * @note react_time in ms
  *
  * If error in command CC:
- * CC ... -> 0x80(128)+CC u8[]|"string with \0" ///TODO Не так, как в стандарте!
+ * CC ... -> 0x80(128)+CC u8[]|"string with \0" ///TODO ASK Не так, как в стандарте!
  */
 uint8_t Commands[]={0x1, 0x4, 0x10, 0x11, 0x12};
 
@@ -183,7 +183,7 @@ int main (int , char** )
                     reader.read(dev_read);
                 } while (reader.is_error());
                 uint16_t react_time;
-                std::cout << i << ' ' << reader.get_param(react_time) << ", el_time "<<reader.get_param<uint16_t>()<<", Ampl: "<<(int)reader.get_param<uint8_t>()<<endl;
+                std::cout << i << ' ' << reader.get_param(react_time) << ", el_time "<<reader.get_param<uint16_t>()<<", ampl: "<<(int)reader.get_param<uint8_t>()<<endl;
             }
         }
         else

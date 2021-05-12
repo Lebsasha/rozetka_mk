@@ -274,7 +274,6 @@ void TIM3_IRQHandler(void)
             if (x >= tester.MSECONDS_TO_MAX)
             {
                 tester.button.stop_time=1;
-//                x=0;
             }
         }
         return;
