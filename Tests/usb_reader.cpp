@@ -142,7 +142,7 @@ public:
 
 int main (int , char** )
 {
-    const char* path="react_time.log";
+    const char* path="react_time_sasha.log";
     ofstream stat(path, ios_base::app|ios_base::out);
     Command_writer writer;
     Command_reader reader;
@@ -155,23 +155,24 @@ int main (int , char** )
         return 1;
     }
     cout<<"begin "<<std::flush;
-    for(size_t i =0;i<4;++i)
+    for(size_t i =0;i<15;++i)
     {
-        comp_command[sizeof(comp_command) - 1 - 1] = rand() % 4 + '0';
+        comp_command[sizeof(comp_command) - 1 - 1] = rand() % 5 + '0';
         system(comp_command);
-        const int cmd = 0x10;
+        const int cmd = 0x11;
         writer.set_cmd(cmd);
         writer.append_var<uint8_t>(0);/// Port
-        writer.append_var<uint16_t>(5000);
-//        writer.append_var<uint16_t>(1000);///max_vol
-//        writer.append_var<uint16_t>(10000);///msecs
-        writer.append_var<uint16_t>((NOTE_C4)*10);
-        if (i>=1)
-        writer.append_var<uint16_t>(NOTE_E4*10);
-        if(i>=2)
-        writer.append_var<uint16_t>(NOTE_G4*10);
-        if (i>=3)
-        writer.append_var<uint16_t>((NOTE_C5)*10);
+        if (cmd==0x10)
+            writer.append_var<uint16_t>(5000);///tone_volume
+        if(cmd==0x11)
+        {
+            writer.append_var<uint16_t>(5000);///temp_vol
+            writer.append_var<uint16_t>(100);///max_vol
+            writer.append_var<uint16_t>(10000);///msecs
+        }
+        writer.append_var<uint16_t>((NOTE_C4) * (cmd == 0x10 ? 10 : 1));
+        writer.append_var<uint16_t>((NOTE_E4) * (cmd == 0x10 ? 10 : 1));
+        writer.append_var<uint16_t>((NOTE_G4) * (cmd == 0x10 ? 10 : 1));
         writer.prepare_for_sending();
         writer.write(dev);
         reader.read(dev_read);
@@ -182,17 +183,17 @@ int main (int , char** )
             {
                 do
                 {
-                    system("sleep 1");
+                    system("sleep 2");///TODO Optimise USB
                     writer.set_cmd(0x12);
                     writer.prepare_for_sending();
                     writer.write(dev);
                     reader.read(dev_read);
                 } while (reader.is_error());
                 uint16_t react_time;
-                ostringstream temp;
-                temp << i << ", react_time " << reader.get_param(react_time) << ", el_time "<<reader.get_param<uint16_t>()<<", ampl "<<(int)reader.get_param<uint16_t>()<<endl;
-                cout<<temp.str();
-                stat<<temp.str();
+                ostringstream duplicator;
+                duplicator << i << ", react_time " << reader.get_param(react_time) << ", el_time " << reader.get_param<uint16_t>() << ", ampl " << (int)reader.get_param<uint16_t>() << endl;
+                cout << duplicator.str();
+                stat << duplicator.str();
             }
         }
         else
