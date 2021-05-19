@@ -142,7 +142,7 @@ public:
 
 int main (int , char** )
 {
-    const char* path="react_time_sasha.log";
+    const char* path="react_time_results.csv";
     ofstream stat(path, ios_base::app|ios_base::out);
     Command_writer writer;
     Command_reader reader;
