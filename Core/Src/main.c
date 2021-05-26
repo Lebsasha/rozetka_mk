@@ -148,7 +148,7 @@ int main(void)
       {
           tester.react_time += tester.button.stop_time - tester.button.start_time;
           prev_volume = tone_pins[tester.port].volume;
-          tone_pins[tester.port].volume = 0;//todo Make same in 0x11
+          tone_pins[tester.port].volume = 0;
           for (volatile uint32_t* c = tone_pins[tester.port].dx; c < tone_pins[tester.port].dx + sizeof_arr(tone_pins[tester.port].dx); ++c)
               *c = 0;
           tone_pins[tester.port].volume=prev_volume;
@@ -181,7 +181,7 @@ int main(void)
               tester.button.start_time = HAL_GetTick();
           }
       }
-      if (tester.states == Measuring_freq)///TODO ASK Минимальный дискрет; линейный, эксп, небоскр
+      if (tester.states == Measuring_freq)
       {
           if (tester.button.stop_time != 0)
           {
