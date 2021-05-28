@@ -144,22 +144,15 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-      if (tester.button.stop_time != 0 && tester.states == Measuring_reaction)
+      if (tester.states == Measuring_reaction && tester.button.stop_time != 0)
       {
           tester.react_time += tester.button.stop_time - tester.button.start_time;
           prev_volume = tone_pins[tester.port].volume;
           tone_pins[tester.port].volume = 0;
-          for (volatile uint32_t* c = tone_pins[tester.port].dx; c < tone_pins[tester.port].dx + sizeof_arr(tone_pins[tester.port].dx); ++c)
-              *c = 0;
-          tone_pins[tester.port].volume=prev_volume;
           if (tester.react_time_size < 2)
           {
               HAL_Delay(600);
               ++tester.react_time_size;
-              prev_volume = tone_pins[tester.port].volume;
-              tone_pins[tester.port].volume = 0;
-              for (size_t i = 0; i < sizeof_arr(tester.freq); ++i)
-                  tone_pins[tester.port].dx[i] = freq_to_dx(&tone_pins[tester.port], tester.freq[i]);
               tone_pins[tester.port].volume = prev_volume;
               tester.button.start_time = HAL_GetTick();
               tester.button.stop_time = 0;
@@ -171,37 +164,42 @@ int main(void)
               tester.button.stop_time = 0;
               tester.react_time_size = 0;
 
-              HAL_Delay(300);
-              tone_pins[tester.port].volume=0;
-              for (size_t i = 0; i < sizeof_arr(tester.freq); ++i)
-                  tone_pins[tester.port].dx[i] = freq_to_dx(&tone_pins[tester.port], tester.freq[i]);
-              ///volume now controlled by TIM3 interrupt therefore volume=prev_volume not needed
-              HAL_Delay(400);
-              tester.states = Measuring_freq;
-              tester.button.start_time = HAL_GetTick();
+              tester.elapsed_time -= tester.react_time;
+              tester.ampl = tester.max_volume * tester.elapsed_time / tester.mseconds_to_max;
+              tester.states = Sending;
           }
       }
-      if (tester.states == Measuring_freq)
+      if (tester.states == Measuring_freq)///TODO ASK Минимальный дискрет; линейный, эксп, небоскр
       {
           if (tester.button.stop_time != 0)
           {
               if (tester.button.stop_time != 1)
               {
-                  tester.elapsed_time = tester.button.stop_time - tester.button.start_time - tester.react_time;
+                  tester.elapsed_time = tester.button.stop_time - tester.button.start_time/* - tester.react_time*/;
                   tester.ampl = tester.max_volume * tester.elapsed_time / tester.mseconds_to_max;
+                  tone_pins[tester.port].volume = 0;
+
+                  HAL_Delay(300);
+                  HAL_Delay(400);
+//                  for (size_t i = 0; i < sizeof_arr(tester.freq); ++i)
+//                      tone_pins[tester.port].dx[i] = freq_to_dx(&tone_pins[tester.port], tester.freq[i]);
+                  tester.states = Measuring_reaction;
+                  tone_pins[tester.port].volume = 2*tester.ampl;
+                  tester.button.start_time=HAL_GetTick();
               }
               else
               {
                   tester.elapsed_time = 0;
                   tester.ampl = 0;
+                  tone_pins[tester.port].volume = 0;
+//                  for (volatile uint32_t* c = tone_pins[tester.port].dx; c < tone_pins[tester.port].dx + sizeof_arr(tone_pins[tester.port].dx); ++c)
+//                      *c = 0;
+                  tester.states=Sending;
+                  tester.button.start_time = 0;
               }
-              tone_pins[tester.port].volume = 0;
-              for (volatile uint32_t* c = tone_pins[tester.port].dx; c < tone_pins[tester.port].dx + sizeof_arr(tone_pins[tester.port].dx); ++c)
-                  *c = 0;
-              tester.button.start_time = 0;
               tester.button.stop_time = 0;
-              tester.states = Sending;
-
+              ///Считать фазу - Прямой цифровой синтез
+//TODO Передача сигнала - Сигма-дельта модуляция
           }
       }
       if (writer.buffer[CC] != 0)

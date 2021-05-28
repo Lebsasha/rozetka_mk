@@ -228,8 +228,8 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 my_assert(tester.states == Idle);
                 get_param_8(&reader, (uint8_t*) &tester.port);
                 my_assert(tester.port < 2);
-                uint16_t volume;
-                get_param_16(&reader, &volume);
+//                uint16_t volume;
+//                get_param_16(&reader, &volume);///TODO Uneeded
                 tone_pins[tester.port].volume=0;
                 get_param_16(&reader, (uint16_t*) &tester.max_volume);
                 get_param_16(&reader, (uint16_t*) &tester.mseconds_to_max);
@@ -240,11 +240,10 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                     my_assert(*freq <= 3400);
                 }
                 for (size_t i = 0; i < sizeof_arr(tester.freq); ++i)
-                {
                     tone_pins[tester.port].dx[i] = freq_to_dx(&tone_pins[tester.port], tester.freq[i]);
-                }
-                tone_pins[tester.port].volume=volume;
-                tester.states = Measuring_reaction;
+//                tone_pins[tester.port].volume=volume;
+                ///volume now controlled by TIM3 interrupt therefore volume=prev_volume not needed
+                tester.states = Measuring_freq;
                 tester.button.start_time = HAL_GetTick();
                 prepare_for_sending(&writer, cmd, true);
             }
@@ -256,7 +255,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                     append_var_16(&writer, tester.elapsed_time);
                     append_var_16(&writer, tester.ampl);
                     tester.react_time=0;
-                    tester.ampl=0;
+//                    tester.ampl=0;
                     tester.states = Idle;
                     prepare_for_sending(&writer, cmd, true);
                 }
@@ -270,12 +269,12 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 for (volatile uint32_t* c = tone_pins[tester.port].dx; c < tone_pins[tester.port].dx + sizeof_arr(tone_pins[tester.port].dx); ++c)
                     *c = 0;
                 tester.button.start_time=0;
-
-                ///next 4 lines not necessary but maybe needed in some cases
                 tester.button.stop_time=0;
-                tester.ampl=0;
                 tester.react_time=0;
                 tester.react_time_size=0;
+
+                ///next 3 lines not necessary but maybe needed in some cases
+//                tester.ampl=0;
                 prepare_for_sending(&writer, cmd, true);
             }
             else

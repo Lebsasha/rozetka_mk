@@ -20,9 +20,14 @@ enum
  * 0x4 ->
  * 0x10 u8|port u16|volume u16[]|freqs ->
  * @note freqs preserve 1 digit after point with help of fixed point, i. e. if you pass 300,6 Hz it will transmit and set in mk 300,6 Hz
- * 0x11 u8|port u16|volume u16|MAX_VOLUME u16|MSECONDS_TO_MAX u16[]|freqs ->
+ * 0x11 u8|port u16|MAX_VOLUME u16|MSECONDS_TO_MAX u16[]|freqs ->
  * 0x12 -> u16|react_time u8|ampl
  * @note react_time in ms
+ *
+ * port mean:
+ * 0 - A10 pin, right channel
+ * 1 - A9 pin, left channel
+ *
  *
  * If error in command CC:
  * CC ... -> 0x80(128)+CC u8[]|"string with \0" ///TODO ASK Не так, как в стандарте!
@@ -155,24 +160,24 @@ int main (int , char** )
         return 1;
     }
     cout<<"begin "<<std::flush;
-    for(size_t i =0;i<15;++i)
+    for(size_t i =0;i<3;++i)
     {
-        comp_command[sizeof(comp_command) - 1 - 1] = rand() % 5 + '0';
+        comp_command[sizeof(comp_command) - 1 - 1] = rand() % 4 + '0';
         system(comp_command);
         const int cmd = 0x11;
         writer.set_cmd(cmd);
-        writer.append_var<uint8_t>(0);/// Port
-        if (cmd==0x10)
-            writer.append_var<uint16_t>(5000);///tone_volume
-        if(cmd==0x11)
-        {
-            writer.append_var<uint16_t>(5000);///temp_vol
-            writer.append_var<uint16_t>(100);///max_vol
-            writer.append_var<uint16_t>(10000);///msecs
-        }
-        writer.append_var<uint16_t>((NOTE_C4) * (cmd == 0x10 ? 10 : 1));
-        writer.append_var<uint16_t>((NOTE_E4) * (cmd == 0x10 ? 10 : 1));
-        writer.append_var<uint16_t>((NOTE_G4) * (cmd == 0x10 ? 10 : 1));
+        writer.append_var<uint8_t>(1);/// Port
+        if(cmd==0x10)
+            writer.append_var<uint16_t>(5000);///Curr volume
+        writer.append_var<uint16_t>(1000);///max_vol
+        writer.append_var<uint16_t>(10000);///msecs
+        writer.append_var<uint16_t>((NOTE_C4));
+//        if (i>=1)
+        writer.append_var<uint16_t>(NOTE_E4);
+//        if(i>=2)
+        writer.append_var<uint16_t>(NOTE_G4);
+//        if (i>=3)
+//        writer.append_var<uint16_t>((NOTE_C5)*10);
         writer.prepare_for_sending();
         writer.write(dev);
         reader.read(dev_read);
@@ -183,17 +188,17 @@ int main (int , char** )
             {
                 do
                 {
-                    system("sleep 2");///TODO Optimise USB
+                    system("sleep 1");
                     writer.set_cmd(0x12);
                     writer.prepare_for_sending();
                     writer.write(dev);
                     reader.read(dev_read);
                 } while (reader.is_error());
                 uint16_t react_time;
-                ostringstream duplicator;
-                duplicator << i << ", react_time, " << reader.get_param(react_time) << ", el_time, " << reader.get_param<uint16_t>() << ", ampl, " << (int)reader.get_param<uint16_t>() << endl;
-                cout << duplicator.str();
-                stat << duplicator.str();
+                ostringstream temp;
+                temp << i << ", react_time " << reader.get_param(react_time) << ", el_time "<<reader.get_param<uint16_t>()<<", ampl "<<(int)reader.get_param<uint16_t>()<<endl;
+                cout<<temp.str();
+                stat<<temp.str();
             }
         }
         else
