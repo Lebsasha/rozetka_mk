@@ -102,3 +102,65 @@ Updated 0x11
 0, react_time 204, el_time 525, ampl 52
 1, react_time 144, el_time 556, ampl 55
 2, react_time 198, el_time 458, ampl 45
+
+With наушники
+0, react_time 179, el_time 612, ampl 61
+1, react_time 194, el_time 519, ampl 51
+2, react_time 483, el_time 776, ampl 77
+
+Pure tone (without ampl)
+0, react_time 0, el_time 0, ampl 0
+1, react_time 0, el_time 0, ampl 0
+2, react_time 0, el_time 0, ampl 0
+0, react_time 0, el_time 0, ampl 0
+1, react_time 281, el_time 6539, ampl 1307
+2, react_time 9145, el_time 59682, ampl 11936
+0, react_time 6665, el_time 59178, ampl 5917
+1, react_time 6237, el_time 60585, ampl 6058
+2, react_time 571, el_time 9038, ampl 903
+0, react_time 325, el_time 65211, ampl 2608
+1, react_time 439, el_time 2075, ampl 83
+2, react_time 0, el_time 0, ampl 0
+0, react_time 0, el_time 0, ampl 0
+1, react_time 487, el_time 2366, ampl 94
+2, react_time 323, el_time 1935, ampl 77
+0, react_time 229, el_time 1658, ampl 66
+1, react_time 525, el_time 1957, ampl 78
+2, react_time 270, el_time 1724, ampl 68
+3, react_time 265, el_time 2434, ampl 97
+4, react_time 0, el_time 0, ampl 0
+5, react_time 1410, el_time 1547, ampl 61
+6, react_time 269, el_time 1987, ampl 79
+7, react_time 219, el_time 2199, ampl 87
+8, react_time 226, el_time 2034, ampl 81
+9, react_time 272, el_time 1578, ampl 63
+10, react_time 316, el_time 1752, ampl 70
+11, react_time 378, el_time 1859, ampl 74
+12, react_time 302, el_time 1588, ampl 63
+13, react_time 214, el_time 4436, ampl 177
+14, react_time 174, el_time 2868, ampl 114
+
+Mom
+
+0, react_time 0, el_time 0, ampl 0
+1, react_time 0, el_time 0, ampl 0
+2, react_time 0, el_time 0, ampl 0
+3, react_time 0, el_time 0, ampl 0
+4, react_time 1343, el_time 2644, ampl 105
+5, react_time 0, el_time 0, ampl 0
+6, react_time 0, el_time 0, ampl 0
+7, react_time 1718, el_time 273, ampl 10
+8, react_time 253, el_time 1605, ampl 64
+9, react_time 0, el_time 1229, ampl 49
+10, react_time 0, el_time 1, ampl 0
+11, react_time 342, el_time 890, ampl 35
+12, react_time 498, el_time 1423, ampl 56
+13, react_time 215, el_time 1470, ampl 58
+14, react_time 171, el_time 792, ampl 31
+0, react_time 421, el_time 1404, ampl 56
+1, react_time 346, el_time 1483, ampl 59
+2, react_time 447, el_time 1586, ampl 63
+3, react_time 510, el_time 1368, ampl 54
+4, react_time 392, el_time 1503, ampl 60
+5, react_time 509, el_time 1471, ampl 58
+6, react_time 310, el_time 1872, ampl 74

@@ -160,17 +160,21 @@ int main (int , char** )
         return 1;
     }
     cout<<"begin "<<std::flush;
-    for(size_t i =0;i<3;++i)
+    system("sleep 3");///TODO Tricky error while testing: mk don't turn states correctly, but doesn't hang
+    for(size_t i =0;i<10;++i)
     {
         comp_command[sizeof(comp_command) - 1 - 1] = rand() % 4 + '0';
         system(comp_command);
         const int cmd = 0x11;
         writer.set_cmd(cmd);
         writer.append_var<uint8_t>(1);/// Port
-        if(cmd==0x10)
+        if (cmd == 0x10)
             writer.append_var<uint16_t>(5000);///Curr volume
-        writer.append_var<uint16_t>(1000);///max_vol
-        writer.append_var<uint16_t>(10000);///msecs
+        if (cmd == 0x11)
+        {
+            writer.append_var<uint16_t>(200);///max_vol
+            writer.append_var<uint16_t>(5000);///msecs
+        }
         writer.append_var<uint16_t>((NOTE_C4));
 //        if (i>=1)
         writer.append_var<uint16_t>(NOTE_E4);
