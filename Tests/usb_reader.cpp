@@ -163,23 +163,23 @@ int main (int , char** )
     system("sleep 3");///TODO Tricky error while testing: mk don't turn states correctly, but doesn't hang
     for(size_t i =0;i<10;++i)
     {
-        comp_command[sizeof(comp_command) - 1 - 1] = rand() % 4 + '0';
+        comp_command[sizeof(comp_command) - 1 - 1] = rand() % 1 + '0';
         system(comp_command);
-        const int cmd = 0x11;
+        const int cmd = 0x10;
         writer.set_cmd(cmd);
         writer.append_var<uint8_t>(1);/// Port
         if (cmd == 0x10)
-            writer.append_var<uint16_t>(5000);///Curr volume
+            writer.append_var<uint16_t>(1000);///Curr volume
         if (cmd == 0x11)
         {
             writer.append_var<uint16_t>(200);///max_vol
             writer.append_var<uint16_t>(5000);///msecs
         }
-        writer.append_var<uint16_t>((NOTE_C4));
+        writer.append_var<uint16_t>((NOTE_C5)*10);
 //        if (i>=1)
-        writer.append_var<uint16_t>(NOTE_E4);
+        writer.append_var<uint16_t>(NOTE_E5*10);
 //        if(i>=2)
-        writer.append_var<uint16_t>(NOTE_G4);
+        writer.append_var<uint16_t>(NOTE_G5*10);
 //        if (i>=3)
 //        writer.append_var<uint16_t>((NOTE_C5)*10);
         writer.prepare_for_sending();
