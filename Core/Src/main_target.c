@@ -98,6 +98,7 @@ extern Tester tester;
 //TODO Change notes
 //TODO Remove {} in appropriate for's
 //TODO ASK if main() is busy, is it good for usb
+//TODO bx lr
 
 const int16_t sine_ampl = (1U << (sizeof(sine_ampl) * 8 - 1)) - 1;
 const uint16_t arr_size = 1024;
