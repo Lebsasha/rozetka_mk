@@ -124,7 +124,7 @@ void tone_pin_ctor(Tone_pin* ptr, volatile uint32_t* CCR)
 
 void make_tone(Tone_pin* tone_pin)
 {
-//    if(tone_pin->volume!=0)
+    if(tone_pin->volume!=0)
     for(uint8_t i=0; i<(uint8_t)sizeof_arr(tone_pin->dx);++i)
     {
         if (i == 0)
@@ -137,7 +137,7 @@ void make_tone(Tone_pin* tone_pin)
             tone_pin->curr[i] -= arr_size << 8;
         }
     }
-    *tone_pin->duty_cycle=((*tone_pin->duty_cycle*tone_pin->volume)>>17)+(COUNTER_PERIOD>>1);
+    *tone_pin->duty_cycle=(*tone_pin->duty_cycle*tone_pin->volume)>>16;
 }
 
 void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n)//TODO ASK If this needed
