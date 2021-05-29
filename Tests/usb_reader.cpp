@@ -200,7 +200,7 @@ int main (int , char** )
                 } while (reader.is_error());
                 uint16_t react_time;
                 ostringstream temp;
-                temp << i << ", react_time " << reader.get_param(react_time) << ", el_time "<<reader.get_param<uint16_t>()<<", ampl "<<(int)reader.get_param<uint16_t>()<<endl;
+                temp << i << ", react_time, " << reader.get_param(react_time) << ", el_time, "<<reader.get_param<uint16_t>()<<", ampl, "<<(int)reader.get_param<uint16_t>()<<endl;
                 cout<<temp.str();
                 stat<<temp.str();
             }
