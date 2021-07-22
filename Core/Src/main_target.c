@@ -110,7 +110,7 @@ void tone_pin_ctor(Tone_pin* ptr, volatile uint32_t* CCR)
     ptr->duty_cycle = CCR;
     for (int i = 0; i < arr_size; ++i)
     {
-        f_dots[i] = sine_ampl / 2.0 - sine_ampl / 2.0 * sin(i * 2 * M_PI / arr_size);
+        f_dots[i] = (int16_t)(sine_ampl / 2.0 - sine_ampl / 2.0 * sin(i * 2 * M_PI / arr_size));
     }
     ptr->f_dots = f_dots;
     ptr->arr_size = arr_size;
@@ -125,20 +125,20 @@ void tone_pin_ctor(Tone_pin* ptr, volatile uint32_t* CCR)
 
 void make_tone(Tone_pin* tone_pin)
 {
-    if(tone_pin->volume!=0)
-    for(uint8_t i=0; i<(uint8_t)sizeof_arr(tone_pin->dx);++i)
-    {
-        if (i == 0)
-            *tone_pin->duty_cycle = (uint32_t) (tone_pin->f_dots[tone_pin->curr[i] >> 8]) * COUNTER_PERIOD / sine_ampl / sizeof_arr(tone_pin->dx);
-        else
-            *tone_pin->duty_cycle += (uint32_t) (tone_pin->f_dots[tone_pin->curr[i] >> 8]) * COUNTER_PERIOD / sine_ampl / sizeof_arr(tone_pin->dx);
-        tone_pin->curr[i] += tone_pin->dx[i];
-        if (tone_pin->curr[i] >= arr_size << 8)
+    if (tone_pin->volume != 0)
+        for (uint8_t i = 0; i < (uint8_t)sizeof_arr(tone_pin->dx); ++i)
         {
-            tone_pin->curr[i] -= arr_size << 8;
+            if (i == 0)
+                *tone_pin->duty_cycle = (uint32_t)(tone_pin->f_dots[tone_pin->curr[i] >> 8]) * COUNTER_PERIOD / sine_ampl / sizeof_arr(tone_pin->dx);
+            else
+                *tone_pin->duty_cycle += (uint32_t)(tone_pin->f_dots[tone_pin->curr[i] >> 8]) * COUNTER_PERIOD / sine_ampl / sizeof_arr(tone_pin->dx);
+            tone_pin->curr[i] += tone_pin->dx[i];
+            if (tone_pin->curr[i] >= arr_size << 8)
+            {
+                tone_pin->curr[i] -= arr_size << 8;
+            }
         }
-    }
-    *tone_pin->duty_cycle=(*tone_pin->duty_cycle*tone_pin->volume)>>16;
+    *tone_pin->duty_cycle = (*tone_pin->duty_cycle * tone_pin->volume) >> 16;
 }
 
 void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n)
@@ -161,7 +161,7 @@ void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n)
 void Tester_ctor(Tester* ptr)
 {
     ptr->states = Idle;
-    memset(ptr->freq, 0, sizeof(ptr->freq));
+    memset((void*)ptr->freq, 0, sizeof(ptr->freq));
     ptr->react_time = 0;
     ptr->react_time_size = 0;
     ptr->button.start_time = 0;
@@ -230,8 +230,6 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 my_assert(tester.states == Idle);
                 get_param_8(&reader, (uint8_t*) &tester.port);
                 my_assert(tester.port < 2);
-//                uint16_t volume;
-//                get_param_16(&reader, &volume);///TODO Uneeded
                 tone_pins[tester.port].volume=0;
                 get_param_16(&reader, (uint16_t*) &tester.max_volume);
                 get_param_16(&reader, (uint16_t*) &tester.mseconds_to_max);
@@ -243,8 +241,6 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 }
                 for (size_t i = 0; i < sizeof_arr(tester.freq); ++i)
                     tone_pins[tester.port].dx[i] = freq_to_dx(&tone_pins[tester.port], tester.freq[i]);
-//                tone_pins[tester.port].volume=volume;
-                ///volume now controlled by TIM3 interrupt therefore volume=prev_volume not needed
                 tester.states = Measuring_freq;
                 tester.button.start_time = HAL_GetTick();
                 prepare_for_sending(&writer, cmd, true);
@@ -275,7 +271,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 tester.react_time=0;
                 tester.react_time_size=0;
 
-                ///next 3 lines not necessary but maybe needed in some cases
+                ///next line not necessary but maybe needed in some cases
 //                tester.ampl=0;
                 prepare_for_sending(&writer, cmd, true);
             }

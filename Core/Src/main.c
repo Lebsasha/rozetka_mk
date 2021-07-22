@@ -175,17 +175,17 @@ int main(void)
           {
               if (tester.button.stop_time != 1)
               {
-                  tester.elapsed_time = tester.button.stop_time - tester.button.start_time/* - tester.react_time*/;///-react_time located higher, in Measuring_reaction
-                  //tester.ampl = tester.max_volume * tester.elapsed_time / tester.mseconds_to_max;
+                  tester.elapsed_time = tester.button.stop_time - tester.button.start_time/* - tester.react_time*/;///- react_time located higher, in Measuring_reaction
+                  tester.ampl = tester.max_volume * tester.elapsed_time / tester.mseconds_to_max;///This is needed for calculating volume for measuring react_time
                   tone_pins[tester.port].volume = 0;
 
                   HAL_Delay(300);
-                  HAL_Delay(400);
+                  HAL_Delay(400);//TODO Make rand
                   tester.states = Measuring_reaction;
                   tone_pins[tester.port].volume = 4*tester.ampl;
                   tester.button.start_time=HAL_GetTick();
               }
-              else
+              else///case elapsed time for sound testing exceed tester.mseconds_to_max
               {
                   tester.elapsed_time = 0;
                   tester.ampl = 0;

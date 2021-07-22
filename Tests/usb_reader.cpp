@@ -73,14 +73,14 @@ public:
         uint8_t sum = SS_OFFSET;
         for_each(buffer + CC + 1, buffer + length, [&sum](char c)
         { sum += c; });
-        buffer[length] = sum;
+        buffer[length] = (char)sum;
         length += sizeof(sum);
     }
 
     void set_cmd(const uint8_t cmd)
     {
         assert(count(Commands, Commands + sizeof(Commands)/sizeof(Commands[0]), cmd)==1);
-        buffer[CC] = cmd;
+        buffer[CC] = (char)cmd;
     }
 };
 
@@ -163,7 +163,7 @@ int main (int , char** )
 //    system("sleep 3");///TODO Tricky error while testing: mk don't turn states correctly, but doesn't hang
     for(size_t i =0;i<10;++i)
     {
-        comp_command[sizeof(comp_command) - 1 - 1] = rand() % 4 + '0';
+        comp_command[sizeof(comp_command) - 1 - 1] = (char) (rand() % 4 + '0');
         system(comp_command);
         const int cmd = 0x11;
         writer.set_cmd(cmd);
