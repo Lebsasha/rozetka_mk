@@ -1,0 +1,35 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="ConstantConditionsOC" enabled="false" level="WARNING" enabled_by_default="false" />
+    <inspection_tool class="Simplify" enabled="true" level="WARNING" enabled_by_default="true">
+      <scope name="Project Files" level="TYPO" enabled="true">
+        <option name="clangTidyCheckOptions">
+          <list>
+            <ClangTidyCheckOption>
+              <option name="optionName" value="clion-simplify.SimplifyConstantConditions" />
+              <option name="optionValue" value="1" />
+            </ClangTidyCheckOption>
+            <ClangTidyCheckOption>
+              <option name="optionName" value="clion-simplify.SimplifyEqualToTrueFalse" />
+              <option name="optionValue" value="1" />
+            </ClangTidyCheckOption>
+            <ClangTidyCheckOption>
+              <option name="optionName" value="clion-simplify.SimplifyTernaryWithConstantBranch" />
+              <option name="optionValue" value="1" />
+            </ClangTidyCheckOption>
+          </list>
+        </option>
+      </scope>
+      <option name="clangTidyCheckOptions">
+        <list>
+          <ClangTidyCheckOption>
+            <option name="optionName" value="clion-simplify.SimplifyConstantConditions" />
+            <option name="optionValue" value="1" />
+          </ClangTidyCheckOption>
+        </list>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="UnreachableCode" enabled="false" level="WARNING" enabled_by_default="false" />
+  </profile>
+</component>

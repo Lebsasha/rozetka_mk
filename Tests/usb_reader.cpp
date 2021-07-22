@@ -30,7 +30,7 @@ enum
  *
  *
  * If error in command CC:
- * CC ... -> 0x80(128)+CC u8[]|"string with \0" ///TODO ASK Не так, как в стандарте!
+ * CC ... -> 0x80(128)+CC u8[]|"string with \0" ///TODO Доделать
  */
 uint8_t Commands[]={0x1, 0x4, 0x10, 0x11, 0x12};
 
@@ -58,7 +58,7 @@ public:
 //TODO Write release conf with Tests
     void write(ostream& dev)
     {
-        dev.write(buffer, length);
+        dev.write(buffer, (streamsize) length);
         dev.flush();
         for(char* c=buffer+length-1;c>=buffer;--c)
         {
@@ -147,7 +147,7 @@ public:
 
 int main (int , char** )
 {
-    const char* path="react_time_results.csv";
+    const char* path="react_time.csv";
     ofstream stat(path, ios_base::app|ios_base::out);
     Command_writer writer;
     Command_reader reader;
@@ -163,7 +163,7 @@ int main (int , char** )
 //    system("sleep 3");///TODO Tricky error while testing: mk don't turn states correctly, but doesn't hang
     for(size_t i =0;i<10;++i)
     {
-        comp_command[sizeof(comp_command) - 1 - 1] = rand() % 1 + '0';
+        comp_command[sizeof(comp_command) - 1 - 1] = rand() % 4 + '0';
         system(comp_command);
         const int cmd = 0x11;
         writer.set_cmd(cmd);
@@ -200,7 +200,7 @@ int main (int , char** )
                 } while (reader.is_error());
                 uint16_t react_time;
                 ostringstream temp;
-                temp << i << ", react_time, " << reader.get_param(react_time) << ", el_time, "<<reader.get_param<uint16_t>()<<", ampl, "<<(int)reader.get_param<uint16_t>()<<endl;
+                temp << i << ", " << reader.get_param(react_time) << ", "<<reader.get_param<uint16_t>()<<", "<<(int)reader.get_param<uint16_t>()<<endl;
                 cout<<temp.str();
                 stat<<temp.str();
             }
@@ -216,7 +216,6 @@ int main (int , char** )
             } while (c);
             cout<<endl;
         }
-        //TODO Спросить про Clock tree; Vref, etc.,
     }
 
     cout<<"end"<<endl;

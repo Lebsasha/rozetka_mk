@@ -19,7 +19,7 @@ void Command_writer_ctor(Command_writer* ptr)
     ptr->length += sizeof(var);\
     ptr->buffer[LenL] += sizeof(var);\
 }
-///TODO ASK If todos below are need in this context?
+///TODO
 //    assert(ptr->length + sizeof(var) < ptr->BUF_SIZE); ///TODO Error Handle
 //    assert(ptr->buffer[LenL]<128)   ///TODO Error Handle
 
@@ -99,6 +99,7 @@ extern Tester tester;
 //TODO Remove {} in appropriate for's
 //TODO ASK if main() is busy, is it good for usb
 //TODO bx lr
+//TODO Remove *10 in 0x10
 
 const int16_t sine_ampl = (1U << (sizeof(sine_ampl) * 8 - 1)) - 1;
 const uint16_t arr_size = 1024;
@@ -140,7 +141,7 @@ void make_tone(Tone_pin* tone_pin)
     *tone_pin->duty_cycle=(*tone_pin->duty_cycle*tone_pin->volume)>>16;
 }
 
-void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n)//TODO ASK If this needed
+void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n)
 {
     volatile uint32_t wait;///TODO try remove volatile
     uint32_t start_tick = HAL_GetTick();
@@ -160,8 +161,7 @@ void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n)
 void Tester_ctor(Tester* ptr)
 {
     ptr->states = Idle;
-    for (volatile uint16_t* freq = ptr->freq; freq < ptr->freq + sizeof_arr(ptr->freq); ++freq)///TODO ASK If this const in < good?
-        *freq = 0;
+    memset(ptr->freq, 0, sizeof(ptr->freq));
     ptr->react_time = 0;
     ptr->react_time_size = 0;
     ptr->button.start_time = 0;

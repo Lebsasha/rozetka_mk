@@ -169,3 +169,15 @@ Mom
 USB priority 1
 0, react_time, 3143, el_time, 63282, ampl, 12656
 1, react_time, 229, el_time, 2015, ampl, 403
+
+With button
+0, react_time, 0, el_time, 0, ampl, 0
+1, react_time, 0, el_time, 0, ampl, 0
+2, react_time, 0, el_time, 0, ampl, 0
+3, react_time, 241, el_time, 1842, ampl, 73
+4, react_time, 237, el_time, 1538, ampl, 61
+5, react_time, 209, el_time, 1269, ampl, 50
+6, react_time, 198, el_time, 1129, ampl, 45
+7, react_time, 134, el_time, 1293, ampl, 51
+8, react_time, 0, el_time, 1286, ampl, 51
+9, react_time, 0, el_time, 0, ampl, 0

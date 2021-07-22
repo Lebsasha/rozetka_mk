@@ -176,7 +176,7 @@ int main(void)
               if (tester.button.stop_time != 1)
               {
                   tester.elapsed_time = tester.button.stop_time - tester.button.start_time/* - tester.react_time*/;///-react_time located higher, in Measuring_reaction
-                  tester.ampl = tester.max_volume * tester.elapsed_time / tester.mseconds_to_max;
+                  //tester.ampl = tester.max_volume * tester.elapsed_time / tester.mseconds_to_max;
                   tone_pins[tester.port].volume = 0;
 
                   HAL_Delay(300);
