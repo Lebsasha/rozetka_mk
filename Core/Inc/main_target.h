@@ -14,7 +14,6 @@ typedef struct Tone_pin
     volatile uint32_t* duty_cycle;
     int16_t* f_dots;
     uint16_t arr_size;///TODO Maybe inline? Yes, i can define this and change freq_dx and f_dots[arr_size]
-//    int16_t sine_ampl;///TODO Maybe inline?
     uint16_t volume;
     volatile uint32_t dx[3];
     uint32_t curr[3];

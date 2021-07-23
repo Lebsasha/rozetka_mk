@@ -169,7 +169,7 @@ int main(void)
               tester.states = Sending;
           }
       }
-      if (tester.states == Measuring_freq)///TODO ASK Минимальный дискрет; линейный, эксп, небоскр
+      if (tester.states == Measuring_freq)
       {
           if (tester.button.stop_time != 0)
           {
@@ -194,8 +194,6 @@ int main(void)
                   tester.button.start_time = 0;
               }
               tester.button.stop_time = 0;
-              ///Считать фазу - Прямой цифровой синтез
-//TODO Передача сигнала - Сигма-дельта модуляция
           }
       }
       if (writer.buffer[CC] != 0)

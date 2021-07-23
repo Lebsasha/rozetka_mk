@@ -19,7 +19,6 @@ enum
  * 0x1 -> u8|version u8[]|"string with \0"
  * 0x4 ->
  * 0x10 u8|port u16|volume u16[]|freqs ->
- * @note freqs preserve 1 digit after point with help of fixed point, i. e. if you pass 300,6 Hz it will transmit and set in mk 300,6 Hz
  * 0x11 u8|port u16|MAX_VOLUME u16|MSECONDS_TO_MAX u16[]|freqs ->
  * 0x12 -> u16|react_time u8|ampl
  * @note react_time in ms
@@ -54,7 +53,6 @@ public:
         buffer[LenL] += sizeof(var);
     }
 //TODO Test 0x4
-//TODO Припаять "кнопку"
 //TODO Write release conf with Tests
     void write(ostream& dev)
     {

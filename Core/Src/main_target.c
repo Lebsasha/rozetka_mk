@@ -15,22 +15,23 @@ void Command_writer_ctor(Command_writer* ptr)
 //    template<typename T>
 #define def_append_var(size) void append_var_##size(Command_writer* ptr, uint##size##_t var) \
 {\
+    if(ptr->length + sizeof(var) +1 > ptr->BUF_SIZE)/** +1 for SS byte*/\
+        return;\
     *(uint##size##_t*)(ptr->buffer + ptr->length) = var;\
     ptr->length += sizeof(var);\
-    ptr->buffer[LenL] += sizeof(var);\
 }
-///TODO
-//    assert(ptr->length + sizeof(var) < ptr->BUF_SIZE); ///TODO Error Handle
-//    assert(ptr->buffer[LenL]<128)   ///TODO Error Handle
+//TODO Rewrite with size and switch
 
 def_append_var(8);
 def_append_var(16);
 
 void prepare_for_sending(Command_writer* ptr, uint8_t command_code, bool if_ok)
 {
+    ptr->buffer[LenH]=(ptr->length-3)>>8;///-3 because of CC+LenL+LenH
+    ptr->buffer[LenL]=(ptr->length-3);
     uint8_t sum = SS_OFFSET;
     for(uint8_t* c = ptr->buffer + CC + 1; c < ptr->buffer + ptr->length; ++c)
-    { sum += *c; }
+      sum += *c;
     ptr->buffer[ptr->length]=sum;///SS
     ptr->length+=sizeof(uint8_t);
     ptr->buffer[CC]= command_code + 128 * !if_ok;/// 128==1<<7
@@ -53,11 +54,9 @@ bool Command_reader_ctor(Command_reader* ptr, const uint8_t* cmd)
     ptr->length += n;
     uint8_t sum = SS_OFFSET;
     for (uint8_t* c = ptr->buffer + CC + 1; c < ptr->buffer + ptr->length; ++c)
-    { sum += *c; }
+      sum += *c;
     if (sum != (uint8_t) ptr->buffer[ptr->length])
-    {
         return false;
-    }
     ptr->length += sizeof(uint8_t);
     ptr->read_length = LenH + 1;
     return true;
@@ -77,6 +76,7 @@ bool is_empty(Command_reader* ptr)
     ptr->read_length+=sizeof(*param);\
     return true;\
 }
+///TODO Rewrite this
 def_get_param(8);
 def_get_param(16);
 
@@ -86,35 +86,23 @@ uint8_t get_command(Command_reader* ptr)
 }
 
 extern TIM_HandleTypeDef htim1;
-//extern TIM_HandleTypeDef htim3;
 extern Tone_pin* tone_pins;
 extern Command_writer writer;
 extern Tester tester;
-//TODO Remove some global vars
 //TODO Sometime cleanup code
-// TIM_TRGO_UPDATE; TODO View @ref in docs
-//TODO What is restrict
-//TODO If volatile always needed?
-//TODO Change notes
-//TODO Remove {} in appropriate for's
 //TODO ASK if main() is busy, is it good for usb
-//TODO bx lr
-//TODO Remove *10 in 0x10
 
 const int16_t sine_ampl = (1U << (sizeof(sine_ampl) * 8 - 1)) - 1;
-const uint16_t arr_size = 1024;
+const uint16_t arr_size = 1024; /*!<for optimization purposes*/
 int16_t f_dots[1024];
 
 void tone_pin_ctor(Tone_pin* ptr, volatile uint32_t* CCR)
 {
     ptr->duty_cycle = CCR;
     for (int i = 0; i < arr_size; ++i)
-    {
         f_dots[i] = (int16_t)(sine_ampl / 2.0 - sine_ampl / 2.0 * sin(i * 2 * M_PI / arr_size));
-    }
     ptr->f_dots = f_dots;
     ptr->arr_size = arr_size;
-//    ptr->sine_ampl = sine_ampl;
     ptr->volume = 0;
     for (size_t i = 0; i < sizeof_arr(ptr->dx); ++i)
     {
@@ -143,7 +131,7 @@ void make_tone(Tone_pin* tone_pin)
 
 void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n)
 {
-    volatile uint32_t wait;///TODO try remove volatile
+    volatile uint32_t wait;///volatile for silencing compiler warning about "infifnit" loop
     uint32_t start_tick = HAL_GetTick();
     for (int i = 0; i < n; ++i)
     {
@@ -192,7 +180,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
         {
             HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
             const uint8_t cmd = get_command(&reader);
-            if (cmd == 0x10)///todo think about /10 for this command
+            if (cmd == 0x10)
             {
                 my_assert(tester.states == Idle);
                 uint8_t port;
@@ -206,11 +194,8 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 {
                     if (!get_param_16(&reader, &freq))
                         freq = 0;
-                    my_assert(freq <= 3400 * 10);
-                    if (freq < 16384)///Control uint32_t overflow
-                        *c = freq_to_dx(&tone_pins[port], freq) / 10;
-                    else
-                        *c = freq_to_dx(&tone_pins[port], (uint64_t) freq) / 10;
+                    my_assert(freq <= 3400);
+                    *c = freq_to_dx(&tone_pins[port], freq);
                 }
                 tone_pins[port].volume=volume;
                 prepare_for_sending(&writer, cmd, true);
@@ -218,11 +203,9 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
             else if (cmd == 0x1)
             {
                 append_var_8(&writer, 1);
-                const char* VER = "Tone";
+                const char* VER = "Sound tester";
                 for (const char* c = VER; c <= VER + strlen(VER); ++c)
-                {
                     append_var_8(&writer, *c);
-                }
                 prepare_for_sending(&writer, cmd, true);
             }
             else if (cmd == 0x11)
@@ -288,9 +271,7 @@ void assertion_failed(const char* cond, const uint8_t cmd)
     writer.length=3;///clean writer if I already have appended something; it is replacement of Command_writer_ctor() call for optimisation purposes
     size_t length = strlen(cond)+3+1+1>=writer.BUF_SIZE?writer.BUF_SIZE-3-1-1 : strlen(cond);///3 - 3 bytes: CC, LenL, LenH; 1 - checksum byte; 1 - size of '\0'
     for (const char* c = cond; c < cond + length; ++c)
-    {
         append_var_8(&writer, *c);
-    }
     append_var_8(&writer, '\0');
     prepare_for_sending(&writer, cmd, false);
 }
