@@ -5,7 +5,7 @@
 
 void Command_writer_ctor(Command_writer* ptr)
 {
-    ptr->length = 1 + 1 + 1;///CC, LenH, LenL
+    ptr->length = 3*sizeof(uint8_t);///CC, LenH, LenL
     ptr->BUF_SIZE = 128;///Can be changed if needed, but with appropriate changes with buffer array
     ptr->buffer[CC]=0;
     ptr->buffer[LenL]=0;
@@ -15,7 +15,7 @@ void Command_writer_ctor(Command_writer* ptr)
 //    template<typename T>
 #define def_append_var(size) void append_var_##size(Command_writer* ptr, uint##size##_t var) \
 {\
-    if(ptr->length + sizeof(var) +1 > ptr->BUF_SIZE)/** +1 for SS byte*/\
+    if(ptr->length + sizeof(var) + sizeof(uint16_t) > ptr->BUF_SIZE)\
         return;\
     *(uint##size##_t*)(ptr->buffer + ptr->length) = var;\
     ptr->length += sizeof(var);\
@@ -27,13 +27,13 @@ def_append_var(16);
 
 void prepare_for_sending(Command_writer* ptr, uint8_t command_code, bool if_ok)
 {
-    ptr->buffer[LenH]=(ptr->length-3)>>8;///-3 because of CC+LenL+LenH
-    ptr->buffer[LenL]=(ptr->length-3);
-    uint8_t sum = SS_OFFSET;
+    ptr->buffer[LenH]=(ptr->length-3*sizeof(uint8_t) )>>8;///-3 because of CC+LenL+LenH
+    ptr->buffer[LenL]=(ptr->length-3*sizeof(uint8_t) );
+    uint16_t sum = SS_OFFSET;
     for(uint8_t* c = ptr->buffer + CC + 1; c < ptr->buffer + ptr->length; ++c)
       sum += *c;
-    ptr->buffer[ptr->length]=sum;///SS
-    ptr->length+=sizeof(uint8_t);
+    *(uint16_t*)(ptr->buffer+ptr->length)=sum;///SS
+    ptr->length+=sizeof(sum);
     ptr->buffer[CC]= command_code + 128 * !if_ok;/// 128==1<<7
 }
 
@@ -47,30 +47,30 @@ typedef struct Command_reader
 bool Command_reader_ctor(Command_reader* ptr, const uint8_t* cmd)
 {
     ptr->buffer = (typeof(ptr->buffer)) (cmd);
-    ptr->length = 3;
-    const uint16_t n = (*(uint8_t*) (ptr->buffer + LenH) << 8) + *(uint8_t*) (ptr->buffer + LenL);
+    ptr->length = 3*sizeof(uint8_t);
+    const uint16_t n = (*(uint8_t*) (ptr->buffer + LenH) << 8) + *(uint8_t*) (ptr->buffer + LenL);//TODO
     if (n > 64)///USB packet size
         return false;
     ptr->length += n;
-    uint8_t sum = SS_OFFSET;
+    uint16_t sum = SS_OFFSET;
     for (uint8_t* c = ptr->buffer + CC + 1; c < ptr->buffer + ptr->length; ++c)
       sum += *c;
-    if (sum != (uint8_t) ptr->buffer[ptr->length])
+    if (sum != (*(uint16_t*) (ptr->buffer+ptr->length)))
         return false;
-    ptr->length += sizeof(uint8_t);
+    ptr->length += sizeof(sum);
     ptr->read_length = LenH + 1;
     return true;
 }
 
 bool is_empty(Command_reader* ptr)
 {
-    return ptr->length == 3 + 1 || ptr->length == 0;
+    return ptr->length == 3*sizeof(uint8_t) + sizeof(uint16_t) || ptr->length == 0;
 }
 
 //    template<typename T>
 #define def_get_param(size) bool get_param_##size(Command_reader* ptr, uint##size##_t* param)\
 {\
-    if(ptr->length==0 || !(ptr->read_length+sizeof(*param)+1<=ptr->length))\
+    if(ptr->length==0 || !(ptr->read_length+sizeof(*param)+sizeof(uint16_t) <=ptr->length))\
          return false;\
     *param = *(uint##size##_t*)(ptr->buffer+ptr->read_length);\
     ptr->read_length+=sizeof(*param);\
@@ -180,7 +180,32 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
         {
             HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
             const uint8_t cmd = get_command(&reader);
-            if (cmd == 0x10)
+            if (cmd == 0x1)
+            {
+                append_var_16(&writer, 1);///protocol version
+                append_var_16(&writer, 1);/// program version
+                const char* VER = "tone";
+//                const char* VER = "Sound tester";
+                for (const char* c = VER; c <= VER + strlen(VER); ++c)
+                    append_var_8(&writer, *c);
+                prepare_for_sending(&writer, cmd, true);
+            }
+            else if (cmd == 0x4)
+            {
+                tester.states=Idle;
+                tone_pins[tester.port].volume=0;
+                for (volatile uint32_t* c = tone_pins[tester.port].dx; c < tone_pins[tester.port].dx + sizeof_arr(tone_pins[tester.port].dx); ++c)
+                    *c = 0;
+                tester.button.start_time=0;
+                tester.button.stop_time=0;
+                tester.react_time=0;
+                tester.react_time_size=0;
+
+                ///next line not necessary but maybe needed in some cases
+//                tester.ampl=0;
+                prepare_for_sending(&writer, cmd, true);
+            }
+            else if (cmd == 0x10)
             {
                 my_assert(tester.states == Idle);
                 uint8_t port;
@@ -198,14 +223,6 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                     *c = freq_to_dx(&tone_pins[port], freq);
                 }
                 tone_pins[port].volume=volume;
-                prepare_for_sending(&writer, cmd, true);
-            }
-            else if (cmd == 0x1)
-            {
-                append_var_8(&writer, 1);
-                const char* VER = "Sound tester";
-                for (const char* c = VER; c <= VER + strlen(VER); ++c)
-                    append_var_8(&writer, *c);
                 prepare_for_sending(&writer, cmd, true);
             }
             else if (cmd == 0x11)
@@ -242,21 +259,6 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 }
                 else
                     prepare_for_sending(&writer, cmd, false);
-            }
-            else if (cmd == 0x4)
-            {
-                tester.states=Idle;
-                tone_pins[tester.port].volume=0;
-                for (volatile uint32_t* c = tone_pins[tester.port].dx; c < tone_pins[tester.port].dx + sizeof_arr(tone_pins[tester.port].dx); ++c)
-                    *c = 0;
-                tester.button.start_time=0;
-                tester.button.stop_time=0;
-                tester.react_time=0;
-                tester.react_time_size=0;
-
-                ///next line not necessary but maybe needed in some cases
-//                tester.ampl=0;
-                prepare_for_sending(&writer, cmd, true);
             }
             else
                 assertion_failed("Command not recognised", cmd);

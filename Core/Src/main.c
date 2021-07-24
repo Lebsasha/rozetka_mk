@@ -138,6 +138,9 @@ int main(void)
     uint16_t notes_1[] = {NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4};
     uint8_t durations_1[] = {4, 8, 8, 4, 4, 4, 4, 4};
     uint16_t prev_volume;
+    uint8_t cmd[]={0x11, 0x0b, 0x00, 0x01,   0xc8, 0x00, 0x88, 0x13,   0x0b, 0x02, 0x93, 0x02,   0x10, 0x03, 0x4e, 0xff, 0x00};
+    uint32_t len= sizeof_arr(cmd);
+    process_cmd(cmd, &len);
   /* USER CODE END 2 */
 
   /* Infinite loop */

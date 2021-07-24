@@ -47,7 +47,7 @@ public:
     template<typename T>
     void append_var(T var)
     {
-        assert(length + sizeof(var) < BUF_SIZE);///Less only (without equal) because we must append CC
+        assert(length + sizeof(var) + sizeof(uint16_t) <= BUF_SIZE);///SS
         *reinterpret_cast<T*>(buffer + length) = var;
         length += sizeof(var);
         buffer[LenL] += sizeof(var);
@@ -68,10 +68,10 @@ public:
     void prepare_for_sending()
     {
         assert(buffer[CC]!=0);
-        uint8_t sum = SS_OFFSET;
-        for_each(buffer + CC + 1, buffer + length, [&sum](char c)
+        uint16_t sum = SS_OFFSET;
+        for_each(buffer + CC + 1, buffer + length, [&sum](uint8_t c)
         { sum += c; });
-        buffer[length] = (char)sum;
+        *reinterpret_cast<uint16_t*>(buffer+length) = sum;
         length += sizeof(sum);
     }
 
@@ -99,23 +99,23 @@ public:
         length =LenH+1;
         dev.read(buffer + length, n);/// DD DD DD ... DD
         length += n;
-        dev.read(buffer + length, sizeof (uint8_t)); /// SS
-        uint8_t sum = SS_OFFSET;
-        for_each(buffer + LenL, buffer + length, [&sum](char c)
+        uint16_t sum = SS_OFFSET;
+        dev.read(buffer + length, sizeof (sum)); /// SS
+        for_each(buffer + LenL, buffer + length, [&sum](uint8_t c)
         { sum += c; });
-        if (sum != (uint8_t) buffer[length])
+        if (sum != *reinterpret_cast<typeof(sum)*>(buffer+length))
         {
             cerr << "SS isn't correct" << endl;
             assert(false);
         }
-        length += sizeof (uint8_t);
+        length += sizeof (sum);
         read_length= LenH + 1;
         return buffer;
     }
 
     bool is_empty() const
     {
-        return length==3+1 || length==0;
+        return length==3+2 || length==0;
     }
     uint8_t is_error() const
     {
@@ -125,7 +125,7 @@ public:
     T get_param(T& param)
     {
         assert(length != 0);
-        assert(read_length + sizeof(T) + 1 <= length);
+        assert(read_length + sizeof(T) + 2 <= length);
         param = *reinterpret_cast<T*>(buffer + read_length);
         read_length += sizeof(T);
         return param;
@@ -157,12 +157,16 @@ int main (int , char** )
         std::cout << "Error opening COM file" << std::endl;
         return 1;
     }
+    writer.set_cmd(0x1);
+    writer.prepare_for_sending();
+    writer.write(dev);
+    reader.read(dev_read);
     cout<<"begin "<<std::flush;
 //    system("sleep 3");///TODO Tricky error while testing: mk don't turn states correctly, but doesn't hang
-    for(size_t i =0;i<10;++i)
+    for(size_t i =0;i<2;++i)
     {
-        comp_command[sizeof(comp_command) - 1 - 1] = (char) (rand() % 4 + '0');
-        system(comp_command);
+//        comp_command[sizeof(comp_command) - 1 - 1] = (char) (rand() % 4 + '0');
+//        system(comp_command);
         const int cmd = 0x11;
         writer.set_cmd(cmd);
         writer.append_var<uint8_t>(1);/// Port
@@ -179,7 +183,7 @@ int main (int , char** )
 //        if(i>=2)
         writer.append_var<uint16_t>(NOTE_G5);
 //        if (i>=3)
-//        writer.append_var<uint16_t>((NOTE_C5)*10);
+//        writer.append_var<uint16_t>((NOTE_C5));
         writer.prepare_for_sending();
         writer.write(dev);
         reader.read(dev_read);
@@ -190,11 +194,11 @@ int main (int , char** )
             {
                 do
                 {
-                    system("sleep 1");
                     writer.set_cmd(0x12);
                     writer.prepare_for_sending();
                     writer.write(dev);
                     reader.read(dev_read);
+                    system("sleep 1");
                 } while (reader.is_error());
                 uint16_t react_time;
                 ostringstream temp;
