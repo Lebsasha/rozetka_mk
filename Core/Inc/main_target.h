@@ -6,7 +6,7 @@
 #define freq_to_dx(tone_pin_ptr, freq)  (((tone_pin_ptr)->arr_size*(freq)<<8)/TONE_FREQ)
 #define sizeof_arr(arr) (sizeof(arr)/sizeof((arr)[0]))
 #define static_access(type) ((type*)NULL)
-
+#define reinterpret_cast(type, expression) ((type)(expression))
 #include "notes.h"
 
 typedef struct Tone_pin

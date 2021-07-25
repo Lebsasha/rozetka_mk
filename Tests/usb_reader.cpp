@@ -50,7 +50,6 @@ public:
         assert(length + sizeof(var) + sizeof(uint16_t) <= BUF_SIZE);///SS
         *reinterpret_cast<T*>(buffer + length) = var;
         length += sizeof(var);
-        buffer[LenL] += sizeof(var);
     }
 //TODO Test 0x4
 //TODO Write release conf with Tests
@@ -68,6 +67,7 @@ public:
     void prepare_for_sending()
     {
         assert(buffer[CC]!=0);
+        *reinterpret_cast<uint16_t*>(buffer+LenL)=length-3*sizeof(uint8_t);
         uint16_t sum = SS_OFFSET;
         for_each(buffer + CC + 1, buffer + length, [&sum](uint8_t c)
         { sum += c; });
@@ -94,14 +94,14 @@ public:
     char* read(istream& dev)
     {
         dev.read(buffer, LenH + 1);/// CC LenL LenH
-        const uint16_t n = (*reinterpret_cast<uint8_t*>(buffer + LenH) << 8) + *reinterpret_cast<uint8_t*>(buffer + LenL);
+        const uint16_t n = *reinterpret_cast<uint16_t*>(buffer + LenL);
         assert(n < BUF_SIZE);
         length =LenH+1;
         dev.read(buffer + length, n);/// DD DD DD ... DD
         length += n;
         uint16_t sum = SS_OFFSET;
         dev.read(buffer + length, sizeof (sum)); /// SS
-        for_each(buffer + LenL, buffer + length, [&sum](uint8_t c)
+        for_each(buffer + CC + 1, buffer + length, [&sum](uint8_t c)
         { sum += c; });
         if (sum != *reinterpret_cast<typeof(sum)*>(buffer+length))
         {
@@ -157,10 +157,6 @@ int main (int , char** )
         std::cout << "Error opening COM file" << std::endl;
         return 1;
     }
-    writer.set_cmd(0x1);
-    writer.prepare_for_sending();
-    writer.write(dev);
-    reader.read(dev_read);
     cout<<"begin "<<std::flush;
 //    system("sleep 3");///TODO Tricky error while testing: mk don't turn states correctly, but doesn't hang
     for(size_t i =0;i<2;++i)
@@ -178,12 +174,8 @@ int main (int , char** )
             writer.append_var<uint16_t>(5000);///msecs
         }
         writer.append_var<uint16_t>((NOTE_C5));
-//        if (i>=1)
         writer.append_var<uint16_t>(NOTE_E5);
-//        if(i>=2)
         writer.append_var<uint16_t>(NOTE_G5);
-//        if (i>=3)
-//        writer.append_var<uint16_t>((NOTE_C5));
         writer.prepare_for_sending();
         writer.write(dev);
         reader.read(dev_read);

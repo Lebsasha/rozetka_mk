@@ -17,7 +17,7 @@ void Command_writer_ctor(Command_writer* ptr)
 {\
     if(ptr->length + sizeof(var) + sizeof(uint16_t) > ptr->BUF_SIZE)\
         return;\
-    *(uint##size##_t*)(ptr->buffer + ptr->length) = var;\
+    *reinterpret_cast(uint##size##_t*, ptr->buffer + ptr->length) = var;\
     ptr->length += sizeof(var);\
 }
 //TODO Rewrite with size and switch
@@ -27,12 +27,11 @@ def_append_var(16);
 
 void prepare_for_sending(Command_writer* ptr, uint8_t command_code, bool if_ok)
 {
-    ptr->buffer[LenH]=(ptr->length-3*sizeof(uint8_t) )>>8;///-3 because of CC+LenL+LenH
-    ptr->buffer[LenL]=(ptr->length-3*sizeof(uint8_t) );
+    *reinterpret_cast(uint16_t*, ptr->buffer+LenL)=ptr->length-3*sizeof(uint8_t);
     uint16_t sum = SS_OFFSET;
     for(uint8_t* c = ptr->buffer + CC + 1; c < ptr->buffer + ptr->length; ++c)
       sum += *c;
-    *(uint16_t*)(ptr->buffer+ptr->length)=sum;///SS
+    *reinterpret_cast(uint16_t*, ptr->buffer+ptr->length)=sum;///SS
     ptr->length+=sizeof(sum);
     ptr->buffer[CC]= command_code + 128 * !if_ok;/// 128==1<<7
 }
@@ -48,14 +47,14 @@ bool Command_reader_ctor(Command_reader* ptr, const uint8_t* cmd)
 {
     ptr->buffer = (typeof(ptr->buffer)) (cmd);
     ptr->length = 3*sizeof(uint8_t);
-    const uint16_t n = (*(uint8_t*) (ptr->buffer + LenH) << 8) + *(uint8_t*) (ptr->buffer + LenL);//TODO
+    const uint16_t n = *reinterpret_cast(uint16_t*, ptr->buffer+LenL);
     if (n > 64)///USB packet size
         return false;
     ptr->length += n;
     uint16_t sum = SS_OFFSET;
     for (uint8_t* c = ptr->buffer + CC + 1; c < ptr->buffer + ptr->length; ++c)
       sum += *c;
-    if (sum != (*(uint16_t*) (ptr->buffer+ptr->length)))
+    if (sum != *reinterpret_cast(uint16_t*, ptr->buffer+ptr->length))
         return false;
     ptr->length += sizeof(sum);
     ptr->read_length = LenH + 1;
@@ -70,9 +69,9 @@ bool is_empty(Command_reader* ptr)
 //    template<typename T>
 #define def_get_param(size) bool get_param_##size(Command_reader* ptr, uint##size##_t* param)\
 {\
-    if(ptr->length==0 || !(ptr->read_length+sizeof(*param)+sizeof(uint16_t) <=ptr->length))\
+    if(ptr->length==0 || (ptr->read_length+sizeof(*param)+sizeof(uint16_t) > ptr->length))\
          return false;\
-    *param = *(uint##size##_t*)(ptr->buffer+ptr->read_length);\
+    *param = *reinterpret_cast(uint##size##_t*, ptr->buffer+ptr->read_length);\
     ptr->read_length+=sizeof(*param);\
     return true;\
 }
@@ -131,7 +130,7 @@ void make_tone(Tone_pin* tone_pin)
 
 void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n)
 {
-    volatile uint32_t wait;///volatile for silencing compiler warning about "infifnit" loop
+    volatile uint32_t wait;///volatile for silencing compiler warning about "infinit" loop
     uint32_t start_tick = HAL_GetTick();
     for (int i = 0; i < n; ++i)
     {
