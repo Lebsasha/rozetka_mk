@@ -43,20 +43,22 @@ typedef struct Command_reader
     size_t read_length;
 }Command_reader;
 
-bool Command_reader_ctor(Command_reader* ptr, const uint8_t* cmd)
+bool Command_reader_ctor(Command_reader* ptr, const uint8_t* cmd, const uint32_t cmd_length)
 {
     ptr->buffer = (typeof(ptr->buffer)) (cmd);
+    if(cmd_length <= 3)
+        return false;
     ptr->length = 3*sizeof(uint8_t);
     const uint16_t n = *reinterpret_cast(uint16_t*, ptr->buffer+LenL);
-    if (n > 64)///USB packet size
+    uint16_t checksum = SS_OFFSET;
+    if (cmd_length != 3 + n + sizeof(checksum))
         return false;
     ptr->length += n;
-    uint16_t sum = SS_OFFSET;
     for (uint8_t* c = ptr->buffer + CC + 1; c < ptr->buffer + ptr->length; ++c)
-      sum += *c;
-    if (sum != *reinterpret_cast(uint16_t*, ptr->buffer+ptr->length))
+        checksum += *c;
+    if (checksum != *reinterpret_cast(uint16_t*, ptr->buffer + ptr->length))
         return false;
-    ptr->length += sizeof(sum);
+    ptr->length += sizeof(checksum);
     ptr->read_length = LenH + 1;
     return true;
 }
@@ -175,7 +177,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
     if (*len)
     {
         Command_reader reader;
-        if(Command_reader_ctor(&reader, command))
+        if(Command_reader_ctor(&reader, command, *len))
         {
             HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
             const uint8_t cmd = get_command(&reader);
