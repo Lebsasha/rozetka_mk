@@ -15,7 +15,7 @@ void Command_writer_ctor(Command_writer* ptr)
 //    template<typename T>
 #define def_append_var(size) void append_var_##size(Command_writer* ptr, uint##size##_t var) \
 {\
-    if(ptr->length + sizeof(var) + sizeof(uint16_t) > ptr->BUF_SIZE)\
+    if(ptr->length + sizeof(var) + sizeof(uint8_t) > ptr->BUF_SIZE)\
         return;\
     *reinterpret_cast(uint##size##_t*, ptr->buffer + ptr->length) = var;\
     ptr->length += sizeof(var);\
@@ -28,11 +28,11 @@ def_append_var(16);
 void prepare_for_sending(Command_writer* ptr, uint8_t command_code, bool if_ok)
 {
     *reinterpret_cast(uint16_t*, ptr->buffer+LenL)=ptr->length-3*sizeof(uint8_t);
-    uint16_t sum = SS_OFFSET;
+    uint8_t checksum = SS_OFFSET;
     for(uint8_t* c = ptr->buffer + CC + 1; c < ptr->buffer + ptr->length; ++c)
-      sum += *c;
-    *reinterpret_cast(uint16_t*, ptr->buffer+ptr->length)=sum;///SS
-    ptr->length+=sizeof(sum);
+        checksum += *c;
+    *reinterpret_cast(typeof(checksum)*, ptr->buffer + ptr->length)=checksum;
+    ptr->length+=sizeof(checksum);
     ptr->buffer[CC]= command_code + 128 * !if_ok;/// 128==1<<7
 }
 
@@ -50,13 +50,13 @@ bool Command_reader_ctor(Command_reader* ptr, const uint8_t* cmd, const uint32_t
         return false;
     ptr->length = 3*sizeof(uint8_t);
     const uint16_t n = *reinterpret_cast(uint16_t*, ptr->buffer+LenL);
-    uint16_t checksum = SS_OFFSET;
+    uint8_t checksum = SS_OFFSET;
     if (cmd_length != 3 + n + sizeof(checksum))
         return false;
     ptr->length += n;
     for (uint8_t* c = ptr->buffer + CC + 1; c < ptr->buffer + ptr->length; ++c)
         checksum += *c;
-    if (checksum != *reinterpret_cast(uint16_t*, ptr->buffer + ptr->length))
+    if (checksum != *reinterpret_cast(typeof(checksum)*, ptr->buffer + ptr->length))
         return false;
     ptr->length += sizeof(checksum);
     ptr->read_length = LenH + 1;
@@ -65,13 +65,13 @@ bool Command_reader_ctor(Command_reader* ptr, const uint8_t* cmd, const uint32_t
 
 bool is_empty(Command_reader* ptr)
 {
-    return ptr->length == 3*sizeof(uint8_t) + sizeof(uint16_t) || ptr->length == 0;
+    return ptr->length == 3*sizeof(uint8_t) + sizeof(uint8_t) || ptr->length == 0;
 }
 
 //    template<typename T>
 #define def_get_param(size) bool get_param_##size(Command_reader* ptr, uint##size##_t* param)\
 {\
-    if(ptr->length==0 || (ptr->read_length+sizeof(*param)+sizeof(uint16_t) > ptr->length))\
+    if(ptr->length==0 || (ptr->read_length+sizeof(*param)+sizeof(uint8_t) > ptr->length))\
          return false;\
     *param = *reinterpret_cast(uint##size##_t*, ptr->buffer+ptr->read_length);\
     ptr->read_length+=sizeof(*param);\

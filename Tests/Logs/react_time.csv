@@ -62,4 +62,12 @@ After changing length read style to reinterpret_cast on mk
 After adding length check in mk
 0, 322, 2692, 107
 1, 291, 1326, 53
+Testing access when C# cannot do this
+0, 274, 2739, 109
+1, 300, 1509, 60
 
+Change size of checksum to 1 byte
+0, 201, 2897, 115
+1, 173, 3362, 134
+0, 183, 1663, 66
+1, 181, 1066, 42

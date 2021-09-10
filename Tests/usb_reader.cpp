@@ -47,7 +47,7 @@ public:
     template<typename T>
     void append_var(T var)
     {
-        assert(length + sizeof(var) + sizeof(uint16_t) <= BUF_SIZE);///SS
+        assert(length + sizeof(var) + sizeof(uint8_t) <= BUF_SIZE);///SS
         *reinterpret_cast<T*>(buffer + length) = var;
         length += sizeof(var);
     }
@@ -68,10 +68,10 @@ public:
     {
         assert(buffer[CC]!=0);
         *reinterpret_cast<uint16_t*>(buffer+LenL)=length-3*sizeof(uint8_t);
-        uint16_t sum = SS_OFFSET;
+        uint8_t sum = SS_OFFSET;
         for_each(buffer + CC + 1, buffer + length, [&sum](uint8_t c)
         { sum += c; });
-        *reinterpret_cast<uint16_t*>(buffer+length) = sum;
+        *reinterpret_cast<typeof(sum)*>(buffer+length) = sum;
         length += sizeof(sum);
     }
 
@@ -99,7 +99,7 @@ public:
         length =LenH+1;
         dev.read(buffer + length, n);/// DD DD DD ... DD
         length += n;
-        uint16_t sum = SS_OFFSET;
+        uint8_t sum = SS_OFFSET;
         dev.read(buffer + length, sizeof (sum)); /// SS
         for_each(buffer + CC + 1, buffer + length, [&sum](uint8_t c)
         { sum += c; });
@@ -113,11 +113,11 @@ public:
         return buffer;
     }
 
-    bool is_empty() const
+    [[nodiscard]] bool is_empty() const
     {
-        return length==3+2 || length==0;
+        return length==3*sizeof(uint8_t)+sizeof(uint8_t) || length==0;
     }
-    uint8_t is_error() const
+    [[nodiscard]] uint8_t is_error() const
     {
         return buffer[CC]&(1<<7);
     }
@@ -125,7 +125,7 @@ public:
     T get_param(T& param)
     {
         assert(length != 0);
-        assert(read_length + sizeof(T) + 2 <= length);
+        assert(read_length + sizeof(T) + sizeof(uint8_t) <= length);
         param = *reinterpret_cast<T*>(buffer + read_length);
         read_length += sizeof(T);
         return param;
@@ -137,7 +137,7 @@ public:
         T param;
         return get_param(param);
     }
-    uint8_t get_command() const
+    [[nodiscard]] uint8_t get_command() const
     {
         return buffer[CC];
     }
