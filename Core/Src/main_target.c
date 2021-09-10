@@ -58,20 +58,19 @@ bool Command_reader_ctor(Command_reader* ptr, const uint8_t* cmd, const uint32_t
         checksum += *c;
     if (checksum != *reinterpret_cast(typeof(checksum)*, ptr->buffer + ptr->length))
         return false;
-    ptr->length += sizeof(checksum);
     ptr->read_length = LenH + 1;
     return true;
 }
 
 bool is_empty(Command_reader* ptr)
 {
-    return ptr->length == 3*sizeof(uint8_t) + sizeof(uint8_t) || ptr->length == 0;
+    return ptr->length == 3*sizeof(uint8_t) || ptr->length == 0;
 }
 
 //    template<typename T>
 #define def_get_param(size) bool get_param_##size(Command_reader* ptr, uint##size##_t* param)\
 {\
-    if(ptr->length==0 || (ptr->read_length+sizeof(*param)+sizeof(uint8_t) > ptr->length))\
+    if(ptr->length==0 || (ptr->read_length+sizeof(*param) > ptr->length))\
          return false;\
     *param = *reinterpret_cast(uint##size##_t*, ptr->buffer+ptr->read_length);\
     ptr->read_length+=sizeof(*param);\

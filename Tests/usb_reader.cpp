@@ -108,14 +108,13 @@ public:
             cerr << "SS isn't correct" << endl;
             assert(false);
         }
-        length += sizeof (sum);
         read_length= LenH + 1;
         return buffer;
     }
 
     [[nodiscard]] bool is_empty() const
     {
-        return length==3*sizeof(uint8_t)+sizeof(uint8_t) || length==0;
+        return length==3*sizeof(uint8_t) || length==0;
     }
     [[nodiscard]] uint8_t is_error() const
     {
@@ -125,7 +124,7 @@ public:
     T get_param(T& param)
     {
         assert(length != 0);
-        assert(read_length + sizeof(T) + sizeof(uint8_t) <= length);
+        assert(read_length + sizeof(T) <= length);
         param = *reinterpret_cast<T*>(buffer + read_length);
         read_length += sizeof(T);
         return param;

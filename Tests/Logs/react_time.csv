@@ -65,9 +65,11 @@ After adding length check in mk
 Testing access when C# cannot do this
 0, 274, 2739, 109
 1, 300, 1509, 60
-
 Change size of checksum to 1 byte
 0, 201, 2897, 115
 1, 173, 3362, 134
 0, 183, 1663, 66
 1, 181, 1066, 42
+Remove dependency of checksum for get_param function
+0, 111, 1422, 56
+1, 75, 1205, 48
