@@ -59,7 +59,7 @@ void Command_writer_ctor(Command_writer* ptr);
 void send_command(Command_writer* ptr);
 
 
-typedef enum States{Measuring_reaction, Measuring_freq, Sending, Idle}States;
+typedef enum States{Measuring_freq=0, Measuring_reaction=1, Sending=2, Idle}States;
 typedef struct Tester
 {
     volatile States states;
@@ -78,5 +78,5 @@ void Tester_ctor(Tester* ptr);
 
 void process_cmd(const uint8_t* command, const uint32_t* len);
 
-void my_delay(int mc_s);
+void my_delay(int us);
 #endif //MAIN_TARGET

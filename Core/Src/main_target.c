@@ -89,6 +89,7 @@ extern TIM_HandleTypeDef htim1;
 extern Tone_pin* tone_pins;
 extern Command_writer writer;
 extern Tester tester;
+//TODO Add release config
 //TODO Sometime cleanup code
 //TODO ASK if main() is busy, is it good for usb
 
@@ -131,7 +132,7 @@ void make_tone(Tone_pin* tone_pin)
 
 void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n)
 {
-    volatile uint32_t wait;///volatile for silencing compiler warning about "infinit" loop
+    volatile uint32_t wait;///volatile need to shut up compiler warning about "infinit" loop below
     uint32_t start_tick = HAL_GetTick();
     for (int i = 0; i < n; ++i)
     {
@@ -160,16 +161,16 @@ void Tester_ctor(Tester* ptr)
 }
 
 #ifdef NDEBUG
-#define my_assert(cond) ((void)0)
+#define usb_assert(cond) ((void)0)
 #else
-#define my_assert(cond) do{if(!(cond)) \
+#define usb_assert(cond) do{if(!(cond)) \
 {                                   \
-    assertion_failed(#cond, cmd);   \
+    assertion_fail(#cond, cmd);   \
     return;                         \
 }}while(false)
 #endif
 
-void assertion_failed(const char*, uint8_t cmd);
+void assertion_fail(const char*, uint8_t cmd);
 
 void process_cmd(const uint8_t* command, const uint32_t* len)
 {
@@ -207,10 +208,10 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
             }
             else if (cmd == 0x10)
             {
-                my_assert(tester.states == Idle);
+                usb_assert(tester.states == Idle);
                 uint8_t port;
                 get_param_8(&reader, &port);
-                my_assert(port < 2);
+                usb_assert(port < 2);
                 uint16_t volume;
                 get_param_16(&reader, &volume);
                 tone_pins[port].volume=0;
@@ -219,7 +220,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 {
                     if (!get_param_16(&reader, &freq))
                         freq = 0;
-                    my_assert(freq <= 3400);
+                    usb_assert(freq <= 3400);
                     *c = freq_to_dx(&tone_pins[port], freq);
                 }
                 tone_pins[port].volume=volume;
@@ -227,9 +228,9 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
             }
             else if (cmd == 0x11)
             {
-                my_assert(tester.states == Idle);
+                usb_assert(tester.states == Idle);
                 get_param_8(&reader, (uint8_t*) &tester.port);
-                my_assert(tester.port < 2);
+                usb_assert(tester.port < 2);
                 tone_pins[tester.port].volume=0;
                 get_param_16(&reader, (uint16_t*) &tester.max_volume);
                 get_param_16(&reader, (uint16_t*) &tester.mseconds_to_max);
@@ -237,7 +238,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 {
                     if (!get_param_16(&reader, (uint16_t*) freq))
                         *freq = 0;
-                    my_assert(*freq <= 3400);
+                    usb_assert(*freq <= 3400);
                 }
                 for (size_t i = 0; i < sizeof_arr(tester.freq); ++i)
                     tone_pins[tester.port].dx[i] = freq_to_dx(&tone_pins[tester.port], tester.freq[i]);
@@ -247,32 +248,42 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
             }
             else if (cmd == 0x12)
             {
-                if(tester.states == Sending)
+                usb_assert(tester.states != Idle);
+                if (tester.states == Measuring_freq)
                 {
-                    append_var_8(&writer, true);/// If patient reacted
+                    append_var_8(&writer, Measuring_freq);
+                    append_var_16(&writer, 0);
+                    append_var_16(&writer, 0);
+                    append_var_16(&writer, 0);
+                }
+                else if (tester.states == Measuring_reaction)
+                {
+                    append_var_8(&writer, Measuring_reaction);
+                    append_var_16(&writer, 0);
+                    append_var_16(&writer, 0);
+                    append_var_16(&writer, 0);
+                }
+                else if(tester.states == Sending)
+                {
+                    append_var_8(&writer, Sending);
                     append_var_16(&writer, tester.react_time);
                     append_var_16(&writer, tester.elapsed_time);
                     append_var_16(&writer, tester.ampl);
                     tester.react_time=0;
 //                    tester.ampl=0;
                     tester.states = Idle;
-                    prepare_for_sending(&writer, cmd, true);
                 }
-                else
-                {
-                    append_var_8(&writer, false);/// If patient reacted
-                    prepare_for_sending(&writer, cmd, true);
-                }
+                prepare_for_sending(&writer, cmd, true);
             }
             else
-                assertion_failed("Command not recognised", cmd);
+                assertion_fail("Command not recognised", cmd);
         }
         if (command[0] == '0')
             HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
     }
 }
 
-void assertion_failed(const char* cond, const uint8_t cmd)
+void assertion_fail(const char* cond, const uint8_t cmd)
 {
     writer.length=3;///clean writer if I already have appended something; it is replacement of Command_writer_ctor() call for optimisation purposes
     size_t length = strlen(cond)+3+1+1>=writer.BUF_SIZE?writer.BUF_SIZE-3-1-1 : strlen(cond);///3 - 3 bytes: CC, LenL, LenH; 1 - checksum byte; 1 - size of '\0'
@@ -282,11 +293,12 @@ void assertion_failed(const char* cond, const uint8_t cmd)
     prepare_for_sending(&writer, cmd, false);
 }
 
-void my_delay(int mc_s)
+/// \param us - time in microseconds
+void delay_us(int us)
 {
-    if (mc_s <= 0)
+    if (us <= 0)
         return;
     __HAL_TIM_SET_COUNTER(&htim1, 0);
-    while (__HAL_TIM_GET_COUNTER(&htim1) < mc_s)
+    while (__HAL_TIM_GET_COUNTER(&htim1) < us)
     {}
 }
