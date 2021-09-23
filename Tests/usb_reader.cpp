@@ -20,8 +20,9 @@ enum
  * 0x4 ->
  * 0x10 u8|port u16|volume u16[]|freqs ->
  * 0x11 u8|port u16|MAX_VOLUME u16|MSECONDS_TO_MAX u16[]|freqs ->
- * 0x12 -> u16|react_time u8|ampl
+ * 0x12 -> u8|is_reacted *u16|react_time *u16|el_time *u16|ampl
  * @note react_time in ms
+ * @note "*" near parameter means that these params are sent only if is_reacted is true //TODO
  *
  * port mean:
  * 0 - A10 pin, right channel
@@ -183,17 +184,18 @@ int main (int , char** )
             assert(reader.is_empty());
             if (cmd == 0x11)
             {
+                bool is_reacted;
                 do
                 {
                     writer.set_cmd(0x12);
                     writer.prepare_for_sending();
                     writer.write(dev);
                     reader.read(dev_read);
+                    reader.get_param(is_reacted);
                     system("sleep 1");
-                } while (reader.is_error());
-                uint16_t react_time;
+                } while (!is_reacted);
                 ostringstream temp;
-                temp << i << ", " << reader.get_param(react_time) << ", "<<reader.get_param<uint16_t>()<<", "<<(int)reader.get_param<uint16_t>()<<endl;
+                temp << i << ", " << reader.get_param<uint16_t>() << ", "<<reader.get_param<uint16_t>()<<", "<<(int)reader.get_param<uint16_t>()<<endl;
                 cout<<temp.str();
                 stat<<temp.str();
             }

@@ -249,6 +249,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
             {
                 if(tester.states == Sending)
                 {
+                    append_var_8(&writer, true);/// If patient reacted
                     append_var_16(&writer, tester.react_time);
                     append_var_16(&writer, tester.elapsed_time);
                     append_var_16(&writer, tester.ampl);
@@ -258,7 +259,10 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                     prepare_for_sending(&writer, cmd, true);
                 }
                 else
-                    prepare_for_sending(&writer, cmd, false);
+                {
+                    append_var_8(&writer, false);/// If patient reacted
+                    prepare_for_sending(&writer, cmd, true);
+                }
             }
             else
                 assertion_failed("Command not recognised", cmd);
