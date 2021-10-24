@@ -62,11 +62,11 @@ static void MX_TIM3_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-Tone_pin* tone_pins; /// It is the array of pins that make tones. The first pin is A10 and the second is A9
+Tone_pin* tone_pins; /// This is the array of pins that make tones. The first pin is A10 (equals right speaker) and the second is A9 (equals left speaker)
 Command_writer writer;
 Tester tester;
 
-void send_command(Command_writer* ptr)///In main, USB part
+void send_command(Command_writer* ptr)
 {
     while (CDC_Transmit_FS(ptr->buffer, ptr->length) == USBD_BUSY){}
     ptr->buffer[CC]=0;
@@ -115,11 +115,11 @@ int main(void)
     HAL_Delay(400);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
     HAL_Delay(400);
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 1);
 
-    /// This lines is ctor for tone_pins
+    /// These lines is ctor for tone_pins
     Tone_pin tone_pins_init[2];
     tone_pin_ctor(&tone_pins_init[0], &(htim1.Instance->CCR3));
     tone_pins_init[0].dx[0]=freq_to_dx(&tone_pins_init[0], NOTE_A4);//A4 == 440 Hz

@@ -85,3 +85,7 @@ Add to 0x12 command bool parameter if_reacted
 Change if_reacted to states
 0, 162, 4025, 161
 1, 112, 1907, 76
+
+Some changes
+0, 133, 2248, 89
+1, 175, 2510, 100

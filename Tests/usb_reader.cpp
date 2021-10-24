@@ -29,8 +29,8 @@ enum
  * @note "*" near parameter means that these params are sent only if state is MeasureEnd //TODO ASK if it good
  *
  * port mean:
- * 0 - A10 pin, right channel
- * 1 - A9 pin, left channel
+ * 0 - A9 pin, left channel
+ * 1 - A10 pin, right channel
  *
  *
  * If error in command CC:
@@ -169,7 +169,7 @@ int main (int , char** )
 //        system(comp_command);
         const int cmd = 0x11;
         writer.set_cmd(cmd);
-        writer.append_var<uint8_t>(1);/// Port
+        writer.append_var<uint8_t>(0);/// Port
         if (cmd == 0x10)
             writer.append_var<uint16_t>(5000);///Curr volume
         if (cmd == 0x11)

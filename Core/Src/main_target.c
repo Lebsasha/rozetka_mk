@@ -99,17 +99,14 @@ int16_t f_dots[1024];
 
 void tone_pin_ctor(Tone_pin* ptr, volatile uint32_t* CCR)
 {
-    ptr->duty_cycle = CCR;
     for (int i = 0; i < arr_size; ++i)
         f_dots[i] = (int16_t)(sine_ampl / 2.0 - sine_ampl / 2.0 * sin(i * 2 * M_PI / arr_size));
     ptr->f_dots = f_dots;
     ptr->arr_size = arr_size;
     ptr->volume = 0;
-    for (size_t i = 0; i < sizeof_arr(ptr->dx); ++i)
-    {
-        ptr->dx[i] = 0;
-        ptr->curr[i] = 0;
-    }
+    memset((void*)ptr->dx, 0, sizeof(ptr->dx));
+    memset((void*)ptr->curr, 0, sizeof(ptr->curr));
+    ptr->duty_cycle = CCR;//TODO Test this
 }
 
 void make_tone(Tone_pin* tone_pin)
@@ -285,8 +282,8 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
 
 void assertion_fail(const char* cond, const uint8_t cmd)
 {
-    writer.length=3;///clean writer if I already have appended something; it is replacement of Command_writer_ctor() call for optimisation purposes
-    size_t length = strlen(cond)+3+1+1>=writer.BUF_SIZE?writer.BUF_SIZE-3-1-1 : strlen(cond);///3 - 3 bytes: CC, LenL, LenH; 1 - checksum byte; 1 - size of '\0'
+    writer.length=3;///clean writer if I already have appended something; this line replaces Command_writer_ctor() call for optimisation purposes
+    size_t length = strlen(cond)+3+1+1>=writer.BUF_SIZE?writer.BUF_SIZE-3-1-1 : strlen(cond);///3 - CC, LenL, LenH; 1 - SS (checksum byte); 1 - size of '\0'
     for (const char* c = cond; c < cond + length; ++c)
         append_var_8(&writer, *c);
     append_var_8(&writer, '\0');
@@ -296,7 +293,7 @@ void assertion_fail(const char* cond, const uint8_t cmd)
 /// \param us - time in microseconds
 void delay_us(int us)
 {
-    if (us <= 0)
+    if (us <= 0)//TODO Test for timer microseconds
         return;
     __HAL_TIM_SET_COUNTER(&htim1, 0);
     while (__HAL_TIM_GET_COUNTER(&htim1) < us)
