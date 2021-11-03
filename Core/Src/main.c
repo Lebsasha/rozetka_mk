@@ -24,6 +24,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "main_target.h"
+#include <notes.h>
 #include "usbd_cdc_if.h"
 /* USER CODE END Includes */
 
@@ -34,7 +35,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define SEND_VAR(var_addr) do{}while(CDC_Transmit_FS((uint8_t*) var_addr, sizeof(*var_addr))==USBD_BUSY)
+#define SEND_VAR(var_addr) do{}while(CDC_Transmit_FS((uint8_t*) (var_addr), sizeof(*(var_addr)))==USBD_BUSY)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -44,6 +45,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim3;
 
 /* USER CODE BEGIN PV */
 
@@ -53,18 +55,26 @@ TIM_HandleTypeDef htim1;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_TIM3_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-volatile char* cmd=NULL;
-volatile uint32_t count = 0;
-extern volatile bool if_ping_req;
-extern volatile size_t need_length;
-extern volatile size_t arrived_length;
-extern volatile uint8_t data[4096];
+Tone_pin* tone_pins; /// This is the array of pins that make tones. The first pin is A10 (equals right speaker) and the second is A9 (equals left speaker)
+Command_writer writer;
+Tester tester;
+
+void send_command(Command_writer* ptr)
+{
+    while (CDC_Transmit_FS(ptr->buffer, ptr->length) == USBD_BUSY){}
+    ptr->buffer[CC]=0;
+    ptr->buffer[LenL]=0;
+    ptr->buffer[LenH]=0;
+    ptr->length = 1 + 1 + 1;///CC, LenH, LenL
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+}
 /* USER CODE END 0 */
 
 /**
@@ -97,61 +107,98 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM1_Init();
   MX_USB_DEVICE_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 
-//assert(1000/MY_FREQ*DETAILYTY_1==1000);
-      HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, 0);
-      HAL_Delay(100);
-      HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, 1);
-      HAL_Delay(100);
-      HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, 0);
-      HAL_Delay(100);
-      HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, 1);
+    HAL_Delay(300);
+    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+    HAL_Delay(400);
+    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+    HAL_Delay(400);
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 
-    TIM1->PSC = 40 - 1;
-    TIM1->ARR = 18 - 1;
-    __HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
-    __HAL_TIM_ENABLE(&htim1);
-    uint32_t time=0;
-/* USER CODE END 2 */
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 1);
+
+    /// These lines is ctor for tone_pins
+    Tone_pin tone_pins_init[2];
+    tone_pin_ctor(&tone_pins_init[0], &(htim1.Instance->CCR3));
+    tone_pins_init[0].dx[0]=freq_to_dx(&tone_pins_init[0], NOTE_A4);//A4 == 440 Hz
+    tone_pin_ctor(&tone_pins_init[1], &(htim1.Instance->CCR2));
+    tone_pins_init[1].dx[0]=freq_to_dx(&tone_pins_init[1], NOTE_A4);
+
+    tone_pins=tone_pins_init;
+
+    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);///start sound at A10
+    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);///start sound at A9
+    HAL_TIM_Base_Start_IT(&htim1);
+    HAL_TIM_Base_Start_IT(&htim3);
+    Command_writer_ctor(&writer);
+    Tester_ctor(&tester);
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 0);
+    uint16_t notes_1[] = {NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4};
+    uint8_t durations_1[] = {4, 8, 8, 4, 4, 4, 4, 4};
+    uint16_t prev_volume;
+  /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-      if(cmd)
+      if (tester.states == Measuring_reaction && tester.button.stop_time != 0)
       {
-          char* next_num = NULL;
-          int n_size = strtol((char*) cmd, &next_num, 10);
-          int packet_size = strtol(next_num, NULL, 10);
-          uint8_t* x = (uint8_t*) LONG_STRING;
-          if (errno == ERANGE || packet_size > strlen((char*) x))
+          tester.react_time += tester.button.stop_time - tester.button.start_time;
+          prev_volume = tone_pins[tester.port].volume;
+          tone_pins[tester.port].volume = 0;
+          if (tester.react_time_size < 2)
           {
-              HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+              HAL_Delay(600);
+              ++tester.react_time_size;
+              tone_pins[tester.port].volume = prev_volume;
+              tester.button.start_time = HAL_GetTick();
+              tester.button.stop_time = 0;
           }
-          count=0;
-          for (int i = 0; i < n_size; ++i)
+          else
           {
-              while (CDC_Transmit_FS((uint8_t*) x, packet_size) == USBD_BUSY);
+              tester.react_time /= 3;
+              tester.button.start_time = 0;
+              tester.button.stop_time = 0;
+              tester.react_time_size = 0;
+
+              tester.elapsed_time -= tester.react_time;
+              tester.ampl = tester.max_volume * tester.elapsed_time / tester.mseconds_to_max;
+              tester.states = Sending;
           }
-          while (CDC_Transmit_FS((uint8_t*) ".", sizeof(".") - 1) == USBD_BUSY);
-          time=count;
-          HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-          HAL_Delay(500);
-          HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-          while (CDC_Transmit_FS((uint8_t*) "\n end", sizeof("\n end")) == USBD_BUSY);
-          SEND_VAR(&time);
-          cmd = NULL;
       }
-      if(if_ping_req)
+      if (tester.states == Measuring_freq)
       {
-          while (CDC_Transmit_FS(data, need_length) == USBD_BUSY);
-          SEND_VAR(&arrived_length);
-          time = count;
-          SEND_VAR(&time);
-          arrived_length=0;
-          need_length=0;
-          if_ping_req=false;
+          if (tester.button.stop_time != 0)
+          {
+              if (tester.button.stop_time != 1)
+              {
+                  tester.elapsed_time = tester.button.stop_time - tester.button.start_time/* - tester.react_time*/;///- react_time located higher, in Measuring_reaction
+                  tester.ampl = tester.max_volume * tester.elapsed_time / tester.mseconds_to_max;///This is needed for calculating volume for measuring react_time
+                  tone_pins[tester.port].volume = 0;
+
+                  HAL_Delay(300);
+                  HAL_Delay(400);//TODO Make rand
+                  tester.states = Measuring_reaction;
+                  tone_pins[tester.port].volume = 4*tester.ampl;
+                  tester.button.start_time=HAL_GetTick();
+              }
+              else///case elapsed time for sound testing exceed tester.mseconds_to_max
+              {
+                  tester.elapsed_time = 0;
+                  tester.ampl = 0;
+                  tone_pins[tester.port].volume = 0;
+                  tester.states=Sending;
+                  tester.button.start_time = 0;
+              }
+              tester.button.stop_time = 0;
+          }
+      }
+      if (writer.buffer[CC] != 0)
+      {
+          send_command(&writer);
       }
     /* USER CODE END WHILE */
 
@@ -160,7 +207,6 @@ int main(void)
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "hicpp-signed-bitwise"
-#pragma clang diagnostic push
 #pragma ide diagnostic ignored "OCInconsistentNamingInspection"
 
   /* USER CODE END 3 */
@@ -225,14 +271,16 @@ static void MX_TIM1_Init(void)
 
   TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
 
   /* USER CODE BEGIN TIM1_Init 1 */
 
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 7199;
+  htim1.Init.Prescaler = 0;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 9999;
+  htim1.Init.Period = 1799;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
@@ -245,15 +293,91 @@ static void MX_TIM1_Init(void)
   {
     Error_Handler();
   }
+  if (HAL_TIM_PWM_Init(&htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
   {
     Error_Handler();
   }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 40000/500;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
+  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
+  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
+  sBreakDeadTimeConfig.DeadTime = 0;
+  sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
+  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
+  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
+  if (HAL_TIMEx_ConfigBreakDeadTime(&htim1, &sBreakDeadTimeConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE BEGIN TIM1_Init 2 */
 
   /* USER CODE END TIM1_Init 2 */
+  HAL_TIM_MspPostInit(&htim1);
+
+}
+
+/**
+  * @brief TIM3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM3_Init(void)
+{
+
+  /* USER CODE BEGIN TIM3_Init 0 */
+
+  /* USER CODE END TIM3_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM3_Init 1 */
+
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 3;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 17999;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM3_Init 2 */
+
+  /* USER CODE END TIM3_Init 2 */
 
 }
 
@@ -269,11 +393,14 @@ static void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
-  __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12|GPIO_PIN_13, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
@@ -281,6 +408,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PB12 PB13 */
+  GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PB5 */
   GPIO_InitStruct.Pin = GPIO_PIN_5;
@@ -305,6 +439,7 @@ static void MX_GPIO_Init(void)
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   /* USER CODE BEGIN Callback 0 */
+
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM2) {
     HAL_IncTick();
@@ -322,8 +457,7 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-//#pragma clang diagnostic pop
-// #pragma clang diagnostic pop
+#pragma clang diagnostic pop
   /* USER CODE END Error_Handler_Debug */
 }
 

@@ -54,9 +54,12 @@ dkms.conf
 Debug/first_mk.bin
 
 Debug/first_mk.list
+# CLion build dir
 cmake-build-debug
+# CubeIDe dir
+Debug
 /core
+exp.bin_log
+temp.txt
 bin/
 obj/
-*.log
-*.png
