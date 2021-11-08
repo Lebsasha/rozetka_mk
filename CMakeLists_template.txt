@@ -28,7 +28,8 @@ SET(COMMON_FLAGS
     -g -fno-common -fmessage-length=0 ${linkerFlags}")
 
 SET(CMAKE_CXX_FLAGS_INIT "$${COMMON_FLAGS} -std=c++11")
-SET(CMAKE_C_FLAGS_INIT "$${COMMON_FLAGS} -std=gnu99")
+SET(CMAKE_C_FLAGS_INIT "$${COMMON_FLAGS} -std=gnu99 -pipe")
+#SET(CMAKE_C_FLAGS -pipe)
 SET(CMAKE_EXE_LINKER_FLAGS_INIT "-Wl,-gc-sections,--print-memory-usage -T $${LINKER_SCRIPT}")
 
 PROJECT(${projectName} C CXX ASM)

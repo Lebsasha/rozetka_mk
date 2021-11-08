@@ -23,9 +23,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "main_target.h"
-#include <notes.h>
+#include "communicationWithPC.h"
 #include "usbd_cdc_if.h"
+#include "skinConduction.h"
+#include "hearing.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -45,7 +46,9 @@
 
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
+TIM_HandleTypeDef htim4;
 
 /* USER CODE BEGIN PV */
 
@@ -55,26 +58,23 @@ TIM_HandleTypeDef htim3;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_TIM4_Init(void);
 static void MX_TIM3_Init(void);
+static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+volatile Measures currMeasure;
+SkinConductionTester skinTester;
 Tone_pin* tone_pins; /// This is the array of pins that make tones. The first pin is A10 (equals right speaker) and the second is A9 (equals left speaker)
 Command_writer writer;
-Tester tester;
+Button button;
+HearingTester hearingTester;
 
-void send_command(Command_writer* ptr)
-{
-    while (CDC_Transmit_FS(ptr->buffer, ptr->length) == USBD_BUSY){}
-    ptr->buffer[CC]=0;
-    ptr->buffer[LenL]=0;
-    ptr->buffer[LenH]=0;
-    ptr->length = 1 + 1 + 1;///CC, LenH, LenL
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
-}
+void send_command(Command_writer* ptr);
 /* USER CODE END 0 */
 
 /**
@@ -107,9 +107,13 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM1_Init();
   MX_USB_DEVICE_Init();
+  MX_TIM4_Init();
   MX_TIM3_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
+    currMeasure = None;
+//    ConstructDiode(&skinTester);
     HAL_Delay(300);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
     HAL_Delay(400);
@@ -117,7 +121,9 @@ int main(void)
     HAL_Delay(400);
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 1);
+#ifdef DEBUG
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 1);//show that initialisation started
+#endif
 
     /// These lines is ctor for tone_pins
     Tone_pin tone_pins_init[2];
@@ -131,70 +137,84 @@ int main(void)
     HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);///start sound at A10
     HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);///start sound at A9
     HAL_TIM_Base_Start_IT(&htim1);
-    HAL_TIM_Base_Start_IT(&htim3);
+    HAL_TIM_Base_Start_IT(&htim4);
+    Button_ctor(&button);
     Command_writer_ctor(&writer);
-    Tester_ctor(&tester);
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 0);
+    HearingTesterCtor(&hearingTester);
     uint16_t notes_1[] = {NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4};
     uint8_t durations_1[] = {4, 8, 8, 4, 4, 4, 4, 4};
     uint16_t prev_volume;
+
+#ifdef DEBUG
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 0);//show that initialisation finished
+#endif
+//    uint8_t cmd[]={0x11, 0x07, 0x00, 0x01,   0xc8, 0x00, 0x88, 0x13,   0x0b, 0x02, 0xa2};//0x93, 0x02,   0x10, 0x03, 0x4e };
+//    uint32_t len= sizeof_arr(cmd);
+//    process_cmd(cmd, &len);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-      if (tester.states == Measuring_reaction && tester.button.stop_time != 0)
+//TODO Перепаять кнопку
+
+      if (hearingTester.states == Measuring_reaction && button.stop_time != 0)
       {
-          tester.react_time += tester.button.stop_time - tester.button.start_time;
-          prev_volume = tone_pins[tester.port].volume;
-          tone_pins[tester.port].volume = 0;
-          if (tester.react_time_size < 2)
+          hearingTester.react_time += button.stop_time - button.start_time;
+          prev_volume = tone_pins[hearingTester.port].volume;
+          tone_pins[hearingTester.port].volume = 0;
+          if (hearingTester.react_time_size < 2)
           {
               HAL_Delay(600);
-              ++tester.react_time_size;
-              tone_pins[tester.port].volume = prev_volume;
-              tester.button.start_time = HAL_GetTick();
-              tester.button.stop_time = 0;
+              ++hearingTester.react_time_size;
+              tone_pins[hearingTester.port].volume = prev_volume;
+              button.start_time = HAL_GetTick();
+              button.stop_time = 0;
           }
           else
           {
-              tester.react_time /= 3;
-              tester.button.start_time = 0;
-              tester.button.stop_time = 0;
-              tester.react_time_size = 0;
+              hearingTester.react_time /= 3;
+              button.start_time = 0;
+              button.stop_time = 0;
+              hearingTester.react_time_size = 0;
 
-              tester.elapsed_time -= tester.react_time;
-              tester.ampl = tester.max_volume * tester.elapsed_time / tester.mseconds_to_max;
-              tester.states = Sending;
+              hearingTester.elapsed_time -= hearingTester.react_time;
+              hearingTester.ampl = hearingTester.max_volume * hearingTester.elapsed_time / hearingTester.mseconds_to_max;
+              hearingTester.states = Sending;
           }
       }
-      if (tester.states == Measuring_freq)
+      if (hearingTester.states == Measuring_freq)
       {
-          if (tester.button.stop_time != 0)
+          if (button.stop_time != 0)
           {
-              if (tester.button.stop_time != 1)
+              if (button.stop_time != 1)
               {
-                  tester.elapsed_time = tester.button.stop_time - tester.button.start_time/* - tester.react_time*/;///- react_time located higher, in Measuring_reaction
-                  tester.ampl = tester.max_volume * tester.elapsed_time / tester.mseconds_to_max;///This is needed for calculating volume for measuring react_time
-                  tone_pins[tester.port].volume = 0;
+                  hearingTester.elapsed_time = button.stop_time - button.start_time/* - hearingTester.react_time*/;///- react_time located higher, in Measuring_reaction
+                  hearingTester.ampl = hearingTester.max_volume * hearingTester.elapsed_time / hearingTester.mseconds_to_max;///This is needed for calculating volume for measuring react_time
+                  tone_pins[hearingTester.port].volume = 0;
 
                   HAL_Delay(300);
                   HAL_Delay(400);//TODO Make rand
-                  tester.states = Measuring_reaction;
-                  tone_pins[tester.port].volume = 4*tester.ampl;
-                  tester.button.start_time=HAL_GetTick();
+                  hearingTester.states = Measuring_reaction;
+                  tone_pins[hearingTester.port].volume = 4 * hearingTester.ampl;//TODO 4 to parameter
+                  button.start_time=HAL_GetTick();
               }
-              else///case elapsed time for sound testing exceed tester.mseconds_to_max
+              else///case elapsed time for sound testing exceed hearingTester.mseconds_to_max
               {
-                  tester.elapsed_time = 0;
-                  tester.ampl = 0;
-                  tone_pins[tester.port].volume = 0;
-                  tester.states=Sending;
-                  tester.button.start_time = 0;
+                  hearingTester.elapsed_time = 0;
+                  hearingTester.ampl = 0;
+                  tone_pins[hearingTester.port].volume = 0;
+                  hearingTester.states=Sending;
+                  button.start_time = 0;
               }
-              tester.button.stop_time = 0;
+              button.stop_time = 0;
           }
+      }
+      if (currMeasure == SkinConduction && button.start_time != 0 && button.stop_time != 0)
+      {
+          SkinConductionEnd(&skinTester);
       }
       if (writer.buffer[CC] != 0)
       {
@@ -304,12 +324,17 @@ static void MX_TIM1_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 40000/500;
+  sConfigOC.Pulse = 0;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
   sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.Pulse = 40000/500;
   if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
   {
     Error_Handler();
@@ -337,6 +362,65 @@ static void MX_TIM1_Init(void)
 }
 
 /**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 719;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 9;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_PWM_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_ENABLE;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_ENABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM2;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
+  HAL_TIM_MspPostInit(&htim2);
+
+}
+
+/**
   * @brief TIM3 Initialization Function
   * @param None
   * @retval None
@@ -349,15 +433,17 @@ static void MX_TIM3_Init(void)
   /* USER CODE END TIM3_Init 0 */
 
   TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_SlaveConfigTypeDef sSlaveConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
 
   /* USER CODE BEGIN TIM3_Init 1 */
 
   /* USER CODE END TIM3_Init 1 */
   htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 3;
+  htim3.Init.Prescaler = 0;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 17999;
+  htim3.Init.Period = 719;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
@@ -369,15 +455,79 @@ static void MX_TIM3_Init(void)
   {
     Error_Handler();
   }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIM_PWM_Init(&htim3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sSlaveConfig.SlaveMode = TIM_SLAVEMODE_GATED;
+  sSlaveConfig.InputTrigger = TIM_TS_ITR1;
+  if (HAL_TIM_SlaveConfigSynchro(&htim3, &sSlaveConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_ENABLE;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_ENABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 1;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
   {
     Error_Handler();
   }
   /* USER CODE BEGIN TIM3_Init 2 */
 
   /* USER CODE END TIM3_Init 2 */
+  HAL_TIM_MspPostInit(&htim3);
+
+}
+
+/**
+  * @brief TIM4 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM4_Init(void)
+{
+
+  /* USER CODE BEGIN TIM4_Init 0 */
+
+  /* USER CODE END TIM4_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM4_Init 1 */
+
+  /* USER CODE END TIM4_Init 1 */
+  htim4.Instance = TIM4;
+  htim4.Init.Prescaler = 3;
+  htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim4.Init.Period = 17999;
+  htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM4_Init 2 */
+
+  /* USER CODE END TIM4_Init 2 */
 
 }
 
@@ -393,8 +543,8 @@ static void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
@@ -416,8 +566,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PB5 */
-  GPIO_InitStruct.Pin = GPIO_PIN_5;
+  /*Configure GPIO pins : PB5 PB6 */
+  GPIO_InitStruct.Pin = GPIO_PIN_5|GPIO_PIN_6;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
@@ -426,28 +576,16 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
-/* USER CODE END 4 */
-
-/**
-  * @brief  Period elapsed callback in non blocking mode
-  * @note   This function is called  when TIM2 interrupt took place, inside
-  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
-  * a global variable "uwTick" used as application time base.
-  * @param  htim : TIM handle
-  * @retval None
-  */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+void send_command(Command_writer* ptr)
 {
-  /* USER CODE BEGIN Callback 0 */
-
-  /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM2) {
-    HAL_IncTick();
-  }
-  /* USER CODE BEGIN Callback 1 */
-
-  /* USER CODE END Callback 1 */
+    while (CDC_Transmit_FS(ptr->buffer, ptr->length) == USBD_BUSY){}
+    ptr->buffer[CC]=0;
+    ptr->buffer[LenL]=0;
+    ptr->buffer[LenH]=0;
+    ptr->length = 1 + 1 + 1;///CC, LenH, LenL
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 }
+/* USER CODE END 4 */
 
 /**
   * @brief  This function is executed in case of error occurrence.

@@ -23,7 +23,9 @@
 #include "stm32f1xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "main_target.h"
+#include "skinConduction.h"
+#include "hearing.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -59,12 +61,15 @@
 /* External variables --------------------------------------------------------*/
 extern PCD_HandleTypeDef hpcd_USB_FS;
 extern TIM_HandleTypeDef htim1;
-extern TIM_HandleTypeDef htim3;
 extern TIM_HandleTypeDef htim2;
-
+extern TIM_HandleTypeDef htim3;
+extern TIM_HandleTypeDef htim4;
 /* USER CODE BEGIN EV */
+extern volatile Measures currMeasure;
+extern Button button;
+extern SkinConductionTester skinTester;
+extern HearingTester hearingTester;
 extern Tone_pin* tone_pins;
-extern Tester tester;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -190,7 +195,7 @@ void SysTick_Handler(void)
   /* USER CODE BEGIN SysTick_IRQn 0 */
 
   /* USER CODE END SysTick_IRQn 0 */
-
+  HAL_IncTick();
   /* USER CODE BEGIN SysTick_IRQn 1 */
 
   /* USER CODE END SysTick_IRQn 1 */
@@ -223,15 +228,21 @@ void USB_LP_CAN1_RX0_IRQHandler(void)
 void TIM1_UP_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM1_UP_IRQn 0 */
+  if(currMeasure == Hearing)
+  {
+#ifdef DEBUG
 ///    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 1);
-    GPIOB->BSRR = GPIO_PIN_12;
-    __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);
-    make_tone(&tone_pins[0]);
-    make_tone(&tone_pins[1]);
+      GPIOB->BSRR = GPIO_PIN_12;//for showing how much time this interrupt takes
+#endif
+      make_tone(&tone_pins[0]);
+      make_tone(&tone_pins[1]);
+#ifdef DEBUG
 ///    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 0);
-    GPIOB->BSRR = (uint32_t)GPIO_PIN_12 << 16U;
+      GPIOB->BSRR = (uint32_t) GPIO_PIN_12 << 16U;
+#endif
+  }
+    __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);
     return;
-
   /* USER CODE END TIM1_UP_IRQn 0 */
   HAL_TIM_IRQHandler(&htim1);
   /* USER CODE BEGIN TIM1_UP_IRQn 1 */
@@ -244,7 +255,10 @@ void TIM1_UP_IRQHandler(void)
 void TIM2_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM2_IRQn 0 */
-
+    if (currMeasure == SkinConduction)
+        skinTester.nextState();
+    __HAL_TIM_CLEAR_IT(&htim2, TIM_IT_UPDATE);
+    return;
   /* USER CODE END TIM2_IRQn 0 */
   HAL_TIM_IRQHandler(&htim2);
   /* USER CODE BEGIN TIM2_IRQn 1 */
@@ -258,31 +272,55 @@ void TIM2_IRQHandler(void)
 void TIM3_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM3_IRQn 0 */
-    if (__HAL_TIM_GET_FLAG(&htim3, TIM_FLAG_UPDATE) != RESET)
-    {
-        __HAL_TIM_CLEAR_IT(&htim3, TIM_IT_UPDATE);
-        if(HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5)==GPIO_PIN_RESET && tester.button.stop_time==0 && tester.button.start_time!=0)
-        {
-            tester.button.stop_time=HAL_GetTick();
-        }
-
-        static uint16_t x=0;
-        if (tester.states == Measuring_freq && tester.button.stop_time == 0)
-        {
-            x = HAL_GetTick() - tester.button.start_time;
-            tone_pins[tester.port].volume = tester.max_volume * x / tester.mseconds_to_max;
-            if (x >= tester.mseconds_to_max)
-            {
-                tester.button.stop_time=1;
-            }
-        }
-        return;
-    }
+    __HAL_TIM_CLEAR_IT(&htim3, TIM_IT_UPDATE);
+    return;
   /* USER CODE END TIM3_IRQn 0 */
   HAL_TIM_IRQHandler(&htim3);
   /* USER CODE BEGIN TIM3_IRQn 1 */
 
   /* USER CODE END TIM3_IRQn 1 */
+}
+
+/**
+  * @brief This function handles TIM4 global interrupt.
+  */
+void TIM4_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM4_IRQn 0 */
+
+    if (currMeasure == Hearing)
+    {
+        if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5) == GPIO_PIN_RESET && button.stop_time == 0 && button.start_time != 0)//TODO
+        {
+            button.stop_time = HAL_GetTick();//TODO Replace with InputCapture
+        }
+    }
+    else if (currMeasure == SkinConduction)
+        if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_6) == GPIO_PIN_RESET && button.stop_time == 0 && button.start_time != 0)//TODO
+        {
+            button.stop_time = HAL_GetTick();
+        }
+
+    if (currMeasure == Hearing)
+    {
+        static uint16_t x=0;
+        if (hearingTester.states == Measuring_freq && button.stop_time == 0)
+        {
+            x = HAL_GetTick() - button.start_time;
+            tone_pins[hearingTester.port].volume = hearingTester.max_volume * x / hearingTester.mseconds_to_max;
+            if (x >= hearingTester.mseconds_to_max)
+            {
+                button.stop_time=1;
+            }
+        }
+    }
+    __HAL_TIM_CLEAR_IT(&htim4, TIM_IT_UPDATE);
+    return;
+  /* USER CODE END TIM4_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim4);
+  /* USER CODE BEGIN TIM4_IRQn 1 */
+
+  /* USER CODE END TIM4_IRQn 1 */
 }
 
 /* USER CODE BEGIN 1 */

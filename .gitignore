@@ -57,7 +57,7 @@ Debug/first_mk.list
 # CLion build dir
 cmake-build-debug
 # CubeIDe dir
-Debug
+Debug/
 /core
 exp.bin_log
 temp.txt

@@ -169,7 +169,7 @@ int main (int , char** )
 //        system(comp_command);
         const int cmd = 0x11;
         writer.set_cmd(cmd);
-        writer.append_var<uint8_t>(0);/// Port
+        writer.append_var<uint8_t>(1);/// Port
         if (cmd == 0x10)
             writer.append_var<uint16_t>(5000);///Curr volume
         if (cmd == 0x11)
@@ -178,8 +178,8 @@ int main (int , char** )
             writer.append_var<uint16_t>(5000);///msecs
         }
         writer.append_var<uint16_t>((NOTE_C5));
-        writer.append_var<uint16_t>(NOTE_E5);
-        writer.append_var<uint16_t>(NOTE_G5);
+//        writer.append_var<uint16_t>(NOTE_E5);
+//        writer.append_var<uint16_t>(NOTE_G5);
         writer.prepare_for_sending();
         writer.write(dev);
         reader.read(dev_read);

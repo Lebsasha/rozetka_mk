@@ -1,12 +1,16 @@
 #include <string.h>
 #include <stdlib.h>
 #include "main.h"
-#include "main_target.h"
+#include "communicationWithPC.h"
+#include "skinConduction.h"
+#include "hearing.h"
+
+static const uint8_t SS_OFFSET = 42;
 
 void Command_writer_ctor(Command_writer* ptr)
 {
     ptr->length = 3*sizeof(uint8_t);///CC, LenH, LenL
-    ptr->BUF_SIZE = 128;///Can be changed if needed, but with appropriate changes with buffer array
+    ptr->BUF_SIZE = 128;///Can be changed if needed, but with appropriate changes with buffer array //TODO
     ptr->buffer[CC]=0;
     ptr->buffer[LenL]=0;
     ptr->buffer[LenH]=0;
@@ -85,77 +89,8 @@ uint8_t get_command(Command_reader* ptr)
     return ptr->buffer[CC];
 }
 
-extern TIM_HandleTypeDef htim1;
-extern Tone_pin* tone_pins;
 extern Command_writer writer;
-extern Tester tester;
-//TODO Add release config
-//TODO Sometime cleanup code
 //TODO ASK if main() is busy, is it good for usb
-
-const int16_t sine_ampl = (1U << (sizeof(sine_ampl) * 8 - 1)) - 1;
-const uint16_t arr_size = 1024; /*!<for optimization purposes*/
-int16_t f_dots[1024];
-
-void tone_pin_ctor(Tone_pin* ptr, volatile uint32_t* CCR)
-{
-    for (int i = 0; i < arr_size; ++i)
-        f_dots[i] = (int16_t)(sine_ampl / 2.0 - sine_ampl / 2.0 * sin(i * 2 * M_PI / arr_size));
-    ptr->f_dots = f_dots;
-    ptr->arr_size = arr_size;
-    ptr->volume = 0;
-    memset((void*)ptr->dx, 0, sizeof(ptr->dx));
-    memset((void*)ptr->curr, 0, sizeof(ptr->curr));
-    ptr->duty_cycle = CCR;//TODO Test this
-}
-
-void make_tone(Tone_pin* tone_pin)
-{
-    if (tone_pin->volume != 0)
-        for (uint8_t i = 0; i < (uint8_t)sizeof_arr(tone_pin->dx); ++i)
-        {
-            if (i == 0)
-                *tone_pin->duty_cycle = (uint32_t)(tone_pin->f_dots[tone_pin->curr[i] >> 8]) * COUNTER_PERIOD / sine_ampl / sizeof_arr(tone_pin->dx);
-            else
-                *tone_pin->duty_cycle += (uint32_t)(tone_pin->f_dots[tone_pin->curr[i] >> 8]) * COUNTER_PERIOD / sine_ampl / sizeof_arr(tone_pin->dx);
-            tone_pin->curr[i] += tone_pin->dx[i];
-            if (tone_pin->curr[i] >= arr_size << 8)
-            {
-                tone_pin->curr[i] -= arr_size << 8;
-            }
-        }
-    *tone_pin->duty_cycle = (*tone_pin->duty_cycle * tone_pin->volume) >> 16;
-}
-
-void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n)
-{
-    volatile uint32_t wait;///volatile need to shut up compiler warning about "infinit" loop below
-    uint32_t start_tick = HAL_GetTick();
-    for (int i = 0; i < n; ++i)
-    {
-        pin->dx[0] = freq_to_dx(pin, notes[i]);
-        wait = 1000 / durations[i];
-        while ((HAL_GetTick() - start_tick) < wait)
-        {
-        }
-        start_tick += wait;
-    }
-    pin->dx[0] = 0;
-}
-
-
-void Tester_ctor(Tester* ptr)
-{
-    ptr->states = Idle;
-    memset((void*)ptr->freq, 0, sizeof(ptr->freq));
-    ptr->react_time = 0;
-    ptr->react_time_size = 0;
-    ptr->button.start_time = 0;
-    ptr->button.stop_time = 0;
-    ptr->port=0;
-    ptr->mseconds_to_max=2000;
-    ptr->max_volume=6000;
-}
 
 #ifdef NDEBUG
 #define usb_assert(cond) ((void)0)
@@ -166,6 +101,13 @@ void Tester_ctor(Tester* ptr)
     return;                         \
 }}while(false)
 #endif
+
+extern TIM_HandleTypeDef htim1;
+extern volatile Measures currMeasure;
+extern SkinConductionTester skinTester;
+extern Tone_pin* tone_pins;
+extern Button button;
+extern HearingTester hearingTester;
 
 void assertion_fail(const char*, uint8_t cmd);
 
@@ -180,32 +122,40 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
             const uint8_t cmd = get_command(&reader);
             if (cmd == 0x1)
             {
-                append_var_16(&writer, 1);///protocol version
-                append_var_16(&writer, 1);/// program version
-                const char* VER = "tone";
-//                const char* VER = "Sound tester";
-                for (const char* c = VER; c <= VER + strlen(VER); ++c)
+                append_var_16(&writer, PROTOCOL_VERSION);
+                append_var_16(&writer, PROGRAM_VERSION);
+                for (const char* c = FIRMWARE_VERSION; c <= FIRMWARE_VERSION + strlen(FIRMWARE_VERSION); ++c)
                     append_var_8(&writer, *c);
                 prepare_for_sending(&writer, cmd, true);
             }
             else if (cmd == 0x4)
             {
-                tester.states=Idle;
-                tone_pins[tester.port].volume=0;
-                for (volatile uint32_t* c = tone_pins[tester.port].dx; c < tone_pins[tester.port].dx + sizeof_arr(tone_pins[tester.port].dx); ++c)
-                    *c = 0;
-                tester.button.start_time=0;
-                tester.button.stop_time=0;
-                tester.react_time=0;
-                tester.react_time_size=0;
+                if(currMeasure==Hearing)
+                {
+                    currMeasure = None;
+                    hearingTester.states = Idle;
+                    tone_pins[hearingTester.port].volume = 0;
+                    for (uint32_t volatile* c = tone_pins[hearingTester.port].dx; c < tone_pins[hearingTester.port].dx + sizeof_arr(tone_pins[hearingTester.port].dx); ++c)
+                        *c = 0;
+                    button.start_time=0;
+                    button.stop_time=0;
+                    hearingTester.react_time=0;
+                    hearingTester.react_time_size=0;
 
-                ///next line not necessary but maybe needed in some cases
-//                tester.ampl=0;
+                    ///next line not necessary but maybe needed in some cases
+//                hearingTester.ampl=0;
+                }
+                else if (currMeasure == SkinConduction)
+                {
+                    SkinConductionStop(&skinTester);
+                }
+                currMeasure = None;
                 prepare_for_sending(&writer, cmd, true);
             }
             else if (cmd == 0x10)
             {
-                usb_assert(tester.states == Idle);
+                usb_assert(currMeasure == None);
+                usb_assert(hearingTester.states == Idle);
                 uint8_t port;
                 get_param_8(&reader, &port);
                 usb_assert(port < 2);
@@ -221,57 +171,81 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                     *c = freq_to_dx(&tone_pins[port], freq);
                 }
                 tone_pins[port].volume=volume;
+                currMeasure=Hearing;
                 prepare_for_sending(&writer, cmd, true);
             }
             else if (cmd == 0x11)
             {
-                usb_assert(tester.states == Idle);
-                get_param_8(&reader, (uint8_t*) &tester.port);
-                usb_assert(tester.port < 2);
-                tone_pins[tester.port].volume=0;
-                get_param_16(&reader, (uint16_t*) &tester.max_volume);
-                get_param_16(&reader, (uint16_t*) &tester.mseconds_to_max);
-                for (volatile uint16_t* freq = tester.freq; freq < tester.freq + sizeof_arr(tester.freq); ++freq)
+                usb_assert(currMeasure == None);
+//                usb_assert(hearingTester.states == Idle);///Теоретически не нужно проверять, но на всякий случай пусть будет
+                get_param_8(&reader, (uint8_t*) &hearingTester.port);
+                usb_assert(hearingTester.port < 2);
+                tone_pins[hearingTester.port].volume=0;
+                usb_assert(get_param_16(&reader, (uint16_t*) &hearingTester.max_volume));
+                usb_assert(get_param_16(&reader, (uint16_t*) &hearingTester.mseconds_to_max));
+                usb_assert(hearingTester.mseconds_to_max > 0);
+                for (volatile uint16_t* freq = hearingTester.freq; freq < hearingTester.freq + sizeof_arr(hearingTester.freq); ++freq)
                 {
                     if (!get_param_16(&reader, (uint16_t*) freq))
                         *freq = 0;
                     usb_assert(*freq <= 3400);
                 }
-                for (size_t i = 0; i < sizeof_arr(tester.freq); ++i)
-                    tone_pins[tester.port].dx[i] = freq_to_dx(&tone_pins[tester.port], tester.freq[i]);
-                tester.states = Measuring_freq;
-                tester.button.start_time = HAL_GetTick();
+                for (size_t i = 0; i < sizeof_arr(hearingTester.freq); ++i)
+                    tone_pins[hearingTester.port].dx[i] = freq_to_dx(&tone_pins[hearingTester.port], hearingTester.freq[i]);
+                hearingTester.states = Measuring_freq;
+                currMeasure = Hearing;
+                HearingStart(&hearingTester);
+                button.start_time = HAL_GetTick();
                 prepare_for_sending(&writer, cmd, true);
             }
-            else if (cmd == 0x12)
+            else if (cmd == 0x12)//TODO ASK
             {
-                usb_assert(tester.states != Idle);
-                if (tester.states == Measuring_freq)
+                usb_assert(currMeasure == Hearing);
+                usb_assert(hearingTester.states != Idle);
+                if (hearingTester.states == Measuring_freq)
                 {
                     append_var_8(&writer, Measuring_freq);
                     append_var_16(&writer, 0);
                     append_var_16(&writer, 0);
                     append_var_16(&writer, 0);
                 }
-                else if (tester.states == Measuring_reaction)
+                else if (hearingTester.states == Measuring_reaction)
                 {
                     append_var_8(&writer, Measuring_reaction);
                     append_var_16(&writer, 0);
                     append_var_16(&writer, 0);
                     append_var_16(&writer, 0);
                 }
-                else if(tester.states == Sending)
+                else if(hearingTester.states == Sending)
                 {
+                    HearingStop(&hearingTester);
                     append_var_8(&writer, Sending);
-                    append_var_16(&writer, tester.react_time);
-                    append_var_16(&writer, tester.elapsed_time);
-                    append_var_16(&writer, tester.ampl);
-                    tester.react_time=0;
-//                    tester.ampl=0;
-                    tester.states = Idle;
+                    append_var_16(&writer, hearingTester.react_time);
+                    append_var_16(&writer, hearingTester.elapsed_time);
+                    append_var_16(&writer, hearingTester.ampl);
+                    hearingTester.react_time=0;
+//                    hearingTester.ampl=0;
+                    hearingTester.states = Idle;//TODO Remove this
+                    currMeasure = None;
                 }
                 prepare_for_sending(&writer, cmd, true);
             }
+            else if(cmd == 0x18)
+            {
+                usb_assert(currMeasure == None);
+//                usb_assert(IsPracue()==false);///Теоретически не нужно проверять, но на всякий случай пусть будет
+
+                get_param_16(&reader, &skinTester.channel[0].amplitude);
+                get_param_16(&reader, (uint16_t*) &skinTester.burstPeriod);
+                get_param_16(&reader, (uint16_t*) &skinTester.numberOfBursts);
+                get_param_16(&reader, (uint16_t*) &skinTester.numberOfMeandrs);
+                get_param_16(&reader, &skinTester.maxReactionTime);
+
+                SkinConductionStart(&skinTester);
+                currMeasure = SkinConduction;
+//                prepare_for_sending(&writer, cmd, true);
+            }
+//            else if (cmd == 0x20)//TODO ASK Why?
             else
                 assertion_fail("Command not recognised", cmd);
         }
@@ -280,9 +254,26 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
     }
 }
 
+void SkinConductionSendResultToPC(SkinConductionTester* skinTester)
+{
+    if (skinTester->reactionTime == 0)
+    {
+        append_var_8(&writer, false);
+        append_var_16(&writer, 0);
+        append_var_16(&writer, 0);
+    }
+    else
+    {
+        append_var_8(&writer, true);
+        append_var_16(&writer, skinTester->reactionTime);
+        append_var_16(&writer, *skinTester->channel[0].pin);
+    }
+    prepare_for_sending(&writer, 0x18, true);
+}
+
 void assertion_fail(const char* cond, const uint8_t cmd)
 {
-    writer.length=3;///clean writer if I already have appended something; this line replaces Command_writer_ctor() call for optimisation purposes
+    writer.length=3;///clean writer if I already have appended something; this line replaces Command_writer_ctor() call
     size_t length = strlen(cond)+3+1+1>=writer.BUF_SIZE?writer.BUF_SIZE-3-1-1 : strlen(cond);///3 - CC, LenL, LenH; 1 - SS (checksum byte); 1 - size of '\0'
     for (const char* c = cond; c < cond + length; ++c)
         append_var_8(&writer, *c);
@@ -290,12 +281,4 @@ void assertion_fail(const char* cond, const uint8_t cmd)
     prepare_for_sending(&writer, cmd, false);
 }
 
-/// \param us - time in microseconds
-void delay_us(int us)
-{
-    if (us <= 0)//TODO Test for timer microseconds
-        return;
-    __HAL_TIM_SET_COUNTER(&htim1, 0);
-    while (__HAL_TIM_GET_COUNTER(&htim1) < us)
-    {}
-}
+
