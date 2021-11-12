@@ -113,7 +113,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
     currMeasure = None;
-//    ConstructDiode(&skinTester);
+    ConstructDiode(&skinTester);
     HAL_Delay(300);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
     HAL_Delay(400);

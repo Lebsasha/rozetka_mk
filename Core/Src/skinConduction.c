@@ -83,7 +83,10 @@ void SkinConductionEnd(SkinConductionTester* skinTester)
  	HAL_TIM_IC_Stop(&htim4, TIM_CHANNEL_1);
 	HAL_TIM_Base_Stop_IT(&htim4);
 //	time = HAL_TIM_ReadCapturedValue(&htim4, TIM_CHANNEL_1);
-    skinTester->reactionTime = button.stop_time-button.start_time;
+    if (button.stop_time != 1)
+        skinTester->reactionTime = button.stop_time - button.start_time;
+    else
+        skinTester->reactionTime = 0;
     __HAL_TIM_SET_COUNTER(&htim4, 0);
 	__HAL_TIM_SET_COUNTER(&htim3, 0);
 	__HAL_TIM_SET_COUNTER(&htim2, 0);

@@ -301,18 +301,24 @@ void TIM4_IRQHandler(void)
             button.stop_time = HAL_GetTick();
         }
 
+    static uint16_t measuredTime=0;
+    measuredTime = HAL_GetTick() - button.start_time;
+
     if (currMeasure == Hearing)
     {
-        static uint16_t x=0;
         if (hearingTester.states == Measuring_freq && button.stop_time == 0)
         {
-            x = HAL_GetTick() - button.start_time;
-            tone_pins[hearingTester.port].volume = hearingTester.max_volume * x / hearingTester.mseconds_to_max;
-            if (x >= hearingTester.mseconds_to_max)
+            tone_pins[hearingTester.port].volume = hearingTester.max_volume * measuredTime / hearingTester.mseconds_to_max;
+            if (measuredTime >= hearingTester.mseconds_to_max)
             {
                 button.stop_time=1;
             }
         }
+    }
+    if (currMeasure== SkinConduction)
+    {
+        if(measuredTime > skinTester.maxReactionTime)
+            button.stop_time=1;
     }
     __HAL_TIM_CLEAR_IT(&htim4, TIM_IT_UPDATE);
     return;
