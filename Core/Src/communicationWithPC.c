@@ -269,6 +269,7 @@ void SkinConductionSendResultToPC(SkinConductionTester* skinTester)
         append_var_16(&writer, *skinTester->channel[0].pin);
     }
     prepare_for_sending(&writer, 0x18, true);
+    currMeasure = None;
 }
 
 void assertion_fail(const char* cond, const uint8_t cmd)
