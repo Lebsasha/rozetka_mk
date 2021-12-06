@@ -155,7 +155,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
             else if (cmd == 0x10)
             {
                 usb_assert(currMeasure == None);
-                usb_assert(hearingTester.states == Idle);
+//                usb_assert(hearingTester.states == Idle);
                 uint8_t port;
                 get_param_8(&reader, &port);
                 usb_assert(port < 2);
@@ -171,7 +171,6 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                     *c = freq_to_dx(&tone_pins[port], freq);
                 }
                 tone_pins[port].volume=volume;
-                currMeasure=Hearing;
                 prepare_for_sending(&writer, cmd, true);
             }
             else if (cmd == 0x11)
@@ -237,8 +236,8 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
 
                 get_param_16(&reader, &skinTester.channel[0].amplitude);
                 get_param_16(&reader, (uint16_t*) &skinTester.burstPeriod);
-                get_param_16(&reader, (uint16_t*) &skinTester.numberOfBursts);
-                get_param_16(&reader, (uint16_t*) &skinTester.numberOfMeandrs);
+                get_param_16(&reader, &skinTester.numberOfBursts);
+                get_param_16(&reader, &skinTester.numberOfMeandrs);
                 get_param_16(&reader, &skinTester.maxReactionTime);
 
                 SkinConductionStart(&skinTester);
@@ -249,8 +248,8 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
             else
                 assertion_fail("Command not recognised", cmd);
         }
-        if (command[0] == '0')
-            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+//        if (command[0] == '0')
+//            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
     }
 }
 

@@ -290,7 +290,7 @@ void TIM4_IRQHandler(void)
 
     if (currMeasure == Hearing)
     {
-        if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_5) == GPIO_PIN_RESET && button.stop_time == 0 && button.start_time != 0)//TODO
+        if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_6) == GPIO_PIN_RESET && button.stop_time == 0 && button.start_time != 0)//TODO
         {
             button.stop_time = HAL_GetTick();//TODO Replace with InputCapture
         }
@@ -315,7 +315,7 @@ void TIM4_IRQHandler(void)
             }
         }
     }
-    if (currMeasure== SkinConduction)
+    if (currMeasure == SkinConduction)
     {
         if(measuredTime > skinTester.maxReactionTime)
             button.stop_time=1;

@@ -21,12 +21,13 @@ enum
  * 0x10 u8|port u16|volume u16[]|freqs ->
  * 0x11 u8|port u16|MAX_VOLUME u16|MSECONDS_TO_MAX u16[]|freqs ->
  * 0x12 -> u8|state *u16|react_time *u16|el_time *u16|ampl
+ * 0x18 u16|amplitude, u16|burstPeriod, u16|numberOfBursts, u16|numberOfMeandrs, u16|maxReactionTime -> u16|reactionTime u16|amplitudeInPercent
  * @note react_time in ms
  * @note state can be:
  *      0 - MeasuringHearing
  *      1 - MeasuringReactionTime
  *      2 - MeasureEnd
- * @note "*" near parameter means that these params are sent only if state is MeasureEnd //TODO ASK if it good
+ * @note "*" near parameter means that these params are sent only if state is MeasureEnd
  *
  * port mean:
  * 0 - A9 pin, left channel
@@ -36,7 +37,7 @@ enum
  * If error in command CC:
  * CC ... -> 0x80(128)+CC u8[]|"string with \0" ///TODO Доделать
  */
-uint8_t Commands[]={0x1, 0x4, 0x10, 0x11, 0x12};
+uint8_t Commands[]={0x1, 0x4, 0x10, 0x11, 0x12, 0x18};
 
 static const uint8_t SS_OFFSET = 42;
 static const size_t BUF_SIZE = 64;///USB packet size
@@ -58,6 +59,7 @@ public:
     }
 //TODO Test 0x4
 //TODO Write release conf with Tests
+//error: currMeasure==None;
     void write(ostream& dev)
     {
         dev.write(buffer, (streamsize) length);
@@ -167,25 +169,40 @@ int main (int , char** )
     {
 //        comp_command[sizeof(comp_command) - 1 - 1] = (char) (rand() % 4 + '0');
 //        system(comp_command);
-        const int cmd = 0x11;
+        const int cmd = 0x18;
         writer.set_cmd(cmd);
-        writer.append_var<uint8_t>(1);/// Port
+        if (cmd == 0x10 || cmd == 0x11)
+            writer.append_var<uint8_t>(1);/// Port
         if (cmd == 0x10)
-            writer.append_var<uint16_t>(5000);///Curr volume
+            writer.append_var<uint16_t>(1000);///Curr volume
         if (cmd == 0x11)
         {
             writer.append_var<uint16_t>(200);///max_vol
             writer.append_var<uint16_t>(5000);///msecs
         }
-        writer.append_var<uint16_t>((NOTE_C5));
-//        writer.append_var<uint16_t>(NOTE_E5);
-//        writer.append_var<uint16_t>(NOTE_G5);
+        if (cmd == 0x18)
+        {
+            writer.append_var<uint16_t>(100);
+            writer.append_var<uint16_t>(10);
+            writer.append_var<uint16_t>(10);
+            writer.append_var<uint16_t>(10);
+            writer.append_var<uint16_t>(2000);
+        }
+        if (cmd == 0x10 || cmd == 0x11)
+        {
+            writer.append_var<uint16_t>((NOTE_C5));
+//            writer.append_var<uint16_t>(NOTE_E5);
+//            writer.append_var<uint16_t>(NOTE_G5);
+        }
         writer.prepare_for_sending();
         writer.write(dev);
         reader.read(dev_read);
         if (!reader.is_error())
         {
-            assert(reader.is_empty());
+            if (cmd == 0x10 || cmd == 0x11)
+                assert(reader.is_empty());
+            if (cmd == 0x10)
+            {}
             if (cmd == 0x11)
             {
                 uint8_t state;
@@ -203,6 +220,14 @@ int main (int , char** )
                 cout<<temp.str();
                 stat<<temp.str();
             }
+            if (cmd == 0x18)
+            {
+                uint16_t reactionTime = reader.get_param<uint16_t>();
+                uint16_t ampl = reader.get_param<uint16_t>();
+                ostringstream temp;
+                temp<<i<<", "<<reactionTime<<", "<<ampl<<endl;
+                cout << reactionTime << " " << ampl << endl;
+            }
         }
         else
         {
@@ -219,3 +244,28 @@ int main (int , char** )
 
     cout<<"end"<<endl;
 }
+
+
+
+//    while (true)
+//    {
+//        int i = 4;
+////        system("read dummy");
+//        cin>>i;
+//        if (i == 0)
+//        {
+//            dev.close();
+//            dev_read.close();
+//        }
+//        else if (i == 1)
+//        r
+//            dev.open("/dev/ttyACM0");
+//            dev_read.open("/dev/ttyACM0");
+//        }
+//        else
+//        {
+//            dev.close();
+//            dev_read.close();
+//            exit(0);
+//        }
+//    }

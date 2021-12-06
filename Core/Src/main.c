@@ -126,6 +126,8 @@ int main(void)
 #endif
 
     /// These lines is ctor for tone_pins
+    htim1.Instance->CCR3=0;//TODO Изменить после того, как поставим фильтр
+    htim1.Instance->CCR2=0;
     Tone_pin tone_pins_init[2];
     tone_pin_ctor(&tone_pins_init[0], &(htim1.Instance->CCR3));
     tone_pins_init[0].dx[0]=freq_to_dx(&tone_pins_init[0], NOTE_A4);//A4 == 440 Hz
@@ -144,7 +146,8 @@ int main(void)
     uint16_t notes_1[] = {NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4};
     uint8_t durations_1[] = {4, 8, 8, 4, 4, 4, 4, 4};
     uint16_t prev_volume;
-
+    srand(htim1.Instance->CNT);//Over timer
+    uint16_t rand_delay;
 #ifdef DEBUG
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 0);//show that initialisation finished
 #endif
@@ -167,7 +170,10 @@ int main(void)
           tone_pins[hearingTester.port].volume = 0;
           if (hearingTester.react_time_size < 2)
           {
-              HAL_Delay(600);
+//              do
+              { rand_delay = rand() % 1000 + 800; }
+//              while (rand_delay < 400);
+              HAL_Delay(rand_delay);//TODO Replace
               ++hearingTester.react_time_size;
               tone_pins[hearingTester.port].volume = prev_volume;
               button.start_time = HAL_GetTick();
@@ -195,8 +201,7 @@ int main(void)
                   hearingTester.ampl = hearingTester.max_volume * hearingTester.elapsed_time / hearingTester.mseconds_to_max;///This is needed for calculating volume for measuring react_time
                   tone_pins[hearingTester.port].volume = 0;
 
-                  HAL_Delay(300);
-                  HAL_Delay(400);//TODO Make rand
+                  HAL_Delay(rand()%2000+800);
                   hearingTester.states = Measuring_reaction;
                   tone_pins[hearingTester.port].volume = 4 * hearingTester.ampl;//TODO 4 to parameter
                   button.start_time=HAL_GetTick();

@@ -8,15 +8,15 @@
 typedef struct SkinConductionTester
 {
 	void (*nextState) ();
-	uint32_t numberOfMeandrs;
+	uint16_t numberOfMeandrs;
 	volatile uint32_t currentMeandr;
 	uint32_t meandrPeriod;
 	uint32_t pwmPeriod;
 
-	uint32_t numberOfBursts;
+	uint16_t numberOfBursts;
 	volatile uint32_t currentBurst;
 	uint32_t burstActive;
-	uint32_t burstPeriod;
+	volatile uint16_t burstPeriod;
 
 	uint32_t numberOfPulses;
 	uint32_t currentPulse;
