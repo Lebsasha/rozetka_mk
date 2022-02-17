@@ -6,11 +6,11 @@
 #include <stdbool.h>
 #include "main.h"
 
-#ifndef DEBUG
-#define DEBUG
-//Inform that IDE does not define debug
-#warning DEBUG defined manually
-#endif
+//#ifndef DEBUG
+//#define DEBUG
+// /// Inform that IDE does not define "DEBUG"
+//#warning DEBUG defined manually
+//#endif
 
 #define sizeof_arr(arr) (sizeof(arr)/sizeof((arr)[0]))
 #define static_access(type) ((type*)NULL)
@@ -23,13 +23,26 @@ typedef struct Button
 {
     volatile uint32_t start_time;
     volatile uint32_t stop_time;
+    volatile enum ButtonStates {WaitingForPress, Pressed, Timeout, ButtonIdle} state;
+    GPIO_TypeDef* GPIOx;
+    uint16_t pin;
 }Button;
-void Button_ctor(Button* button);
+void Button_ctor(Button* button, GPIO_TypeDef* GPIOx, uint16_t pin);
+void ButtonStart(Button* button);
+void ButtonStop(Button* button);
 
 typedef enum Measures
 {
     None, Hearing, SkinConduction
 }Measures;
+
+typedef struct RandInitializer
+{
+    bool isInitialised;
+}RandInitializer;
+
+void RandInitializer_ctor(RandInitializer* randInitializer);
+void InitRand(RandInitializer* randInitializer);
 
 void my_delay(int us);
 

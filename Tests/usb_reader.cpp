@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cassert>
 #include <sstream>
+#include <thread>
 #include "../Core/Inc/notes.h"
 
 using namespace std;
@@ -21,7 +22,7 @@ enum
  * 0x10 u8|port u16|volume u16[]|freqs ->
  * 0x11 u8|port u16|MAX_VOLUME u16|MSECONDS_TO_MAX u16[]|freqs ->
  * 0x12 -> u8|state *u16|react_time *u16|el_time *u16|ampl
- * 0x18 u16|amplitude, u16|burstPeriod, u16|numberOfBursts, u16|numberOfMeandrs, u16|maxReactionTime -> u16|reactionTime u16|amplitudeInPercent
+ * 0x18 u16|amplitude, u16|burstPeriod, u16|numberOfBursts, u16|numberOfMeandrs, u16|maxReactionTime -> u8|ifReacted u16|reactionTime u16|amplitudeInPercent
  * @note react_time in ms
  * @note state can be:
  *      0 - MeasuringHearing
@@ -40,7 +41,7 @@ enum
 uint8_t Commands[]={0x1, 0x4, 0x10, 0x11, 0x12, 0x18};
 
 static const uint8_t SS_OFFSET = 42;
-static const size_t BUF_SIZE = 64;///USB packet size
+static const size_t BUF_SIZE = 128;///USB packet size
 
 class Command_writer
 {
@@ -57,7 +58,7 @@ public:
         *reinterpret_cast<T*>(buffer + length) = var;
         length += sizeof(var);
     }
-//TODO Test 0x4
+//TODO Test 0x4 (especially with 0x18)
 //TODO Write release conf with Tests
 //error: currMeasure==None;
     void write(ostream& dev)
@@ -151,11 +152,10 @@ public:
 
 int main (int , char** )
 {
-    const char* path="react_time.csv";
+    const char* path="stats.csv"; //TODO Rename file
     ofstream stat(path, ios_base::app|ios_base::out);
     Command_writer writer;
     Command_reader reader;
-    char comp_command[]="sleep x";///x will be replaced with number
     ofstream dev("/dev/ttyACM0");
     ifstream dev_read("/dev/ttyACM0");
     if(!dev || !dev_read)
@@ -164,35 +164,36 @@ int main (int , char** )
         return 1;
     }
     cout<<"begin "<<std::flush;
-//    system("sleep 3");///TODO Tricky error while testing: mk don't turn states correctly, but doesn't hang
-    for(size_t i =0;i<2;++i)
+//    system("sleep 3");///TODO Tricky error while testing: mk doesn't turn states correctly, but doesn't hang
+//    const uint8_t cmds[] = {0x11, 0x18, 0x11, 0x18, 0x18, 0x11, 0x11, 0x18};
+//    for(const uint8_t* p = cmds; p < cmds + sizeof(cmds); ++p)
+    for(size_t i =0;i<4;++i)
     {
-//        comp_command[sizeof(comp_command) - 1 - 1] = (char) (rand() % 4 + '0');
-//        system(comp_command);
-        const int cmd = 0x18;
+        this_thread::sleep_for(1s);
+        const int cmd = i==0 ? 0x11 : i==1 ? 0x18 : i==2 ? 0x18 : /**i == 3*/0x18;
         writer.set_cmd(cmd);
         if (cmd == 0x10 || cmd == 0x11)
             writer.append_var<uint8_t>(1);/// Port
         if (cmd == 0x10)
             writer.append_var<uint16_t>(1000);///Curr volume
-        if (cmd == 0x11)
+        else if (cmd == 0x11)
         {
             writer.append_var<uint16_t>(200);///max_vol
-            writer.append_var<uint16_t>(5000);///msecs
-        }
-        if (cmd == 0x18)
-        {
-            writer.append_var<uint16_t>(100);
-            writer.append_var<uint16_t>(10);
-            writer.append_var<uint16_t>(10);
-            writer.append_var<uint16_t>(10);
-            writer.append_var<uint16_t>(2000);
+            writer.append_var<uint16_t>(5000);///msecs to max volume (max reaction time)
         }
         if (cmd == 0x10 || cmd == 0x11)
         {
-            writer.append_var<uint16_t>((NOTE_C5));
+            writer.append_var<uint16_t>((NOTE_C5));/// array of 1-3 notes
 //            writer.append_var<uint16_t>(NOTE_E5);
 //            writer.append_var<uint16_t>(NOTE_G5);
+        }
+        if (cmd == 0x18)
+        {
+            writer.append_var<uint16_t>(100);/// amplitude
+            writer.append_var<uint16_t>(10);/// burst period
+            writer.append_var<uint16_t>(10);/// number of bursts
+            writer.append_var<uint16_t>(10);/// number of meanders
+            writer.append_var<uint16_t>(2000);/// max reaction time
         }
         writer.prepare_for_sending();
         writer.write(dev);
@@ -225,8 +226,9 @@ int main (int , char** )
                 uint16_t reactionTime = reader.get_param<uint16_t>();
                 uint16_t ampl = reader.get_param<uint16_t>();
                 ostringstream temp;
-                temp<<i<<", "<<reactionTime<<", "<<ampl<<endl;
-                cout << reactionTime << " " << ampl << endl;
+                temp<<i<<", "<<reactionTime<<", "<<ampl<<", 0x18"<<endl;
+                cout << temp.str();
+                stat << temp.str();
             }
         }
         else

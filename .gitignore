@@ -55,7 +55,7 @@ Debug/first_mk.bin
 
 Debug/first_mk.list
 # CLion build dir
-cmake-build-debug
+cmake-build-*
 # CubeIDe dir
 Debug/
 /core

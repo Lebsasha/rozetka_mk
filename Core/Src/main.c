@@ -68,11 +68,12 @@ static void MX_TIM2_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 volatile Measures currMeasure;
+Button button;
+Command_writer writer;
 SkinConductionTester skinTester;
 Tone_pin* tone_pins; /// This is the array of pins that make tones. The first pin is A10 (equals right speaker) and the second is A9 (equals left speaker)
-Command_writer writer;
-Button button;
 HearingTester hearingTester;
+RandInitializer randInitializer;
 
 void send_command(Command_writer* ptr);
 /* USER CODE END 0 */
@@ -113,6 +114,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
     currMeasure = None;
+    RandInitializer_ctor(&randInitializer);
     ConstructDiode(&skinTester);
     HAL_Delay(300);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
@@ -136,24 +138,19 @@ int main(void)
 
     tone_pins=tone_pins_init;
 
-    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);///start sound at A10
-    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);///start sound at A9
-    HAL_TIM_Base_Start_IT(&htim1);
-    HAL_TIM_Base_Start_IT(&htim4);
-    Button_ctor(&button);
+    Button_ctor(&button, GPIOB, GPIO_PIN_6);
     Command_writer_ctor(&writer);
     HearingTesterCtor(&hearingTester);
     uint16_t notes_1[] = {NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4};
     uint8_t durations_1[] = {4, 8, 8, 4, 4, 4, 4, 4};
-    uint16_t prev_volume;
-    srand(htim1.Instance->CNT);//Over timer
-    uint16_t rand_delay;
+
 #ifdef DEBUG
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 0);//show that initialisation finished
 #endif
-//    uint8_t cmd[]={0x11, 0x07, 0x00, 0x01,   0xc8, 0x00, 0x88, 0x13,   0x0b, 0x02, 0xa2};//0x93, 0x02,   0x10, 0x03, 0x4e };
-//    uint32_t len= sizeof_arr(cmd);
-//    process_cmd(cmd, &len);
+//    uint8_t cmd_11[]={0x11, 0x07, 0x00, 0x01, 0xc8, 0x00, 0x88, 0x13, 0x0b, 0x02, 0xa2};//0x93, 0x02,   0x10, 0x03, 0x4e };
+//    uint8_t cmd_18[]={0x18, 0x0a, 0x00,   0x64, 0x00, 0x0a, 0x00,   0x0a, 0x00, 0x0a, 0x00,   0xd0, 0x07, 0x8d};
+//    uint32_t len= sizeof_arr(cmd_11);
+//    process_cmd(cmd_11, &len);
 
   /* USER CODE END 2 */
 
@@ -161,70 +158,20 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-//TODO Перепаять кнопку
-
-      if (hearingTester.states == Measuring_reaction && button.stop_time != 0)
+      if (currMeasure == Hearing)
       {
-          hearingTester.react_time += button.stop_time - button.start_time;
-          prev_volume = tone_pins[hearingTester.port].volume;
-          tone_pins[hearingTester.port].volume = 0;
-          if (hearingTester.react_time_size < 2)
-          {
-//              do
-              { rand_delay = rand() % 1000 + 800; }
-//              while (rand_delay < 400);
-              HAL_Delay(rand_delay);//TODO Replace
-              ++hearingTester.react_time_size;
-              tone_pins[hearingTester.port].volume = prev_volume;
-              button.start_time = HAL_GetTick();
-              button.stop_time = 0;
-          }
-          else
-          {
-              hearingTester.react_time /= 3;
-              button.start_time = 0;
-              button.stop_time = 0;
-              hearingTester.react_time_size = 0;
-
-              hearingTester.elapsed_time -= hearingTester.react_time;
-              hearingTester.ampl = hearingTester.max_volume * hearingTester.elapsed_time / hearingTester.mseconds_to_max;
-              hearingTester.states = Sending;
-          }
+          HearingHandle(&hearingTester);
       }
-      if (hearingTester.states == Measuring_freq)
-      {
-          if (button.stop_time != 0)
-          {
-              if (button.stop_time != 1)
-              {
-                  hearingTester.elapsed_time = button.stop_time - button.start_time/* - hearingTester.react_time*/;///- react_time located higher, in Measuring_reaction
-                  hearingTester.ampl = hearingTester.max_volume * hearingTester.elapsed_time / hearingTester.mseconds_to_max;///This is needed for calculating volume for measuring react_time
-                  tone_pins[hearingTester.port].volume = 0;
-
-                  HAL_Delay(rand()%2000+800);
-                  hearingTester.states = Measuring_reaction;
-                  tone_pins[hearingTester.port].volume = 4 * hearingTester.ampl;//TODO 4 to parameter
-                  button.start_time=HAL_GetTick();
-              }
-              else///case elapsed time for sound testing exceed hearingTester.mseconds_to_max
-              {
-                  hearingTester.elapsed_time = 0;
-                  hearingTester.ampl = 0;
-                  tone_pins[hearingTester.port].volume = 0;
-                  hearingTester.states=Sending;
-                  button.start_time = 0;
-              }
-              button.stop_time = 0;
-          }
-      }
-      if (currMeasure == SkinConduction && button.start_time != 0 && button.stop_time != 0)
+      if (currMeasure == SkinConduction && (button.state == Pressed || button.state == Timeout))
       {
           SkinConductionEnd(&skinTester);
       }
-      if (writer.buffer[CC] != 0)
+      if (writer.ifSending)
       {
           send_command(&writer);
       }
+//      if (mock_flag && !writer.ifSending)
+//          mock_func();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -339,11 +286,11 @@ static void MX_TIM1_Init(void)
   {
     Error_Handler();
   }
-  sConfigOC.Pulse = 40000/500;
   if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
   {
     Error_Handler();
   }
+  sConfigOC.Pulse = 40000/500;//TODO Set to zero
   if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
   {
     Error_Handler();
@@ -584,11 +531,13 @@ static void MX_GPIO_Init(void)
 void send_command(Command_writer* ptr)
 {
     while (CDC_Transmit_FS(ptr->buffer, ptr->length) == USBD_BUSY){}
-    ptr->buffer[CC]=0;
     ptr->buffer[LenL]=0;
     ptr->buffer[LenH]=0;
     ptr->length = 1 + 1 + 1;///CC, LenH, LenL
+#ifdef DEBUG
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+#endif
+    ptr->ifSending = false;
 }
 /* USER CODE END 4 */
 

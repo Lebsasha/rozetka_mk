@@ -7,16 +7,17 @@
 #define TONE_FREQ 40000
 #define COUNTER_PERIOD 1800
 #define freq_to_dx(tone_pin_ptr, freq)  (((tone_pin_ptr)->arr_size*(freq)<<8)/TONE_FREQ)
+//TODO Change channels number to 2 or higher
 #define CHANNELS_NUM 1
 
 typedef struct Tone_pin
 {
-    volatile uint32_t* duty_cycle;
-    int16_t* f_dots;
-    uint16_t arr_size;///TODO Maybe inline? Yes, i can define this and change freq_dx and f_dots[arr_size]
+    volatile uint32_t* PWM_register;
+    int16_t* sine_table;
+    uint16_t arr_size;/// const TODO Remove this comment Maybe inline? No, as after inlining this will convert to a magic number
     uint16_t volume;
     volatile uint32_t dx[CHANNELS_NUM];
-    uint32_t curr[CHANNELS_NUM];
+    uint32_t curr_phase[CHANNELS_NUM];
 }Tone_pin;
 
 void tone_pin_ctor(Tone_pin* ptr, volatile uint32_t*);
@@ -35,7 +36,9 @@ typedef struct HearingTester
     volatile HearingStates states;
     volatile uint16_t freq[CHANNELS_NUM];
     volatile uint16_t react_time;
-    volatile uint8_t react_time_size;
+    volatile uint8_t react_surveys_elapsed;
+    uint8_t react_surveys_count; //const
+    uint8_t react_volume_koef; //const
     volatile uint8_t port;
     volatile typeof(static_access(Tone_pin)->volume) ampl;
     volatile uint16_t elapsed_time;
@@ -46,5 +49,6 @@ void HearingTesterCtor(HearingTester* ptr);
 
 void HearingStart(HearingTester* ptr);
 void HearingStop(HearingTester* ptr);
+void HearingHandle(HearingTester* ptr);
 
 #endif

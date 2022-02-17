@@ -256,7 +256,7 @@ void TIM2_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM2_IRQn 0 */
     if (currMeasure == SkinConduction)
-        skinTester.nextState();
+        skinTester.nextState(&skinTester);
     __HAL_TIM_CLEAR_IT(&htim2, TIM_IT_UPDATE);
     return;
   /* USER CODE END TIM2_IRQn 0 */
@@ -288,37 +288,33 @@ void TIM4_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM4_IRQn 0 */
 
-    if (currMeasure == Hearing)
+    if (currMeasure == Hearing || currMeasure == SkinConduction)
     {
-        if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_6) == GPIO_PIN_RESET && button.stop_time == 0 && button.start_time != 0)//TODO
+        if (HAL_GPIO_ReadPin(button.GPIOx, button.pin) == GPIO_PIN_RESET && button.state == WaitingForPress)//TODO
         {
             button.stop_time = HAL_GetTick();//TODO Replace with InputCapture
+            button.state = Pressed;
         }
     }
-    else if (currMeasure == SkinConduction)
-        if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_6) == GPIO_PIN_RESET && button.stop_time == 0 && button.start_time != 0)//TODO
-        {
-            button.stop_time = HAL_GetTick();
-        }
 
     static uint16_t measuredTime=0;
     measuredTime = HAL_GetTick() - button.start_time;
 
     if (currMeasure == Hearing)
     {
-        if (hearingTester.states == Measuring_freq && button.stop_time == 0)
+        if (hearingTester.states == Measuring_freq && button.state == WaitingForPress)
         {
             tone_pins[hearingTester.port].volume = hearingTester.max_volume * measuredTime / hearingTester.mseconds_to_max;
             if (measuredTime >= hearingTester.mseconds_to_max)
             {
-                button.stop_time=1;
+                button.state = Timeout;
             }
         }
     }
     if (currMeasure == SkinConduction)
     {
         if(measuredTime > skinTester.maxReactionTime)
-            button.stop_time=1;
+            button.state = Timeout;
     }
     __HAL_TIM_CLEAR_IT(&htim4, TIM_IT_UPDATE);
     return;

@@ -7,7 +7,7 @@
 
 typedef struct SkinConductionTester
 {
-	void (*nextState) ();
+	void (*nextState) (struct SkinConductionTester*);
 	uint16_t numberOfMeandrs;
 	volatile uint32_t currentMeandr;
 	uint32_t meandrPeriod;
