@@ -233,7 +233,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 get_param_16(&reader, &skinTester.maxReactionTime));
 
 //TODO Даник, напиши здесь проверки на диапазон допустимых значений для параметров, например, как у меня "usb_assert(hearingTester.port < 2);"
-
+                skinTester.numberOfBursts -= 1;
                 SkinConductionStart(&skinTester);
                 currMeasure = SkinConduction;
 //                prepare_for_sending(&writer, cmd, true);
@@ -259,7 +259,7 @@ void SkinConductionSendResultToPC(SkinConductionTester* skinTester)
     {
         append_var_8(&writer, true);
         append_var_16(&writer, skinTester->reactionTime);
-        append_var_16(&writer, *skinTester->channel[0].pin);
+        append_var_16(&writer, skinTester->channel[0].amplitude);
     }
     prepare_for_sending(&writer, 0x18, true);
     currMeasure = None;

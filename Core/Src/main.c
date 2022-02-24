@@ -156,6 +156,10 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+    // Код для дебага режима болевой чувствительности
+//    int len = 14;
+//    uint8_t buf[] = {24, 10, 0, 50, 0, 200, 0, 10, 0, 150, 0, 208, 7, 165};
+ //   process_cmd(buf, &len);
   while (1)
   {
       if (currMeasure == Hearing)

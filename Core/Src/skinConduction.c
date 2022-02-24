@@ -64,13 +64,15 @@ void SkinConductionStart(SkinConductionTester* skinTester)
     skinTester->burstActive = skinTester->numberOfMeandrs;
     htim2.Instance->CCR1 = skinTester->burstPeriod - skinTester->burstActive;
     *(skinTester->channel[0].pin) = skinTester->channel[0].amplitude;
+    htim1.Instance->PSC = 17;
+    htim1.Instance->ARR = 99;
     htim2.Instance->ARR = 9;
     htim2.Instance->PSC = 719;
-    htim3.Instance->ARR = 719;
-    htim3.Instance->PSC = 0;
+    htim3.Instance->ARR = 1;
+    htim3.Instance->PSC = 359;
     HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
     HAL_TIM_Base_Start_IT(&htim2);
-//    HAL_TIM_Base_Start(&htim1);//TODO Даник, скорее всего это не нужно вызывать, поэтому если без этой строки хорошо работает, то удаляй ее
+    //HAL_TIM_Base_Start(&htim1);//TODO Даник, скорее всего это не нужно вызывать, поэтому если без этой строки хорошо работает, то удаляй ее
     HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
     skinTester->nextState = StateWait;
 }
