@@ -16,6 +16,8 @@
 #define static_access(type) ((type*)NULL)
 #define reinterpret_cast(type, expression) ((type)(expression))
 
+typedef struct Pin {GPIO_TypeDef* GPIOx; uint16_t pin;} Pin;
+
 /// If start_time!=0 && stop_time==0 time is measured.
 ///     Then if stop_time!=0 time has been measured
 /// Otherwise (i. e. start_time==0) measuring is off

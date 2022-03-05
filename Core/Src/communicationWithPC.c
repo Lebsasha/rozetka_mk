@@ -4,6 +4,7 @@
 #include "skinConduction.h"
 #include "hearing.h"
 
+const char* const FIRMWARE_VERSION =  "tone + pulse";
 static const uint8_t SS_OFFSET = 42;
 
 void Command_writer_ctor(Command_writer* ptr)
@@ -36,7 +37,10 @@ void prepare_for_sending(Command_writer* ptr, uint8_t command_code, bool if_ok)
         checksum += *c;
     *reinterpret_cast(typeof(checksum)*, ptr->buffer + ptr->length)=checksum;
     ptr->length+=sizeof(checksum);
-    ptr->buffer[CC]= command_code + 128 * !if_ok;/// 128==1<<7
+    if (command_code < 128)
+        ptr->buffer[CC] = command_code + 128 * !if_ok;/// 128 == 1<<7
+    else
+        ptr->buffer[CC] = command_code; /// Error bit already set in command_code
     ptr->ifSending = true;
 }
 
@@ -129,7 +133,8 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
             {
                 append_var_16(&writer, PROTOCOL_VERSION);
                 append_var_16(&writer, PROGRAM_VERSION);
-                for (const char* c = FIRMWARE_VERSION; c <= FIRMWARE_VERSION + strlen(FIRMWARE_VERSION); ++c)
+                const char* const firmware_string_end = FIRMWARE_VERSION + strlen(FIRMWARE_VERSION);
+                for (const char* c = FIRMWARE_VERSION; c <= firmware_string_end; ++c)//with '/0' including
                     append_var_8(&writer, *c);
                 prepare_for_sending(&writer, cmd, true);
             }
@@ -168,7 +173,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                     usb_assert(freq <= 3400);
                     *c = freq_to_dx(&tone_pins[port], freq);
                 }
-                tone_pins[port].volume=volume;
+                tone_pins[port].volume = volume;
                 prepare_for_sending(&writer, cmd, true);
             }
             else if (cmd == 0x11)
@@ -177,7 +182,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
 //                usb_assert(hearingTester.states == Idle);///Теоретически не нужно проверять, но на всякий случай пусть будет
                 get_param_8(&reader, (uint8_t*) &hearingTester.port);
                 usb_assert(hearingTester.port < 2);
-                tone_pins[hearingTester.port].volume=0;//TODO Move to HearingTesterStart()
+//                tone_pins[hearingTester.port].volume=0;//TODO Move to HearingTesterStart()
                 usb_assert(get_param_16(&reader, (uint16_t*) &hearingTester.max_volume));
                 usb_assert(get_param_16(&reader, (uint16_t*) &hearingTester.mseconds_to_max));
                 usb_assert(hearingTester.mseconds_to_max > 0);
@@ -190,6 +195,9 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 for (size_t i = 0; i < sizeof_arr(hearingTester.freq); ++i)
                     tone_pins[hearingTester.port].dx[i] = freq_to_dx(&tone_pins[hearingTester.port], hearingTester.freq[i]);
                 currMeasure = Hearing;
+                hearingTester.algorithm = ConstantTone;
+                hearingTester.tone_step = hearingTester.mseconds_to_max / 10;
+//                hearingTester.max_volume = 0x100;
                 HearingStart(&hearingTester);
                 prepare_for_sending(&writer, cmd, true);
             }
@@ -226,11 +234,11 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
             {
                 usb_assert(currMeasure == None);
 
-                usb_assert(get_param_16(&reader, &skinTester.channel[0].amplitude) &&
-                get_param_16(&reader, (uint16_t*) &skinTester.burstPeriod) &&
-                get_param_16(&reader, &skinTester.numberOfBursts) &&
-                get_param_16(&reader, &skinTester.numberOfMeandrs) &&
-                get_param_16(&reader, &skinTester.maxReactionTime));
+                usb_assert(get_param_16(&reader, &skinTester.channel[0].amplitude));
+                usb_assert(get_param_16(&reader, (uint16_t*) &skinTester.burstPeriod));
+                usb_assert(get_param_16(&reader, &skinTester.numberOfBursts));
+                usb_assert(get_param_16(&reader, &skinTester.numberOfMeandrs));
+                usb_assert(get_param_16(&reader, &skinTester.maxReactionTime));
 
 //TODO Даник, напиши здесь проверки на диапазон допустимых значений для параметров, например, как у меня "usb_assert(hearingTester.port < 2);"
                 skinTester.numberOfBursts -= 1;

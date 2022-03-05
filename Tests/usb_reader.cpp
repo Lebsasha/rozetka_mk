@@ -5,9 +5,11 @@
 #include <cassert>
 #include <sstream>
 #include <thread>
+#include <iomanip>
 #include "../Core/Inc/notes.h"
 
 using namespace std;
+#define sizeof_arr(arr) (sizeof(arr)/sizeof((arr)[0]))
 
 ///@brief this enum points on appropriate indexes in bin. prot.
 ///e. g. buffer[CC], ...
@@ -21,6 +23,8 @@ enum
  * 0x4 ->
  * 0x10 u8|port u16|volume u16[]|freqs ->
  * 0x11 u8|port u16|MAX_VOLUME u16|MSECONDS_TO_MAX u16[]|freqs ->
+ * 0x11 u8|port u8|algorithm u16|max_volume u16|mseconds_to_max *u16|time_step u16[]|freqs ->
+ * @note "*" means that presence of parameter depend on algorithm
  * 0x12 -> u8|state *u16|react_time *u16|el_time *u16|ampl
  * 0x18 u16|amplitude, u16|burstPeriod, u16|numberOfBursts, u16|numberOfMeandrs, u16|maxReactionTime -> u8|ifReacted u16|reactionTime u16|amplitudeInPercent
  * @note react_time in ms
@@ -54,7 +58,7 @@ public:
     template<typename T>
     void append_var(T var)
     {
-        assert(length + sizeof(var) + sizeof(uint8_t) <= BUF_SIZE);///SS
+        assert(length + sizeof(var) + sizeof(uint8_t) <= BUF_SIZE);/// sizeof(uint8_t) is sizeof(SS)
         *reinterpret_cast<T*>(buffer + length) = var;
         length += sizeof(var);
     }
@@ -74,7 +78,6 @@ public:
 
     void prepare_for_sending()
     {
-        assert(buffer[CC]!=0);
         *reinterpret_cast<uint16_t*>(buffer+LenL)=length-3*sizeof(uint8_t);
         uint8_t sum = SS_OFFSET;
         for_each(buffer + CC + 1, buffer + length, [&sum](uint8_t c)
@@ -85,7 +88,8 @@ public:
 
     void set_cmd(const uint8_t cmd)
     {
-        assert(count(Commands, Commands + sizeof(Commands)/sizeof(Commands[0]), cmd)==1);
+        if (count(Commands, Commands + sizeof_arr(Commands), cmd) == 0)
+            cout << "Warning! Setting command 0x" << std::hex << (int) cmd << std::dec << ", that is not know in this program" << std::endl;
         buffer[CC] = (char)cmd;
     }
 };
@@ -164,13 +168,20 @@ int main (int , char** )
         return 1;
     }
     cout<<"begin "<<std::flush;
+    time_t t = std::chrono::system_clock::to_time_t(chrono::system_clock::now());
+    stat << endl << std::put_time(std::localtime(&t), "%y_%m_%d %H:%M:%S") << endl;
 //    system("sleep 3");///TODO Tricky error while testing: mk doesn't turn states correctly, but doesn't hang
-//    const uint8_t cmds[] = {0x11, 0x18, 0x11, 0x18, 0x18, 0x11, 0x11, 0x18};
-//    for(const uint8_t* p = cmds; p < cmds + sizeof(cmds); ++p)
-    for(size_t i =0;i<4;++i)
+//    for(size_t i =0;i<4;++i)
+    const uint8_t long_test[] = {0x11, 0x18, 0x11, 0x18, 0x18, 0x11, 0x11, 0x18};
+    const uint8_t short_test[] = {0x11, 0x18, 0x11};
+//    const auto [cmds, cmds_l] = std::tie(short_test, sizeof_arr(short_test));
+    const uint8_t* cmds = long_test;
+    const size_t cmds_length = sizeof_arr(long_test);
+//TODO Test 0x1
+    for(const uint8_t* cmd_ptr = cmds; cmd_ptr < cmds + cmds_length; ++cmd_ptr)
     {
         this_thread::sleep_for(1s);
-        const int cmd = i==0 ? 0x11 : i==1 ? 0x18 : i==2 ? 0x18 : /**i == 3*/0x18;
+        const int cmd = *cmd_ptr; // i==0 ? 0x11 : i==1 ? 0x18 : i==2 ? 0x18 : /**i == 3*/0x18;
         writer.set_cmd(cmd);
         if (cmd == 0x10 || cmd == 0x11)
             writer.append_var<uint8_t>(1);/// Port
@@ -178,7 +189,7 @@ int main (int , char** )
             writer.append_var<uint16_t>(1000);///Curr volume
         else if (cmd == 0x11)
         {
-            writer.append_var<uint16_t>(200);///max_vol
+            writer.append_var<uint16_t>(2000);///max_vol
             writer.append_var<uint16_t>(5000);///msecs to max volume (max reaction time)
         }
         if (cmd == 0x10 || cmd == 0x11)
@@ -215,9 +226,9 @@ int main (int , char** )
                     reader.read(dev_read);
                     reader.get_param(state);
                     system("sleep 1");
-                } while (state != 2);
+                } while (state != 2); /// 2 - end
                 ostringstream temp;
-                temp << i << ", " << reader.get_param<uint16_t>() << ", "<<reader.get_param<uint16_t>()<<", "<<(int)reader.get_param<uint16_t>()<<endl;
+                temp << cmd_ptr - cmds << ", " << reader.get_param<uint16_t>() << ", "<<reader.get_param<uint16_t>()<<", "<<(int)reader.get_param<uint16_t>()<<endl;
                 cout<<temp.str();
                 stat<<temp.str();
             }
@@ -226,7 +237,7 @@ int main (int , char** )
                 uint16_t reactionTime = reader.get_param<uint16_t>();
                 uint16_t ampl = reader.get_param<uint16_t>();
                 ostringstream temp;
-                temp<<i<<", "<<reactionTime<<", "<<ampl<<", 0x18"<<endl;
+                temp<< cmd_ptr - cmds << ", " << reactionTime << ", " << ampl << ", , 0x18" <<endl;
                 cout << temp.str();
                 stat << temp.str();
             }
@@ -238,8 +249,9 @@ int main (int , char** )
             do
             {
                 reader.get_param(c);
-                cout<<c;
-            } while (c);
+                if (c != '\0')
+                    cout<<c;
+            } while (c != '\0');
             cout<<endl;
         }
     }

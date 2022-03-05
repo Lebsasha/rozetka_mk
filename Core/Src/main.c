@@ -45,6 +45,8 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+SPI_HandleTypeDef hspi1;
+
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim3;
@@ -61,6 +63,7 @@ static void MX_TIM1_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_SPI1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -111,6 +114,7 @@ int main(void)
   MX_TIM4_Init();
   MX_TIM3_Init();
   MX_TIM2_Init();
+  MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
 
     currMeasure = None;
@@ -131,13 +135,15 @@ int main(void)
     htim1.Instance->CCR3=0;//TODO Изменить после того, как поставим фильтр
     htim1.Instance->CCR2=0;
     Tone_pin tone_pins_init[2];
-    tone_pin_ctor(&tone_pins_init[0], &(htim1.Instance->CCR3));
+    Pin CS = {GPIOB, GPIO_PIN_10};
+    tone_pin_ctor(&tone_pins_init[0], &(htim1.Instance->CCR3), 0, CS); ///right
     tone_pins_init[0].dx[0]=freq_to_dx(&tone_pins_init[0], NOTE_A4);//A4 == 440 Hz
-    tone_pin_ctor(&tone_pins_init[1], &(htim1.Instance->CCR2));
+    tone_pin_ctor(&tone_pins_init[1], &(htim1.Instance->CCR2), 1, CS); ///left
     tone_pins_init[1].dx[0]=freq_to_dx(&tone_pins_init[1], NOTE_A4);
 
     tone_pins=tone_pins_init;
 
+    Pin button_pin = {GPIOB, GPIO_PIN_6}; //TODO
     Button_ctor(&button, GPIOB, GPIO_PIN_6);
     Command_writer_ctor(&writer);
     HearingTesterCtor(&hearingTester);
@@ -147,10 +153,15 @@ int main(void)
 #ifdef DEBUG
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 0);//show that initialisation finished
 #endif
+    __HAL_SPI_DISABLE(&hspi1);//TODO remove this line abd test
 //    uint8_t cmd_11[]={0x11, 0x07, 0x00, 0x01, 0xc8, 0x00, 0x88, 0x13, 0x0b, 0x02, 0xa2};//0x93, 0x02,   0x10, 0x03, 0x4e };
+//    uint8_t cmd_11[]={0x11, 0x07, 0x00, 0x01, 0xd0, 0x07, 0x88, 0x13, 0x0b, 0x02, 0xb1};
 //    uint8_t cmd_18[]={0x18, 0x0a, 0x00,   0x64, 0x00, 0x0a, 0x00,   0x0a, 0x00, 0x0a, 0x00,   0xd0, 0x07, 0x8d};
-//    uint32_t len= sizeof_arr(cmd_11);
+//    uint32_t len = sizeof_arr(cmd_11);
 //    process_cmd(cmd_11, &len);
+
+
+//    HAL_SPI_Transmit(&hspi1, cmd_11, len, HAL_MAX_DELAY);
 
   /* USER CODE END 2 */
 
@@ -231,6 +242,44 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief SPI1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_SPI1_Init(void)
+{
+
+  /* USER CODE BEGIN SPI1_Init 0 */
+
+  /* USER CODE END SPI1_Init 0 */
+
+  /* USER CODE BEGIN SPI1_Init 1 */
+
+  /* USER CODE END SPI1_Init 1 */
+  /* SPI1 parameter configuration*/
+  hspi1.Instance = SPI1;
+  hspi1.Init.Mode = SPI_MODE_MASTER;
+  hspi1.Init.Direction = SPI_DIRECTION_2LINES;
+  hspi1.Init.DataSize = SPI_DATASIZE_16BIT;
+  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
+  hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi1.Init.NSS = SPI_NSS_SOFT;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
+  hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
+  hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+  hspi1.Init.CRCPolynomial = 10;
+  if (HAL_SPI_Init(&hspi1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN SPI1_Init 2 */
+
+  /* USER CODE END SPI1_Init 2 */
+
 }
 
 /**
@@ -506,7 +555,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12|GPIO_PIN_13, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10|GPIO_PIN_12|GPIO_PIN_13, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
@@ -515,8 +564,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB12 PB13 */
-  GPIO_InitStruct.Pin = GPIO_PIN_12|GPIO_PIN_13;
+  /*Configure GPIO pins : PB10 PB12 PB13 */
+  GPIO_InitStruct.Pin = GPIO_PIN_10|GPIO_PIN_12|GPIO_PIN_13;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;

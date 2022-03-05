@@ -1,10 +1,12 @@
 #ifndef COMMUNICATIONWITHPC
 #define COMMUNICATIONWITHPC
 
+#include "general.h"
+
 #define PROTOCOL_VERSION ((uint16_t) 1)
 #define PROGRAM_VERSION ((uint16_t) 4)
-#define FIRMWARE_VERSION "tone + pulse"
-#include "general.h"
+extern const char* const FIRMWARE_VERSION;
+//const char* const FIRMWARE_VERSION =  "tone + pulse";
 
 ///@brief this enum points on appropriate indexes in binary protocol
 ///e. g. buffer[CC], ...
