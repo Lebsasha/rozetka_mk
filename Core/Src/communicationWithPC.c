@@ -7,7 +7,7 @@
 const char* const FIRMWARE_VERSION =  "tone + pulse";
 static const uint8_t SS_OFFSET = 42;
 
-void Command_writer_ctor(Command_writer* ptr)
+void CommandWriter_ctor(CommandWriter* ptr)
 {
     ptr->length = 3*sizeof(uint8_t);///CC, LenH, LenL
     ptr->BUF_SIZE = 128;///This constant can be changed if needed, but with appropriate changes with buffer array //TODO
@@ -16,27 +16,34 @@ void Command_writer_ctor(Command_writer* ptr)
     ptr->ifSending = false;
 }
 
-//    template<typename T>
-#define def_append_var(size) void append_var_##size(Command_writer* ptr, uint##size##_t var) \
-{\
-    if(ptr->length + sizeof(var) + sizeof(uint8_t) > ptr->BUF_SIZE)\
-        return;\
-    *reinterpret_cast(uint##size##_t*, ptr->buffer + ptr->length) = var;\
-    ptr->length += sizeof(var);\
-}
-//TODO Rewrite with size and switch
-
-def_append_var(8);
-def_append_var(16);
-
-void prepare_for_sending(Command_writer* ptr, uint8_t command_code, bool if_ok)
+void append_var_8(CommandWriter* ptr, uint8_t var)
 {
-    *reinterpret_cast(uint16_t*, ptr->buffer+LenL)=ptr->length-3*sizeof(uint8_t);
+    if (ptr->length + sizeof(var) + sizeof(uint8_t) > ptr->BUF_SIZE)
+        return;
+    *reinterpret_cast(uint8_t*, ptr->buffer + ptr->length) = var;
+    ptr->length += sizeof(var);
+}
+void append_var_16(CommandWriter* ptr, uint16_t var)
+{
+    if (ptr->length + sizeof(var) + sizeof(uint8_t) > ptr->BUF_SIZE)
+        return;
+    *reinterpret_cast(uint16_t*, ptr->buffer + ptr->length) = var;
+    ptr->length += sizeof(var);
+}
+
+void reset_buffer(CommandWriter* ptr)
+{
+    ptr->length = 3;
+}
+
+void prepare_for_sending(CommandWriter* ptr, uint8_t command_code, bool if_ok)
+{
+    *reinterpret_cast(uint16_t*, ptr->buffer+LenL) = ptr->length - 3*sizeof(uint8_t);
     uint8_t checksum = SS_OFFSET;
     for(uint8_t* c = ptr->buffer + CC + 1; c < ptr->buffer + ptr->length; ++c)
         checksum += *c;
-    *reinterpret_cast(typeof(checksum)*, ptr->buffer + ptr->length)=checksum;
-    ptr->length+=sizeof(checksum);
+    *reinterpret_cast(typeof(checksum)*, ptr->buffer + ptr->length) = checksum;
+    ptr->length += sizeof(checksum);
     if (command_code < 128)
         ptr->buffer[CC] = command_code + 128 * !if_ok;/// 128 == 1<<7
     else
@@ -44,14 +51,14 @@ void prepare_for_sending(Command_writer* ptr, uint8_t command_code, bool if_ok)
     ptr->ifSending = true;
 }
 
-typedef struct Command_reader
+typedef struct CommandReader
 {
     uint8_t* buffer;
     size_t length;
     size_t read_length;
-}Command_reader;
+}CommandReader;
 
-bool Command_reader_ctor(Command_reader* ptr, const uint8_t* cmd, const uint32_t cmd_length)
+bool CommandReader_ctor(CommandReader* ptr, const uint8_t* cmd, const uint32_t cmd_length)
 {
     ptr->buffer = (typeof(ptr->buffer)) (cmd);
     if(cmd_length <= 3)
@@ -70,31 +77,40 @@ bool Command_reader_ctor(Command_reader* ptr, const uint8_t* cmd, const uint32_t
     return true;
 }
 
-bool is_empty(Command_reader* ptr)
+bool is_empty(CommandReader* ptr)
 {
     return ptr->length == 3*sizeof(uint8_t) || ptr->length == 0;
 }
 
-//    template<typename T>
-#define def_get_param(size) bool get_param_##size(Command_reader* ptr, uint##size##_t* param)\
-{\
-    if(param == NULL || ptr->length==0 || (ptr->read_length+sizeof(*param) > ptr->length))\
-         return false;\
-    *param = *reinterpret_cast(uint##size##_t*, ptr->buffer+ptr->read_length);\
-    ptr->read_length+=sizeof(*param);\
-    return true;\
+bool get_param_8(CommandReader* ptr, uint8_t* param)
+{
+    if(param == NULL || ptr->length==0 || (ptr->read_length + sizeof(*param) > ptr->length))
+         return false;
+    *param = *reinterpret_cast(uint8_t*, ptr->buffer + ptr->read_length);
+    ptr->read_length += sizeof(*param);
+    return true;
 }
-///TODO Rewrite this
-def_get_param(8);
-def_get_param(16);
+bool get_param_16(CommandReader* ptr, uint16_t* param)
+{
+    if(param == NULL || ptr->length==0 || (ptr->read_length + sizeof(*param) > ptr->length))
+         return false;
+    *param = *reinterpret_cast(uint16_t*, ptr->buffer + ptr->read_length);
+    ptr->read_length += sizeof(*param);
+    return true;
+}
 
-uint8_t get_command(Command_reader* ptr)
+uint8_t get_command(CommandReader* ptr)
 {
     return ptr->buffer[CC];
 }
 
-extern Command_writer writer;
-//TODO ASK if main() is busy, is it good for usb
+extern CommandWriter writer;
+extern volatile Measures currMeasure;
+extern RandInitializer randInitializer;
+extern Button button;
+extern SkinConductionTester skinTester;
+extern HearingTester hearingTester;
+extern Tone_pin* tone_pins;//TODO Move tone_pins from this file to hearingTester
 
 #ifdef NDEBUG
 #define usb_assert(cond) ((void)0)
@@ -106,25 +122,16 @@ extern Command_writer writer;
 }}while(false)
 #endif
 
-extern volatile Measures currMeasure;
-extern RandInitializer randInitializer;
-extern SkinConductionTester skinTester;
-extern Button button;
-extern HearingTester hearingTester;
-extern Tone_pin* tone_pins;//TODO Move tone_pins from this file to hearingTester
-
 void assertion_fail(const char*, uint8_t cmd);
 
 void process_cmd(const uint8_t* command, const uint32_t* len)
 {
     if (*len)
     {
-        Command_reader reader;
-        if(Command_reader_ctor(&reader, command, *len))
+        CommandReader reader;
+        if(CommandReader_ctor(&reader, command, *len))
         {
-#ifdef DEBUG
-            HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
-#endif
+            write_pin_if_in_debug(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
             if (!randInitializer.isInitialised)
                 InitRand(&randInitializer);
 
@@ -254,7 +261,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
     }
 }
 
-void SkinConductionSendResultToPC(SkinConductionTester* skinTester)
+void SkinConduction_send_result_to_PC(SkinConductionTester* skinTester)
 {
     if (skinTester->reactionTime == 0)
     {
@@ -274,9 +281,9 @@ void SkinConductionSendResultToPC(SkinConductionTester* skinTester)
 
 void assertion_fail(const char* cond, const uint8_t cmd)
 {
-    writer.length=3;///clean writer if I already have appended something; this line replaces Command_writer_ctor() call
-    size_t length = strlen(cond)+3*sizeof(uint8_t)+1*sizeof (uint8_t)+1 >= writer.BUF_SIZE ? writer.BUF_SIZE-3*sizeof(uint8_t)-1*sizeof(uint8_t)-1 : strlen(cond);///3 - CC, LenL, LenH; 1 - SS (checksum byte); 1 - size of '\0'
-    for (const char* c = cond; c < cond + length; ++c)
+    reset_buffer(&writer); ///clean writer if I already have appended something; this line replaces CommandWriter_ctor() call
+    size_t str_length = strlen(cond) + 3*sizeof(uint8_t) + 1*sizeof(uint8_t) + 1 >= writer.BUF_SIZE ? writer.BUF_SIZE - 3*sizeof(uint8_t) - 1*sizeof(uint8_t) - 1 : strlen(cond);///3 - CC, LenL, LenH; 1 - SS (checksum byte); 1 - size of '\0'
+    for (const char* c = cond; c < cond + str_length; ++c)
         append_var_8(&writer, *c);
     append_var_8(&writer, '\0');
     prepare_for_sending(&writer, cmd, false);

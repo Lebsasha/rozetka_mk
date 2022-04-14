@@ -25,7 +25,7 @@ enum
  * 0x11 u8|port u8|algorithm u16|max_volume u16|mseconds_to_max *u16|time_step u16[]|freqs ->
  * @note "*" means that presence of parameter depend on algorithm
  * 0x12 -> u8|state *u16|react_time *u16|el_time *u16|ampl
- * 0x18 u16|amplitude, u16|burstPeriod, u16|numberOfBursts, u16|numberOfMeandrs, u16|maxReactionTime -> u8|ifReacted u16|reactionTime u16|amplitudeInPercent
+ * 0x18 u16|amplitude, u16|burstPeriod, u16|numberOfBursts, u16|numberOfMeandrs, u16|maxReactionTime -> u8|ifReacted u16|reactionTime u16|amplitude (In percent?)
  * @note react_time in ms
  * @note state can be:
  *      0 - MeasuringHearing
@@ -161,22 +161,54 @@ public:
     }
 };
 
+class TimeMeasurer
+{
+    constexpr const static auto now = std::chrono::steady_clock::now;
+    std::chrono::steady_clock::time_point t_begin = now();
+    std::chrono::steady_clock::time_point t_end;
+public:
+    void begin()
+    {
+        t_begin = now();
+    }
+    
+    void end(const uint cmd = 0, const string& description = "")
+    {
+        t_end = now();
+        cout << "Time for ";
+        if (cmd != 0)
+            cout << "0x" << std::hex << cmd << std::dec << " command";
+        else if (!description.empty())
+            cout << description;
+        cout << " takes " << std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_begin).count() << endl;
+    }
+};
+
 int main (int , char** )
 {
     const char* path="stats.csv"; //TODO Rename file
     ofstream stat(path, ios_base::app|ios_base::out);
     Command_writer writer;
     Command_reader reader;
-    ofstream dev("/dev/ttyACM0");
-    ifstream dev_read("/dev/ttyACM0");
+    const char* device_location;
+#ifdef linux
+    device_location = "/dev/ttyACM0";
+#elif defined(windows)
+    device_location = "COM3"; // Untested
+#else
+#error Unsupported OS
+#endif
+    ofstream dev(device_location);
+    ifstream dev_read(device_location);
     if(!dev || !dev_read)
     {
         std::cout << "Error opening COM file" << std::endl;
         return 1;
     }
-    cout<<"begin "<<std::flush;
+    cout << "begin " << std::flush << std::endl;
     time_t t = std::chrono::system_clock::to_time_t(chrono::system_clock::now());
     stat << endl << std::put_time(std::localtime(&t), "%y_%m_%d %H:%M:%S") << endl;
+    TimeMeasurer timeMeasurer {};
 //    system("sleep 3");   ///TODO Tricky error while testing: mk doesn't turn states correctly, but doesn't hang
 //TODO Test 0x1
 //TODO Test 0x4 (especially with 0x18)
@@ -209,18 +241,17 @@ int main (int , char** )
         }
         if (cmd == 0x18)
         {
-            writer.append_var<uint16_t>(100);/// amplitude
+            writer.append_var<uint16_t>(101);/// amplitude
             writer.append_var<uint16_t>(10);/// burst period
             writer.append_var<uint16_t>(10);/// number of bursts
             writer.append_var<uint16_t>(10);/// number of meanders
             writer.append_var<uint16_t>(2000);/// max reaction time
         }
-        auto t1 = std::chrono::steady_clock::now();//TODO Move time measuring to class
         writer.prepare_for_sending();
+        timeMeasurer.begin();
         writer.write(dev);
         reader.read(dev_read);
-        auto t2 = std::chrono::steady_clock::now();
-        cout << "Time for 0x11" << std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count() << endl;
+        timeMeasurer.end(cmd);
         if (!reader.is_error())
         {
             if (cmd == 0x10 || cmd == 0x11)
@@ -234,8 +265,10 @@ int main (int , char** )
                 {
                     writer.set_cmd(0x12);
                     writer.prepare_for_sending();
+                    timeMeasurer.begin();
                     writer.write(dev);
                     reader.read(dev_read);
+                    timeMeasurer.end(0x12);
                     reader.get_param(state);
                     this_thread::sleep_for(1s);
                 } while (state != 2); /// 2 - measure end
@@ -246,10 +279,11 @@ int main (int , char** )
             }
             if (cmd == 0x18)
             {
+                uint8_t if_reacted = reader.get_param<uint8_t>();
                 uint16_t reactionTime = reader.get_param<uint16_t>();
                 uint16_t ampl = reader.get_param<uint16_t>();
                 ostringstream temp;
-                temp<< cmd_ptr - cmds << ", " << reactionTime << ", " << ampl << ", , 0x18" <<endl;
+                temp << cmd_ptr - cmds << ", " << (int) if_reacted << ", " << reactionTime << ", " << ampl << ", 0x18" <<endl;
                 cout << temp.str();
                 stat << temp.str();
             }

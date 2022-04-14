@@ -72,13 +72,13 @@ static void MX_SPI1_Init(void);
 /* USER CODE BEGIN 0 */
 volatile Measures currMeasure;
 Button button;
-Command_writer writer;
+CommandWriter writer;
 SkinConductionTester skinTester;
 Tone_pin* tone_pins; /// This is the array of pins that make tones. The first pin is A10 (equals right speaker) and the second is A9 (equals left speaker)
 HearingTester hearingTester;
 RandInitializer randInitializer;
 
-void send_command(Command_writer* ptr);
+void send_command(CommandWriter* ptr);
 /* USER CODE END 0 */
 
 /**
@@ -127,9 +127,7 @@ int main(void)
     HAL_Delay(400);
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 
-#ifdef DEBUG
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 1);//show that initialisation started
-#endif
+    write_pin_if_in_debug(GPIOB, GPIO_PIN_13, 1);//show that initialisation started
 
     /// These lines is ctor for tone_pins
     htim1.Instance->CCR3=0;//TODO Изменить после того, как поставим фильтр
@@ -145,14 +143,12 @@ int main(void)
 
     Pin button_pin = {GPIOB, GPIO_PIN_6}; //TODO
     Button_ctor(&button, GPIOB, GPIO_PIN_6);
-    Command_writer_ctor(&writer);
-    HearingTesterCtor(&hearingTester);
+    CommandWriter_ctor(&writer);
+    HearingTester_ctor(&hearingTester);
     uint16_t notes_1[] = {NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4};
     uint8_t durations_1[] = {4, 8, 8, 4, 4, 4, 4, 4};
 
-#ifdef DEBUG
-    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 0);//show that initialisation finished
-#endif
+    write_pin_if_in_debug(GPIOB, GPIO_PIN_13, 0);//show that initialisation finished
 //    uint8_t cmd_11[]={0x11, 0x07, 0x00, 0x01, 0xc8, 0x00, 0x88, 0x13, 0x0b, 0x02, 0xa2};//0x93, 0x02,   0x10, 0x03, 0x4e };
 //    uint8_t cmd_11[]={0x11, 0x07, 0x00, 0x01, 0xd0, 0x07, 0x88, 0x13, 0x0b, 0x02, 0xb1};
 //    uint8_t cmd_18[]={0x18, 0x0a, 0x00,   0x64, 0x00, 0x0a, 0x00,   0x0a, 0x00, 0x0a, 0x00,   0xd0, 0x07, 0x8d};
@@ -579,16 +575,13 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
-void send_command(Command_writer* ptr)
+void send_command(CommandWriter* ptr)
 {
     while (CDC_Transmit_FS(ptr->buffer, ptr->length) == USBD_BUSY){}
     ptr->buffer[LenL]=0;
     ptr->buffer[LenH]=0;
     ptr->length = 1 + 1 + 1;///CC, LenH, LenL
-#ifdef DEBUG
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
-#endif
+    write_pin_if_in_debug(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
     ptr->ifSending = false;
 }
 /* USER CODE END 4 */

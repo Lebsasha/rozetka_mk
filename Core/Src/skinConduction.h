@@ -37,6 +37,6 @@ void ConstructDiode(SkinConductionTester* source);
 void SkinConductionStart(SkinConductionTester* skinTester);
 void SkinConductionStop(SkinConductionTester* source);
 void SkinConductionEnd(SkinConductionTester* skinTester);
-void SkinConductionSendResultToPC(SkinConductionTester* skinTester);
+void SkinConduction_send_result_to_PC(SkinConductionTester* skinTester);
 
 #endif /* SKIN_CONDUCTION */

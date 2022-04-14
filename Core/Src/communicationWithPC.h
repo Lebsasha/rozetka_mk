@@ -15,17 +15,16 @@ enum Commands
     CC = 0, LenL = 1, LenH = 2
 };
 
-typedef struct Command_writer //TODO rename to CamelCase (and reader same)
+typedef struct CommandWriter //TODO rename to CamelCase (and reader same)
 {
     uint8_t buffer[128];///BUF_SIZE constant
     size_t length;
     size_t BUF_SIZE;///const
     bool ifSending;
-} Command_writer;
+} CommandWriter;
 
-void Command_writer_ctor(Command_writer* ptr);
-
-//void send_command(Command_writer* ptr);
+void CommandWriter_ctor(CommandWriter* ptr);
+//void send_command(CommandWriter* ptr);
 
 void process_cmd(const uint8_t* command, const uint32_t* len);
 

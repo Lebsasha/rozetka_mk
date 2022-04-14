@@ -7,6 +7,7 @@
 //TODO Sometime cleanup code
 //TODO Split system and custom functions
 //TODO ETR instead in clock
+//TODO STM32CubeMX cleanup
 
 extern SPI_HandleTypeDef hspi1;
 extern TIM_HandleTypeDef htim1;
@@ -22,7 +23,7 @@ void tone_pin_ctor(Tone_pin* ptr, volatile uint32_t* CCR, uint8_t channel_bit, P
     for (int i = 0; i < ARR_SIZE; ++i)
         sine_table[i] = (int16_t)(SINE_AMPL / 2.0 - SINE_AMPL / 2.0 * sin(i * 2 * M_PI / ARR_SIZE));
     ptr->sine_table = sine_table;
-    ptr->arr_size = ARR_SIZE;
+    ptr->ARR_SIZE = ARR_SIZE;
     ptr->volume = 0;
     memset((void*)ptr->dx, 0, sizeof(ptr->dx));
     memset((void*)ptr->curr_phase, 0, sizeof(ptr->curr_phase));
@@ -110,15 +111,15 @@ void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n)
 }
 
 
-void HearingTesterCtor(HearingTester* ptr)
+void HearingTester_ctor(HearingTester* ptr)
 {
     ptr->states = Idle;
     ptr->algorithm = ConstantTone;
     memset((void*)ptr->freq, 0, sizeof(ptr->freq));
     ptr->react_time = 0;
     ptr->react_surveys_elapsed = 0;
-    ptr->react_surveys_count = 3;
-    ptr->react_volume_koef = 4;
+    ptr->REACT_SURVEYS_COUNT = 3;
+    ptr->REACT_VOLUME_KOEF = 4;
     ptr->port = 0;
     ptr->mseconds_to_max = 0;
     ptr->max_volume = 0;
@@ -167,7 +168,7 @@ void HearingHandle(HearingTester* ptr)
 
             HAL_Delay(rand() % 1500 + 1000);
             ptr->states = Measuring_reaction;
-            uint8_t curr_koef = ptr->react_volume_koef;
+            uint8_t curr_koef = ptr->REACT_VOLUME_KOEF;
             while (curr_koef * ptr->ampl <= ptr->ampl)
                 curr_koef -= 1;
             tone_pins[ptr->port].volume = curr_koef * ptr->ampl;//TODO Change reaction volume (Remove TODO?)
@@ -190,7 +191,7 @@ void HearingHandle(HearingTester* ptr)
         ptr->react_time += button.stop_time - button.start_time;
         prev_volume = tone_pins[ptr->port].volume;
         tone_pins[ptr->port].volume = 0;
-        if (ptr->react_surveys_elapsed < ptr->react_surveys_count - 1)
+        if (ptr->react_surveys_elapsed < ptr->REACT_SURVEYS_COUNT - 1)
         {
             uint16_t randDelay = rand() % 800 + 1000;
             HAL_Delay(randDelay);//TODO Replace with other function
@@ -200,7 +201,7 @@ void HearingHandle(HearingTester* ptr)
         }
         else
         {
-            ptr->react_time /= ptr->react_surveys_count;
+            ptr->react_time /= ptr->REACT_SURVEYS_COUNT;
             ButtonStop(&button);
             ptr->react_surveys_elapsed = 0;
 

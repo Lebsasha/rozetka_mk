@@ -105,7 +105,7 @@ void SkinConductionEnd(SkinConductionTester* skinTester)
 //	sConfigIC.ICPrescaler = TIM_ICPSC_DIV1;
 //	sConfigIC.ICFilter = 0;
 //    HAL_TIM_IC_ConfigChannel(&htim4, &sConfigIC, TIM_CHANNEL_1);
-    SkinConductionSendResultToPC(skinTester);
+    SkinConduction_send_result_to_PC(skinTester);
 }
 
 void SkinConductionStop(SkinConductionTester* skinTester)

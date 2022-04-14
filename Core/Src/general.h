@@ -45,6 +45,7 @@ typedef struct RandInitializer
 
 void RandInitializer_ctor(RandInitializer* randInitializer);
 void InitRand(RandInitializer* randInitializer);
+void write_pin_if_in_debug(GPIO_TypeDef* GPIOx, uint16_t pin, GPIO_PinState pinState);
 
 void my_delay(int us);
 

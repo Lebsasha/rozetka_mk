@@ -56,3 +56,10 @@ void InitRand(RandInitializer* randInitializer)
     }
 }
 
+inline void write_pin_if_in_debug(GPIO_TypeDef* GPIOx, uint16_t pin, GPIO_PinState pinState)
+{
+#ifdef DEBUG
+//    GPIOx->BSRR = pin;
+    HAL_GPIO_WritePin(GPIOx, pin, pinState);
+#endif
+}

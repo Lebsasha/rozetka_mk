@@ -5,7 +5,7 @@
 #include "general.h"
 
 #define TONE_FREQ 40000
-#define freq_to_dx(tone_pin_ptr, freq)  (((tone_pin_ptr)->arr_size*(freq)<<8)/TONE_FREQ) //TODO Change to function
+#define freq_to_dx(tone_pin_ptr, freq)  (((tone_pin_ptr)->ARR_SIZE*(freq)<<8)/TONE_FREQ) //TODO Change to function
 //TODO Change channels number to 2 or higher
 #define CHANNELS_NUM 1 //TODO Change to higher number
 
@@ -18,7 +18,7 @@ typedef struct Tone_pin
     Pin CS_pin;
     uint8_t channel_bit;
     int16_t* sine_table;
-    uint16_t arr_size;/// const TODO Remove this comment Maybe inline? No, as after inlining this will convert to a magic number
+    uint16_t ARR_SIZE;/// const
     uint16_t volume;
     volatile uint32_t dx[CHANNELS_NUM];
     uint32_t curr_phase[CHANNELS_NUM];
@@ -42,8 +42,8 @@ typedef struct HearingTester
     volatile uint16_t freq[CHANNELS_NUM];
     volatile uint16_t react_time;
     volatile uint8_t react_surveys_elapsed;
-    uint8_t react_surveys_count; //const
-    uint8_t react_volume_koef; //const
+    uint8_t REACT_SURVEYS_COUNT; //const
+    uint8_t REACT_VOLUME_KOEF; //const
     volatile uint8_t port;
     volatile typeof(static_access(Tone_pin)->volume) ampl;
     volatile uint16_t elapsed_time;
@@ -51,7 +51,7 @@ typedef struct HearingTester
     volatile typeof(static_access(Tone_pin)->volume) max_volume;
     volatile uint16_t tone_step;
 }HearingTester;
-void HearingTesterCtor(HearingTester* ptr);
+void HearingTester_ctor(HearingTester* ptr);
 
 void HearingStart(HearingTester* ptr);
 void HearingStop(HearingTester* ptr);
