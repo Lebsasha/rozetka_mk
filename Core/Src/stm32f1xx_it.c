@@ -322,7 +322,7 @@ void TIM4_IRQHandler(void)
                 static uint16_t step = 0;
                 if (step >= hearingTester.tone_step || (measuredTime < hearingTester.tone_step && step == 0))
                 {
-                    volatile uint16_t stepNum = measuredTime / hearingTester.tone_step;
+                    uint16_t stepNum = measuredTime / hearingTester.tone_step;
                     if (measuredTime + hearingTester.tone_step < hearingTester.mseconds_to_max)
                         stepNum += 1;
                     tone_pins[hearingTester.port].volume = hearingTester.max_volume * stepNum * hearingTester.tone_step / hearingTester.mseconds_to_max;

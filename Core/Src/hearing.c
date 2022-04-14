@@ -55,8 +55,8 @@ void make_tone(Tone_pin* tone_pin)
 #elif defined(TONE_SPI_GENERATION)
     if (tone_pin->volume != 0)
     {
-        const uint16_t MAX_VAL = 0xffff;
-        uint16_t command = 4095;
+        const uint16_t MAX_VAL = (1<<12)-1;
+        uint16_t command;
 
         for (uint8_t i = 0; i < (uint8_t) sizeof_arr(tone_pin->dx); ++i)
         {
@@ -71,6 +71,14 @@ void make_tone(Tone_pin* tone_pin)
             }
         }
         command = (command * tone_pin->volume)>>16;
+//       tone_pin->curr_phase[0]++;
+//       if (tone_pin->curr_phase[0] >= 400000)
+//            {
+//                tone_pin->curr_phase[0] = 0;
+//            }
+//       command = tone_pin->curr_phase[0]*4096/400000;
+//        command = 2048;
+        command &= (1<<12)-1; /// If command > 4095, we reset all bits higher 12th
         command |= tone_pin->channel_bit<<15; /// Port (!A/B)
         command |= 0<<14; /// BUF
         command |= 1<<13; /// !GA

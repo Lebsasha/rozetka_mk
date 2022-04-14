@@ -9,7 +9,6 @@
 #include "../Core/Inc/notes.h"
 
 using namespace std;
-#define sizeof_arr(arr) (sizeof(arr)/sizeof((arr)[0]))
 
 ///@brief this enum points on appropriate indexes in bin. prot.
 ///e. g. buffer[CC], ...
@@ -47,6 +46,16 @@ uint8_t Commands[]={0x1, 0x4, 0x10, 0x11, 0x12, 0x18};
 static const uint8_t SS_OFFSET = 42;
 static const size_t BUF_SIZE = 128;///USB packet size
 
+#define sizeof_arr(arr) (sizeof(arr)/sizeof((arr)[0]))
+//template<typename T>
+//std::enable_if_t<std::is_array<T>::value_type, bool > arr_size(T arr)
+//{
+//    size_t i = sizeof_arr(arr);
+//    auto t = std::tie(arr, i);
+//    return t;
+// //    return std::tuple(arr, sizeof_arr(arr));
+//}
+
 class Command_writer
 {
     char buffer[BUF_SIZE] = {0};
@@ -62,9 +71,7 @@ public:
         *reinterpret_cast<T*>(buffer + length) = var;
         length += sizeof(var);
     }
-//TODO Test 0x4 (especially with 0x18)
 //TODO Write release conf with Tests
-//error: currMeasure==None;
     void write(ostream& dev)
     {
         dev.write(buffer, (streamsize) length);
@@ -89,7 +96,7 @@ public:
     void set_cmd(const uint8_t cmd)
     {
         if (count(Commands, Commands + sizeof_arr(Commands), cmd) == 0)
-            cout << "Warning! Setting command 0x" << std::hex << (int) cmd << std::dec << ", that is not know in this program" << std::endl;
+            cout << "Warning! Setting command 0x" << std::hex << (int) cmd << std::dec << ", that is not known in this program" << std::endl;
         buffer[CC] = (char)cmd;
     }
 };
@@ -170,14 +177,16 @@ int main (int , char** )
     cout<<"begin "<<std::flush;
     time_t t = std::chrono::system_clock::to_time_t(chrono::system_clock::now());
     stat << endl << std::put_time(std::localtime(&t), "%y_%m_%d %H:%M:%S") << endl;
-//    system("sleep 3");///TODO Tricky error while testing: mk doesn't turn states correctly, but doesn't hang
-//    for(size_t i =0;i<4;++i)
+//    system("sleep 3");   ///TODO Tricky error while testing: mk doesn't turn states correctly, but doesn't hang
+//TODO Test 0x1
+//TODO Test 0x4 (especially with 0x18)
     const uint8_t long_test[] = {0x11, 0x18, 0x11, 0x18, 0x18, 0x11, 0x11, 0x18};
     const uint8_t short_test[] = {0x11, 0x18, 0x11};
 //    const auto [cmds, cmds_l] = std::tie(short_test, sizeof_arr(short_test));
-    const uint8_t* cmds = long_test;
-    const size_t cmds_length = sizeof_arr(long_test);
-//TODO Test 0x1
+    const uint8_t* cmds = short_test;
+    const size_t cmds_length = sizeof_arr(short_test);
+
+//    for(size_t i =0;i<4;++i)
     for(const uint8_t* cmd_ptr = cmds; cmd_ptr < cmds + cmds_length; ++cmd_ptr)
     {
         this_thread::sleep_for(1s);
@@ -189,7 +198,7 @@ int main (int , char** )
             writer.append_var<uint16_t>(1000);///Curr volume
         else if (cmd == 0x11)
         {
-            writer.append_var<uint16_t>(2000);///max_vol
+            writer.append_var<uint16_t>(20000);///max_vol
             writer.append_var<uint16_t>(5000);///msecs to max volume (max reaction time)
         }
         if (cmd == 0x10 || cmd == 0x11)
@@ -206,9 +215,12 @@ int main (int , char** )
             writer.append_var<uint16_t>(10);/// number of meanders
             writer.append_var<uint16_t>(2000);/// max reaction time
         }
+        auto t1 = std::chrono::steady_clock::now();//TODO Move time measuring to class
         writer.prepare_for_sending();
         writer.write(dev);
         reader.read(dev_read);
+        auto t2 = std::chrono::steady_clock::now();
+        cout << "Time for 0x11" << std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count() << endl;
         if (!reader.is_error())
         {
             if (cmd == 0x10 || cmd == 0x11)
@@ -225,8 +237,8 @@ int main (int , char** )
                     writer.write(dev);
                     reader.read(dev_read);
                     reader.get_param(state);
-                    system("sleep 1");
-                } while (state != 2); /// 2 - end
+                    this_thread::sleep_for(1s);
+                } while (state != 2); /// 2 - measure end
                 ostringstream temp;
                 temp << cmd_ptr - cmds << ", " << reader.get_param<uint16_t>() << ", "<<reader.get_param<uint16_t>()<<", "<<(int)reader.get_param<uint16_t>()<<endl;
                 cout<<temp.str();
@@ -272,7 +284,7 @@ int main (int , char** )
 //            dev_read.close();
 //        }
 //        else if (i == 1)
-//        r
+//        {
 //            dev.open("/dev/ttyACM0");
 //            dev_read.open("/dev/ttyACM0");
 //        }

@@ -197,7 +197,6 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 currMeasure = Hearing;
                 hearingTester.algorithm = ConstantTone;
                 hearingTester.tone_step = hearingTester.mseconds_to_max / 10;
-//                hearingTester.max_volume = 0x100;
                 HearingStart(&hearingTester);
                 prepare_for_sending(&writer, cmd, true);
             }

@@ -153,7 +153,6 @@ int main(void)
 #ifdef DEBUG
     HAL_GPIO_WritePin(GPIOB, GPIO_PIN_13, 0);//show that initialisation finished
 #endif
-    __HAL_SPI_DISABLE(&hspi1);//TODO remove this line abd test
 //    uint8_t cmd_11[]={0x11, 0x07, 0x00, 0x01, 0xc8, 0x00, 0x88, 0x13, 0x0b, 0x02, 0xa2};//0x93, 0x02,   0x10, 0x03, 0x4e };
 //    uint8_t cmd_11[]={0x11, 0x07, 0x00, 0x01, 0xd0, 0x07, 0x88, 0x13, 0x0b, 0x02, 0xb1};
 //    uint8_t cmd_18[]={0x18, 0x0a, 0x00,   0x64, 0x00, 0x0a, 0x00,   0x0a, 0x00, 0x0a, 0x00,   0xd0, 0x07, 0x8d};
@@ -264,8 +263,8 @@ static void MX_SPI1_Init(void)
   hspi1.Init.Mode = SPI_MODE_MASTER;
   hspi1.Init.Direction = SPI_DIRECTION_2LINES;
   hspi1.Init.DataSize = SPI_DATASIZE_16BIT;
-  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi1.Init.CLKPolarity = SPI_POLARITY_HIGH;
+  hspi1.Init.CLKPhase = SPI_PHASE_2EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
   hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
