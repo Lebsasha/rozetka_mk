@@ -74,7 +74,7 @@ volatile Measures currMeasure;
 Button button;
 CommandWriter writer;
 SkinConductionTester skinTester;
-Tone_pin* tone_pins; /// This is the array of pins that make tones. The first pin is A10 (equals right speaker) and the second is A9 (equals left speaker)
+TonePin* tone_pins; /// This is the array of pins that make tones. The first pin is A10 (equals right speaker) and the second is A9 (equals left speaker)
 HearingTester hearingTester;
 RandInitializer randInitializer;
 
@@ -132,7 +132,7 @@ int main(void)
     /// These lines is ctor for tone_pins
     htim1.Instance->CCR3=0;//TODO Изменить после того, как поставим фильтр
     htim1.Instance->CCR2=0;
-    Tone_pin tone_pins_init[2];
+    TonePin tone_pins_init[2];
     Pin CS = {GPIOB, GPIO_PIN_10};
     tone_pin_ctor(&tone_pins_init[0], &(htim1.Instance->CCR3), 0, CS); ///right
     tone_pins_init[0].dx[0]=freq_to_dx(&tone_pins_init[0], NOTE_A4);//A4 == 440 Hz
@@ -142,21 +142,20 @@ int main(void)
     tone_pins=tone_pins_init;
 
     Pin button_pin = {GPIOB, GPIO_PIN_6}; //TODO
-    Button_ctor(&button, GPIOB, GPIO_PIN_6);
+    Button_ctor(&button, button_pin);
     CommandWriter_ctor(&writer);
     HearingTester_ctor(&hearingTester);
     uint16_t notes_1[] = {NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4};
     uint8_t durations_1[] = {4, 8, 8, 4, 4, 4, 4, 4};
 
     write_pin_if_in_debug(GPIOB, GPIO_PIN_13, 0);//show that initialisation finished
+//#define DEBUG_BY_ST_LINK // macro need for preventing mk responding by USB
 //    uint8_t cmd_11[]={0x11, 0x07, 0x00, 0x01, 0xc8, 0x00, 0x88, 0x13, 0x0b, 0x02, 0xa2};//0x93, 0x02,   0x10, 0x03, 0x4e };
 //    uint8_t cmd_11[]={0x11, 0x07, 0x00, 0x01, 0xd0, 0x07, 0x88, 0x13, 0x0b, 0x02, 0xb1};
 //    uint8_t cmd_18[]={0x18, 0x0a, 0x00,   0x64, 0x00, 0x0a, 0x00,   0x0a, 0x00, 0x0a, 0x00,   0xd0, 0x07, 0x8d};
 //    uint32_t len = sizeof_arr(cmd_11);
 //    process_cmd(cmd_11, &len);
 
-
-//    HAL_SPI_Transmit(&hspi1, cmd_11, len, HAL_MAX_DELAY);
 
   /* USER CODE END 2 */
 
@@ -577,7 +576,9 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void send_command(CommandWriter* ptr)
 {
+#if !defined(DEBUG_BY_ST_LINK)
     while (CDC_Transmit_FS(ptr->buffer, ptr->length) == USBD_BUSY){}
+#endif
     ptr->buffer[LenL]=0;
     ptr->buffer[LenH]=0;
     ptr->length = 1 + 1 + 1;///CC, LenH, LenL

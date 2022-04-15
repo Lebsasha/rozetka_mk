@@ -3,38 +3,57 @@
 
 extern TIM_HandleTypeDef htim4;
 
-void Button_ctor(Button* button, GPIO_TypeDef* GPIOx, uint16_t pin)
+void Button_ctor(Button* button, Pin pin)
 {
-    button->GPIOx = GPIOx;
-    button->pin = pin;
+    button->GPIOx = pin.GPIOx;
+    button->pin = pin.pin;
     button->start_time = 0;
     button->stop_time = 0;
     button->state = ButtonIdle;
 }
 
 /// @note If called when button already started, start counting again from current point of time, regardless of what state button is in
-
 void ButtonStart(Button* button)
 {
     button->start_time = HAL_GetTick();
     button->stop_time = 0;
     button->state = WaitingForPress;
 
-    //TODO Rewrite with Input Capture
-    //TODO Check htim4 not enabled with other parameters (i. e. some survey may use it and we don't want to accidentally overwrite parameters)
+    //TODO Maybe rewrite with Input Capture?
+    //TODO Check that htim4 not used in other way (i. e. some survey may use it and we don't want to accidentally overwrite parameters)
+//    __HAL_TIM_ENABLE_IT(&htim4, TIM_IT_UPDATE);
+//    __HAL_TIM_ENABLE(&htim4);
     htim4.Instance->PSC = 3;
     htim4.Instance->ARR = 17999;
-    if (HAL_TIM_Base_Start_IT(&htim4) != HAL_OK)
-        Error_Handler();
+    HAL_TIM_Base_Start_IT(&htim4);
 }
 
+/// THis function should be called when current measure (e. g. SkinConduction) finished at all
 void ButtonStop(Button* button)
 {
-    if (HAL_TIM_Base_Stop_IT(&htim4) != HAL_OK)
-        Error_Handler();
+    HAL_TIM_Base_Stop_IT(&htim4);
     button->stop_time = 0;
     button->start_time = 0;
     button->state = ButtonIdle;
+}
+
+void timer_start(Timer* ptr, uint32_t delay)
+{
+    ptr->endTick = HAL_GetTick() + delay;
+}
+
+bool is_time_passed(Timer* ptr)
+{
+    if (ptr->endTick != 0)
+        return HAL_GetTick() >= ptr->endTick;
+    else
+        return false;
+}
+
+/// Reset needed for preventing accidental accessing already elapsed timer
+void timer_reset(Timer* ptr)
+{
+    ptr->endTick = 0;
 }
 
 void RandInitializer_ctor(RandInitializer* randInitializer)

@@ -69,7 +69,7 @@ extern volatile Measures currMeasure;
 extern Button button;
 extern SkinConductionTester skinTester;
 extern HearingTester hearingTester;
-extern Tone_pin* tone_pins;
+extern TonePin* tone_pins;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -228,19 +228,19 @@ void USB_LP_CAN1_RX0_IRQHandler(void)
 void TIM1_UP_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM1_UP_IRQn 0 */
-  if(currMeasure == Hearing)
-  {
+    if (currMeasure == Hearing)
+    {
 #ifdef DEBUG
-///    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 1);
-      GPIOB->BSRR = GPIO_PIN_12;//for showing how much time this interrupt takes
+//        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 1);
+        GPIOB->BSRR = GPIO_PIN_12;//for showing how much time this interrupt takes
 #endif
-      make_tone(&tone_pins[0]);
-      make_tone(&tone_pins[1]);
+        make_tone(&tone_pins[0]);
+        make_tone(&tone_pins[1]);
 #ifdef DEBUG
-///    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 0);
-      GPIOB->BSRR = (uint32_t) GPIO_PIN_12 << 16U;
+//        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 0);
+        GPIOB->BSRR = (uint32_t) GPIO_PIN_12<<16U;
 #endif
-  }
+    }
     __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);
     return;
   /* USER CODE END TIM1_UP_IRQn 0 */
@@ -302,7 +302,7 @@ void TIM4_IRQHandler(void)
 
     if (currMeasure == Hearing)
     {
-        if (hearingTester.states == Measuring_freq && button.state == WaitingForPress)
+        if (hearingTester.states == MeasuringFreq && button.state == WaitingForPress)
         {
             if(hearingTester.algorithm == LinearTone)
             {
@@ -320,12 +320,12 @@ void TIM4_IRQHandler(void)
             else if(hearingTester.algorithm == LinearStepTone) // TODO
             {
                 static uint16_t step = 0;
-                if (step >= hearingTester.tone_step || (measuredTime < hearingTester.tone_step && step == 0))
+                if (step >= hearingTester.tone_step_for_LinearStepTone || (measuredTime < hearingTester.tone_step_for_LinearStepTone && step == 0))
                 {
-                    uint16_t stepNum = measuredTime / hearingTester.tone_step;
-                    if (measuredTime + hearingTester.tone_step < hearingTester.mseconds_to_max)
+                    uint16_t stepNum = measuredTime / hearingTester.tone_step_for_LinearStepTone;
+                    if (measuredTime + hearingTester.tone_step_for_LinearStepTone < hearingTester.mseconds_to_max)
                         stepNum += 1;
-                    tone_pins[hearingTester.port].volume = hearingTester.max_volume * stepNum * hearingTester.tone_step / hearingTester.mseconds_to_max;
+                    tone_pins[hearingTester.port].volume = hearingTester.max_volume*stepNum*hearingTester.tone_step_for_LinearStepTone/hearingTester.mseconds_to_max;
                     if (measuredTime >= hearingTester.mseconds_to_max)
                     {
                         button.state = Timeout;

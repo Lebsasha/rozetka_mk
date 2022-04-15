@@ -12,7 +12,7 @@
 //#define TONE_PWM_GENERATION
 #define TONE_SPI_GENERATION
 
-typedef struct Tone_pin
+typedef struct TonePin
 {
     volatile uint32_t* PWM_register;
     Pin CS_pin;
@@ -22,34 +22,37 @@ typedef struct Tone_pin
     uint16_t volume;
     volatile uint32_t dx[CHANNELS_NUM];
     uint32_t curr_phase[CHANNELS_NUM];
-}Tone_pin;
+}TonePin;
 
-void tone_pin_ctor(Tone_pin* ptr, volatile uint32_t*, uint8_t, Pin);
+void tone_pin_ctor(TonePin* ptr, volatile uint32_t*, uint8_t, Pin);
 
 /// This is the function that handles changes of tone
-void make_tone(Tone_pin* tone_pin);
+void make_tone(TonePin* tonePin);
 
 ///Play some melody with notes and durations
 /// @param durations - array of !positive! uint8's
-void play(Tone_pin* pin, const uint16_t* notes, const uint8_t* durations, int n);
+void play(TonePin* ptr, const uint16_t* notes, const uint8_t* durations, int n);
 
-typedef enum HearingStates{Measuring_freq=0, Measuring_reaction=1, Sending=2, Idle}HearingStates;
+/// First three state' values (0, 1, 2) used in high level program for observing measure process
+typedef enum HearingStates{MeasuringFreq=0, WaitingBeforeMeasuringReaction=3, MeasuringReaction=1, Sending=2, Idle} HearingStates;
 
 typedef struct HearingTester
 {
+    volatile uint8_t port;
+    volatile typeof(static_access(TonePin)->volume) ampl;
+    volatile uint16_t elapsed_time;
+    volatile uint16_t mseconds_to_max;
+    volatile typeof(static_access(TonePin)->volume) max_volume;
     volatile HearingStates states;
     enum Algorithms{LinearTone, ConstantTone, LinearStepTone} algorithm;
+    Timer timer;
     volatile uint16_t freq[CHANNELS_NUM];
     volatile uint16_t react_time;
     volatile uint8_t react_surveys_elapsed;
     uint8_t REACT_SURVEYS_COUNT; //const
     uint8_t REACT_VOLUME_KOEF; //const
-    volatile uint8_t port;
-    volatile typeof(static_access(Tone_pin)->volume) ampl;
-    volatile uint16_t elapsed_time;
-    volatile uint16_t mseconds_to_max;
-    volatile typeof(static_access(Tone_pin)->volume) max_volume;
-    volatile uint16_t tone_step;
+    uint8_t curr_react_volume_coef;
+    volatile uint16_t tone_step_for_LinearStepTone;
 }HearingTester;
 void HearingTester_ctor(HearingTester* ptr);
 

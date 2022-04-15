@@ -110,7 +110,7 @@ extern RandInitializer randInitializer;
 extern Button button;
 extern SkinConductionTester skinTester;
 extern HearingTester hearingTester;
-extern Tone_pin* tone_pins;//TODO Move tone_pins from this file to hearingTester
+extern TonePin* tone_pins;//TODO Move tone_pins from this file to hearingTester
 
 #ifdef NDEBUG
 #define usb_assert(cond) ((void)0)
@@ -187,7 +187,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
             {
                 usb_assert(currMeasure == None);
 //                usb_assert(hearingTester.states == Idle);///Теоретически не нужно проверять, но на всякий случай пусть будет
-                get_param_8(&reader, (uint8_t*) &hearingTester.port);
+                usb_assert(get_param_8(&reader, (uint8_t*) &hearingTester.port));
                 usb_assert(hearingTester.port < 2);
 //                tone_pins[hearingTester.port].volume=0;//TODO Move to HearingTesterStart()
                 usb_assert(get_param_16(&reader, (uint16_t*) &hearingTester.max_volume));
@@ -203,7 +203,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                     tone_pins[hearingTester.port].dx[i] = freq_to_dx(&tone_pins[hearingTester.port], hearingTester.freq[i]);
                 currMeasure = Hearing;
                 hearingTester.algorithm = ConstantTone;
-                hearingTester.tone_step = hearingTester.mseconds_to_max / 10;
+                hearingTester.tone_step_for_LinearStepTone = hearingTester.mseconds_to_max/10;
                 HearingStart(&hearingTester);
                 prepare_for_sending(&writer, cmd, true);
             }
@@ -211,16 +211,16 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
             {
                 usb_assert(currMeasure == Hearing);
                 usb_assert(hearingTester.states != Idle);
-                if (hearingTester.states == Measuring_freq)
+                if (hearingTester.states == MeasuringFreq)
                 {
-                    append_var_8(&writer, Measuring_freq);
+                    append_var_8(&writer, MeasuringFreq);
                     append_var_16(&writer, 0);
                     append_var_16(&writer, 0);
                     append_var_16(&writer, 0);
                 }
-                else if (hearingTester.states == Measuring_reaction)
+                else if (hearingTester.states == MeasuringReaction || hearingTester.states == WaitingBeforeMeasuringReaction)
                 {
-                    append_var_8(&writer, Measuring_reaction);
+                    append_var_8(&writer, MeasuringReaction);
                     append_var_16(&writer, 0);
                     append_var_16(&writer, 0);
                     append_var_16(&writer, 0);
