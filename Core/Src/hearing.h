@@ -19,12 +19,12 @@ typedef struct TonePin
     uint8_t channel_bit;
     int16_t* sine_table;
     uint16_t ARR_SIZE;/// const
-    uint16_t volume;
+    volatile uint16_t volume;
     volatile uint32_t dx[CHANNELS_NUM];
     uint32_t curr_phase[CHANNELS_NUM];
 }TonePin;
 
-void tone_pin_ctor(TonePin* ptr, volatile uint32_t*, uint8_t, Pin);
+void TonePin_ctor(TonePin* ptr, volatile uint32_t* CCR, uint8_t channel_bit, Pin CS_pin);
 
 /// This is the function that handles changes of tone
 void make_tone(TonePin* tonePin);
@@ -34,30 +34,28 @@ void make_tone(TonePin* tonePin);
 void play(TonePin* ptr, const uint16_t* notes, const uint8_t* durations, int n);
 
 /// First three state' values (0, 1, 2) used in high level program for observing measure process
-typedef enum HearingStates{MeasuringFreq=0, WaitingBeforeMeasuringReaction=3, MeasuringReaction=1, Sending=2, Idle} HearingStates;
+typedef enum HearingStates{Starting=3, PlayingConstantVolume=0, ChangingVolume=4, WaitingBeforeMeasuringReaction=5, MeasuringReaction=1, Sending=2, Idle} HearingStates;
 
 typedef struct HearingTester
 {
     volatile uint8_t port;
     volatile typeof(static_access(TonePin)->volume) ampl;
     volatile uint16_t elapsed_time;
-    volatile uint16_t mseconds_to_max;
-    volatile typeof(static_access(TonePin)->volume) max_volume;
     volatile HearingStates states;
-    enum Algorithms{LinearTone, ConstantTone, LinearStepTone} algorithm;
     Timer timer;
-    volatile uint16_t freq[CHANNELS_NUM];
     volatile uint16_t react_time;
     volatile uint8_t react_surveys_elapsed;
     uint8_t REACT_SURVEYS_COUNT; //const
     uint8_t REACT_VOLUME_KOEF; //const
     uint8_t curr_react_volume_coef;
-    volatile uint16_t tone_step_for_LinearStepTone;
+    volatile uint16_t freq[CHANNELS_NUM];
+    volatile typeof(static_access(TonePin)->volume) curr_volume;
+    volatile typeof(static_access(TonePin)->volume) new_volume;
 }HearingTester;
 void HearingTester_ctor(HearingTester* ptr);
 
-void HearingStart(HearingTester* ptr);
-void HearingStop(HearingTester* ptr);
-void HearingHandle(HearingTester* ptr);
+void hearing_start(HearingTester* ptr);
+void hearing_stop(HearingTester* ptr);
+void hearing_handle(HearingTester* ptr);
 
 #endif

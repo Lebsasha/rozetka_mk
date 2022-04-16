@@ -240,6 +240,23 @@ void TIM1_UP_IRQHandler(void)
 //        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 0);
         GPIOB->BSRR = (uint32_t) GPIO_PIN_12<<16U;
 #endif
+        if (hearingTester.states == ChangingVolume)
+        {
+            if (hearingTester.curr_volume >= hearingTester.new_volume)
+                hearingTester.states = PlayingConstantVolume;
+            else
+            {
+                const int PRESCALER = 2;
+                static int counter = 0;
+                if (counter == PRESCALER)
+                {
+                    counter = 0;
+                    hearingTester.curr_volume += 1;
+                    tone_pins[hearingTester.port].volume = hearingTester.curr_volume;
+                }
+                ++counter;
+            }
+        }
     }
     __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);
     return;
@@ -300,42 +317,6 @@ void TIM4_IRQHandler(void)
     static uint16_t measuredTime=0;
     measuredTime = HAL_GetTick() - button.start_time;
 
-    if (currMeasure == Hearing)
-    {
-        if (hearingTester.states == MeasuringFreq && button.state == WaitingForPress)
-        {
-            if(hearingTester.algorithm == LinearTone)
-            {
-                tone_pins[hearingTester.port].volume = hearingTester.max_volume * measuredTime / hearingTester.mseconds_to_max;
-                if (measuredTime >= hearingTester.mseconds_to_max)
-                {
-                    button.state = Timeout;
-                }
-            }
-            else if (hearingTester.algorithm == ConstantTone)
-            {
-                if (tone_pins[hearingTester.port].volume != hearingTester.max_volume)
-                    tone_pins[hearingTester.port].volume = hearingTester.max_volume;
-            }
-            else if(hearingTester.algorithm == LinearStepTone) // TODO
-            {
-                static uint16_t step = 0;
-                if (step >= hearingTester.tone_step_for_LinearStepTone || (measuredTime < hearingTester.tone_step_for_LinearStepTone && step == 0))
-                {
-                    uint16_t stepNum = measuredTime / hearingTester.tone_step_for_LinearStepTone;
-                    if (measuredTime + hearingTester.tone_step_for_LinearStepTone < hearingTester.mseconds_to_max)
-                        stepNum += 1;
-                    tone_pins[hearingTester.port].volume = hearingTester.max_volume*stepNum*hearingTester.tone_step_for_LinearStepTone/hearingTester.mseconds_to_max;
-                    if (measuredTime >= hearingTester.mseconds_to_max)
-                    {
-                        button.state = Timeout;
-                    }
-                    step = 0;
-                }
-                step++;
-            }
-        }
-    }
     if (currMeasure == SkinConduction)
     {
         if(measuredTime > skinTester.maxReactionTime)

@@ -134,9 +134,9 @@ int main(void)
     htim1.Instance->CCR2=0;
     TonePin tone_pins_init[2];
     Pin CS = {GPIOB, GPIO_PIN_10};
-    tone_pin_ctor(&tone_pins_init[0], &(htim1.Instance->CCR3), 0, CS); ///right
+    TonePin_ctor(&tone_pins_init[0], &(htim1.Instance->CCR3), 0, CS); ///right
     tone_pins_init[0].dx[0]=freq_to_dx(&tone_pins_init[0], NOTE_A4);//A4 == 440 Hz
-    tone_pin_ctor(&tone_pins_init[1], &(htim1.Instance->CCR2), 1, CS); ///left
+    TonePin_ctor(&tone_pins_init[1], &(htim1.Instance->CCR2), 1, CS); ///left
     tone_pins_init[1].dx[0]=freq_to_dx(&tone_pins_init[1], NOTE_A4);
 
     tone_pins=tone_pins_init;
@@ -169,7 +169,7 @@ int main(void)
   {
       if (currMeasure == Hearing)
       {
-          HearingHandle(&hearingTester);
+          hearing_handle(&hearingTester);
       }
       if (currMeasure == SkinConduction && (button.state == Pressed || button.state == Timeout))
       {

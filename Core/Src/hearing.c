@@ -8,6 +8,14 @@
 //TODO Split system and custom functions
 //TODO ETR instead in clock
 //TODO STM32CubeMX cleanup
+//TODO Try disabling SPI between tests
+//TODO estimate curr_volume -> new_volume timing
+//TODO Add HighLevelStates in hearing
+//TODO Hаndling reactioon =_time >= elapsed_time in C++ high level program
+//TODO Make possible decreasing curr_volume to new_volume, not only increasing
+//TODO Change type of sine_table
+//TODO Replace strings with error codes: CurrentMeasureTypeIsNone, RequiredCommandParameterMissing, CommandParameterOutOfRange, OtherError
+//TODO Remove big comments
 
 extern SPI_HandleTypeDef hspi1;
 extern TIM_HandleTypeDef htim1;
@@ -18,7 +26,7 @@ const int16_t SINE_AMPL = (1U << (sizeof(SINE_AMPL) * 8 - 1)) - 1;//max val of i
 const uint16_t ARR_SIZE = 1024; /*!<for optimization purposes*/
 int16_t sine_table[1024];
 
-void tone_pin_ctor(TonePin* ptr, volatile uint32_t* CCR, uint8_t channel_bit, Pin CS_pin)
+void TonePin_ctor(TonePin* ptr, volatile uint32_t* CCR, uint8_t channel_bit, Pin CS_pin)
 {
     for (int i = 0; i < ARR_SIZE; ++i)
         sine_table[i] = (int16_t)(SINE_AMPL / 2.0 - SINE_AMPL / 2.0 * sin(i * 2 * M_PI / ARR_SIZE));
@@ -116,51 +124,49 @@ void HearingTester_ctor(HearingTester* ptr)
     ptr->port = 0;
     ptr->ampl = 0;
     ptr->elapsed_time = 0;
-    ptr->mseconds_to_max = 0;
-    ptr->max_volume = 0;
     ptr->states = Idle;
-    ptr->algorithm = ConstantTone;
     Timer t = {0};
     ptr->timer = t;
-    memset((void*)ptr->freq, 0, sizeof(ptr->freq));
     ptr->react_time = 0;
     ptr->react_surveys_elapsed = 0;
     ptr->REACT_SURVEYS_COUNT = 3;
     ptr->REACT_VOLUME_KOEF = 4;
-    ptr->tone_step_for_LinearStepTone = 0;
+    memset((void*)ptr->freq, 0, sizeof(ptr->freq));
+    ptr->curr_volume = 0;
+    ptr->new_volume = 0;
 }
 
-void HearingStart(HearingTester* ptr)
+void hearing_start(HearingTester* ptr)
 {
     htim1.Instance->PSC = 0;
     htim1.Instance->ARR = 1799;
-    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);///start sound at A10
-    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);///start sound at A9
+//    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);///start sound at A10
+//    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);///start sound at A9
     HAL_TIM_Base_Start_IT(&htim1);
-    ptr->states = MeasuringFreq;
-    ButtonStart(&button);
+//    HAL_SPI_Init(&hspi1);
+    ptr->states = Starting;
 }
 
-void HearingStop(HearingTester* ptr)
+void hearing_stop(HearingTester* ptr)
 {
-    HAL_TIM_PWM_Stop(&htim1,TIM_CHANNEL_3);///stop sound at A10
-    HAL_TIM_PWM_Stop(&htim1,TIM_CHANNEL_2);///stop sound at A9
+//    HAL_TIM_PWM_Stop(&htim1,TIM_CHANNEL_3);///stop sound at A10
+//    HAL_TIM_PWM_Stop(&htim1,TIM_CHANNEL_2);///stop sound at A9
+//    HAL_SPI_DeInit(&hspi1);
     HAL_TIM_Base_Stop_IT(&htim1);
-    ptr->states = Idle;//TODO Remove this
-    ptr->react_time = 0;
+    ptr->states = Idle; //TODO Remove this state
     ButtonStop(&button);
 }
 
-void HearingHandle(HearingTester* ptr)
+void hearing_handle(HearingTester* ptr)
 {
-    static uint16_t prev_volume;
-    if(ptr->states == MeasuringFreq) //TODO Delay before measuring_freq
+    if(ptr->states == PlayingConstantVolume) //TODO Delay before measuring_freq
     {
         if (button.state == Pressed)
         {
             ptr->elapsed_time = button.stop_time - button.start_time/* - ptr->react_time*/;///- react_time located higher, in MeasuringReaction
             ptr->ampl = tone_pins[ptr->port].volume;
             tone_pins[ptr->port].volume = 0;
+            ptr->react_time = 0;
             ptr->curr_react_volume_coef = ptr->REACT_VOLUME_KOEF;// For preventing amplitude overflow
             while (ptr->curr_react_volume_coef * ptr->ampl <= ptr->ampl)
                 ptr->curr_react_volume_coef -= 1;
@@ -206,19 +212,19 @@ void HearingHandle(HearingTester* ptr)
             ptr->react_time /= ptr->REACT_SURVEYS_COUNT;
             ButtonStop(&button);
 
-            ptr->elapsed_time -= ptr->react_time;
-            /// As we changed elapsed_time, we have to recalculate amplitude
-            if (ptr->states == LinearTone)
-                ptr->ampl = ptr->max_volume * ptr->elapsed_time / ptr->mseconds_to_max;
-            else if (ptr->states == ConstantTone)
-            {}
-            else if (ptr->states == LinearStepTone)
-            {
-                uint16_t stepNum = ptr->elapsed_time / ptr->tone_step_for_LinearStepTone;
-                if (ptr->elapsed_time + ptr->tone_step_for_LinearStepTone < ptr->mseconds_to_max)
-                    stepNum += 1;
-                ptr->ampl = ptr->max_volume*stepNum*ptr->tone_step_for_LinearStepTone/ptr->mseconds_to_max;
-            }
+//            ptr->elapsed_time -= ptr->react_time;
+//            /// As we changed elapsed_time, we have to recalculate amplitude
+//            if (ptr->algorithm == LinearTone)
+//                ptr->ampl = ptr->max_volume * ptr->elapsed_time / ptr->mseconds_to_max;
+//            else if (ptr->algorithm == ConstantTone)
+//            {}
+//            else if (ptr->algorithm == LinearStepTone)
+//            {
+//                uint16_t stepNum = ptr->elapsed_time / ptr->tone_step_for_LinearStepTone;
+//                if (ptr->elapsed_time + ptr->tone_step_for_LinearStepTone < ptr->mseconds_to_max)
+//                    stepNum += 1;
+//                ptr->ampl = ptr->max_volume*stepNum*ptr->tone_step_for_LinearStepTone/ptr->mseconds_to_max;
+//            }
             ptr->states = Sending;
         }
     }

@@ -6,6 +6,7 @@
 #include <sstream>
 #include <thread>
 #include <iomanip>
+#include <vector>
 #include "../Core/Inc/notes.h"
 
 using namespace std;
@@ -22,16 +23,17 @@ enum
  * 0x4 ->
  * 0x10 u8|port u16|volume u16[]|freqs ->
  * 0x11 u8|port u16|MAX_VOLUME u16|MSECONDS_TO_MAX u16[]|freqs ->
- * 0x11 u8|port u8|algorithm u16|max_volume u16|mseconds_to_max *u16|time_step u16[]|freqs ->
+ * 0x11 u8|port u16[]|freqs ->
  * @note "*" means that presence of parameter depend on algorithm
- * 0x12 -> u8|state *u16|react_time *u16|el_time *u16|ampl
+ * 0x12 u16|new_amplitude -> u8|state *u16|elapsed_time *u16|amplitude
+ * 0x13 -> u8|state *u16|react_time
  * 0x18 u16|amplitude, u16|burstPeriod, u16|numberOfBursts, u16|numberOfMeandrs, u16|maxReactionTime -> u8|ifReacted u16|reactionTime u16|amplitude (In percent?)
  * @note react_time in ms
  * @note state can be:
- *      0 - MeasuringHearing
+ *      0 - MeasuringHearingThreshold
  *      1 - MeasuringReactionTime
  *      2 - MeasureEnd
- * @note "*" near parameter means that these params are sent only if state is MeasureEnd
+ * @note asterisk "*" near parameter means that that parameter is sent only when state reaches some predefined value
  *
  * port mean:
  * 0 - A9 pin, left channel
@@ -41,7 +43,7 @@ enum
  * If error in command CC:
  * CC ... -> 0x80(128)+CC u8[]|"string with \0" ///TODO Доделать
  */
-uint8_t Commands[]={0x1, 0x4, 0x10, 0x11, 0x12, 0x18};
+uint8_t Commands[]={0x1, 0x4, 0x10, 0x11, 0x12, 0x13, 0x18};
 
 static const uint8_t SS_OFFSET = 42;
 static const size_t BUF_SIZE = 128;///USB packet size
@@ -60,8 +62,9 @@ class Command_writer
 {
     char buffer[BUF_SIZE] = {0};
     size_t length;
+    ostream& dev;
 public:
-    Command_writer() : length(LenH + 1)
+    explicit Command_writer(ostream& dev): dev(dev), length(LenH + 1)
     {}
 
     template<typename T>
@@ -72,7 +75,7 @@ public:
         length += sizeof(var);
     }
 //TODO Write release conf with Tests
-    void write(ostream& dev)
+    void write()
     {
         dev.write(buffer, (streamsize) length);
         dev.flush();
@@ -104,13 +107,14 @@ public:
 class Command_reader
 {
     char buffer[BUF_SIZE] = {0};
-    size_t length;
+    size_t length;  /// Length of buffer without counting SS
     size_t read_length;
+    istream& dev;
 public:
-    Command_reader() : length(0), read_length(0)
+    explicit Command_reader(istream& dev): dev(dev), length(0), read_length(0)
     {}
 
-    char* read(istream& dev)
+    char* read()
     {
         dev.read(buffer, LenH + 1);/// CC LenL LenH
         const uint16_t n = *reinterpret_cast<uint16_t*>(buffer + LenL);
@@ -161,7 +165,7 @@ public:
     }
 };
 
-class TimeMeasurer
+class Time_measurer
 {
     constexpr const static auto now = std::chrono::steady_clock::now;
     std::chrono::steady_clock::time_point t_begin = now();
@@ -184,12 +188,19 @@ public:
     }
 };
 
+auto linear_step_algorithm(uint16_t max_amplitude, int milliseconds_to_max_ampl, int num_of_steps)
+{
+    std::vector<pair<uint16_t, uint16_t>> v;
+    v.reserve(num_of_steps + 1);
+    for (int i = 0; i <= num_of_steps; ++i)
+        v.emplace_back(milliseconds_to_max_ampl * i/num_of_steps, max_amplitude * (i+1)/num_of_steps);
+    return v;
+}
+
 int main (int , char** )
 {
     const char* path="stats.csv"; //TODO Rename file
     ofstream stat(path, ios_base::app|ios_base::out);
-    Command_writer writer;
-    Command_reader reader;
     const char* device_location;
 #ifdef linux
     device_location = "/dev/ttyACM0";
@@ -198,19 +209,27 @@ int main (int , char** )
 #else
 #error Unsupported OS
 #endif
-    ofstream dev(device_location);
+    ofstream dev_write(device_location);
     ifstream dev_read(device_location);
-    if(!dev || !dev_read)
+    if(!dev_write || !dev_read)
     {
         std::cout << "Error opening COM file" << std::endl;
         return 1;
     }
-    cout << "begin " << std::flush << std::endl;
+    Command_writer writer(dev_write);
+    Command_reader reader(dev_read);
     time_t t = std::chrono::system_clock::to_time_t(chrono::system_clock::now());
     stat << endl << std::put_time(std::localtime(&t), "%y_%m_%d %H:%M:%S") << endl;
-    TimeMeasurer timeMeasurer {};
-//    system("sleep 3");   ///TODO Tricky error while testing: mk doesn't turn states correctly, but doesn't hang
-//TODO Test 0x1
+    Time_measurer time_measurer {};
+    int max_amplitude = 20000;
+    int milliseconds_to_max_volume = 10000;
+    int num_of_steps = 30;
+    auto amplitudes = linear_step_algorithm(max_amplitude, milliseconds_to_max_volume, num_of_steps);
+    uint16_t reaction_time;
+    uint16_t elapsed_time;
+    uint16_t amplitude_heared;
+    uint16_t elapsed_time_by_mk;
+    uint16_t amplitude_heared_by_mk;
 //TODO Test 0x4 (especially with 0x18)
     const uint8_t long_test[] = {0x11, 0x18, 0x11, 0x18, 0x18, 0x11, 0x11, 0x18};
     const uint8_t short_test[] = {0x11, 0x18, 0x11};
@@ -218,6 +237,7 @@ int main (int , char** )
     const uint8_t* cmds = short_test;
     const size_t cmds_length = sizeof_arr(short_test);
 
+    cout << "begin " << std::endl;
 //    for(size_t i =0;i<4;++i)
     for(const uint8_t* cmd_ptr = cmds; cmd_ptr < cmds + cmds_length; ++cmd_ptr)
     {
@@ -230,8 +250,11 @@ int main (int , char** )
             writer.append_var<uint16_t>(1000);///Curr volume
         else if (cmd == 0x11)
         {
-            writer.append_var<uint16_t>(20000);///max_vol
-            writer.append_var<uint16_t>(5000);///msecs to max volume (max reaction time)
+            reaction_time = 0;
+            elapsed_time = 0;
+            amplitude_heared = 0;
+            elapsed_time_by_mk = 0;
+            amplitude_heared_by_mk = 0;
         }
         if (cmd == 0x10 || cmd == 0x11)
         {
@@ -248,44 +271,94 @@ int main (int , char** )
             writer.append_var<uint16_t>(2000);/// max reaction time
         }
         writer.prepare_for_sending();
-        timeMeasurer.begin();
-        writer.write(dev);
-        reader.read(dev_read);
-        timeMeasurer.end(cmd);
+        time_measurer.begin();
+        writer.write();
+        reader.read();
+        time_measurer.end(cmd);
         if (!reader.is_error())
         {
             if (cmd == 0x10 || cmd == 0x11)
                 assert(reader.is_empty());
             if (cmd == 0x10)
             {}
-            if (cmd == 0x11)
+            else
             {
-                uint8_t state;
-                do
+                const string del = ", ";
+                if (cmd == 0x11)
                 {
-                    writer.set_cmd(0x12);
-                    writer.prepare_for_sending();
-                    timeMeasurer.begin();
-                    writer.write(dev);
-                    reader.read(dev_read);
-                    timeMeasurer.end(0x12);
-                    reader.get_param(state);
-                    this_thread::sleep_for(1s);
-                } while (state != 2); /// 2 - measure end
-                ostringstream temp;
-                temp << cmd_ptr - cmds << ", " << reader.get_param<uint16_t>() << ", "<<reader.get_param<uint16_t>()<<", "<<(int)reader.get_param<uint16_t>()<<endl;
-                cout<<temp.str();
-                stat<<temp.str();
-            }
-            if (cmd == 0x18)
-            {
-                uint8_t if_reacted = reader.get_param<uint8_t>();
-                uint16_t reactionTime = reader.get_param<uint16_t>();
-                uint16_t ampl = reader.get_param<uint16_t>();
-                ostringstream temp;
-                temp << cmd_ptr - cmds << ", " << (int) if_reacted << ", " << reactionTime << ", " << ampl << ", 0x18" <<endl;
-                cout << temp.str();
-                stat << temp.str();
+                    for (auto iter = amplitudes.begin(); iter < amplitudes.end() - 1; ++iter)  /// As we calculate time as difference between elements, last element in 'amplitudes' only indicates time duration of amplitude before last element
+                    {
+                        auto [time, amplitude] = *iter;
+                        auto next_time = (iter+1)->first;
+                        writer.set_cmd(0x12);
+                        writer.append_var(amplitude);
+                        writer.prepare_for_sending();
+                        time_measurer.begin();
+                        writer.write();
+                        reader.read();
+                        time_measurer.end(0x12);
+                        assert(!reader.is_error());
+                        uint8_t state = reader.get_param<uint8_t>();
+                        if (state == 1) /// Patient reacted and mk starts measuring reaction
+                        {
+                            elapsed_time_by_mk = reader.get_param<uint16_t>();
+                            amplitude_heared_by_mk = reader.get_param<uint16_t>();
+                            break;
+                        }
+                        this_thread::sleep_for(chrono::milliseconds(next_time - time));
+                        amplitude_heared = amplitude;
+                        elapsed_time = time;
+                    }
+                    ostringstream log_string;
+                    log_string << cmd_ptr - cmds << del; /// Number of curr command
+                    if (amplitude_heared_by_mk == 0)  /// Patient doesn't reacted, need to stop measure
+                    {
+                        writer.set_cmd(0x4);
+                        writer.prepare_for_sending();
+                        writer.write();
+                        reader.read();
+                        assert(!reader.is_error() && reader.is_empty());
+                        log_string << '0' << del << '0' << del << '0' << del << '0' << del << '0' << del << '0' << del << '0';
+                    }
+                    else /// Patient reacted
+                    {
+    //                    assert(elapsed_time <= elapsed_time_by_mk);
+                        uint8_t state;
+                        do {
+                            writer.set_cmd(0x13);
+                            writer.prepare_for_sending();
+                            time_measurer.begin();
+                            writer.write();
+                            reader.read();
+                            time_measurer.end(0x13);
+                            assert(!reader.is_error());
+                            reader.get_param(state);
+                            this_thread::sleep_for(1s);
+                        } while (state != 2); /// 2 - measure end
+                        reaction_time = reader.get_param<uint16_t>();//TODO If reaction time higher than elapsed_time
+    //                    uint16_t elapsed_time = reader.get_param<uint16_t>();
+    //                    uint16_t amplitude = reader.get_param<uint16_t>();
+                        auto real_elapsed_time = elapsed_time_by_mk - reaction_time;
+                        auto real_amplitude_heared = (std::find_if(amplitudes.begin(), amplitudes.end(),
+                                                              [&](const auto& item){ return item.first >= real_elapsed_time; }) - 1)->second;
+
+                        log_string << reaction_time << del << real_elapsed_time << del << real_amplitude_heared << del
+                            << elapsed_time_by_mk << del << amplitude_heared_by_mk << del << elapsed_time << del << amplitude_heared;
+                    }
+                    log_string << endl;
+                    cout << log_string.str();
+                    stat << log_string.str();
+                }
+                else if (cmd == 0x18)
+                {
+                    uint8_t if_reacted = reader.get_param<uint8_t>();
+                    uint16_t reaction_time_on_skin_conduction = reader.get_param<uint16_t>();
+                    uint16_t ampl = reader.get_param<uint16_t>();
+                    ostringstream temp;
+                    temp << cmd_ptr - cmds << del << (int) if_reacted << del << reaction_time_on_skin_conduction << del << ampl << del << "0x18" << endl;
+                    cout << temp.str();
+                    stat << temp.str();
+                }
             }
         }
         else

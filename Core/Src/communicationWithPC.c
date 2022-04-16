@@ -151,7 +151,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 {
                     currMeasure = None;
                     tone_pins[hearingTester.port].volume = 0;
-                    HearingStop(&hearingTester);
+                    hearing_stop(&hearingTester);
                     hearingTester.react_surveys_elapsed = 0;
 //                    hearingTester.ampl=0; //not necessary but maybe needed in some cases
                 }
@@ -189,10 +189,6 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
 //                usb_assert(hearingTester.states == Idle);///Теоретически не нужно проверять, но на всякий случай пусть будет
                 usb_assert(get_param_8(&reader, (uint8_t*) &hearingTester.port));
                 usb_assert(hearingTester.port < 2);
-//                tone_pins[hearingTester.port].volume=0;//TODO Move to HearingTesterStart()
-                usb_assert(get_param_16(&reader, (uint16_t*) &hearingTester.max_volume));
-                usb_assert(get_param_16(&reader, (uint16_t*) &hearingTester.mseconds_to_max));
-                usb_assert(hearingTester.mseconds_to_max > 0);
                 for (volatile uint16_t* freq = hearingTester.freq; freq < hearingTester.freq + sizeof_arr(hearingTester.freq); ++freq)
                 {
                     if (!get_param_16(&reader, (uint16_t*) freq))
@@ -202,36 +198,59 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 for (size_t i = 0; i < sizeof_arr(hearingTester.freq); ++i)
                     tone_pins[hearingTester.port].dx[i] = freq_to_dx(&tone_pins[hearingTester.port], hearingTester.freq[i]);
                 currMeasure = Hearing;
-                hearingTester.algorithm = ConstantTone;
-                hearingTester.tone_step_for_LinearStepTone = hearingTester.mseconds_to_max/10;
-                HearingStart(&hearingTester);
+                hearing_start(&hearingTester);
                 prepare_for_sending(&writer, cmd, true);
             }
-            else if (cmd == 0x12)//TODO ASK
+            else if (cmd == 0x12)
             {
                 usb_assert(currMeasure == Hearing);
-                usb_assert(hearingTester.states != Idle);
-                if (hearingTester.states == MeasuringFreq)
+//                usb_assert(hearingTester.states != Idle);
+                if (hearingTester.states == Starting)
                 {
-                    append_var_8(&writer, MeasuringFreq);
-                    append_var_16(&writer, 0);
-                    append_var_16(&writer, 0);
-                    append_var_16(&writer, 0);
+                    ButtonStart(&button);
+                    hearingTester.curr_volume = 0;
+                    hearingTester.new_volume = 0;
+                    hearingTester.states = ChangingVolume;
+                }
+                if(hearingTester.states == PlayingConstantVolume || hearingTester.states == ChangingVolume)
+                {
+                    usb_assert(get_param_16(&reader, (uint16_t *) &hearingTester.new_volume));
+                    append_var_8(&writer, hearingTester.states);
+                    hearingTester.states = ChangingVolume;
                 }
                 else if (hearingTester.states == MeasuringReaction || hearingTester.states == WaitingBeforeMeasuringReaction)
                 {
                     append_var_8(&writer, MeasuringReaction);
-                    append_var_16(&writer, 0);
-                    append_var_16(&writer, 0);
-                    append_var_16(&writer, 0);
+                    append_var_16(&writer, hearingTester.elapsed_time);
+                    append_var_16(&writer, hearingTester.ampl);
+                }
+                prepare_for_sending(&writer, cmd, true);
+            }
+            else if (cmd == 0x13)//TODO ASK
+            {
+                usb_assert(currMeasure == Hearing);
+                usb_assert(hearingTester.states != Idle);
+                if (hearingTester.states == PlayingConstantVolume || hearingTester.states == ChangingVolume) /// This state unlikely to be when this command is received, but just in case we must check this
+                {
+                    append_var_8(&writer, PlayingConstantVolume);
+//                    append_var_16(&writer, 0);
+//                    append_var_16(&writer, 0);
+//                    append_var_16(&writer, 0);
+                }
+                else if (hearingTester.states == MeasuringReaction || hearingTester.states == WaitingBeforeMeasuringReaction)
+                {
+                    append_var_8(&writer, MeasuringReaction);
+//                    append_var_16(&writer, 0);
+//                    append_var_16(&writer, 0);
+//                    append_var_16(&writer, 0);
                 }
                 else if(hearingTester.states == Sending)
                 {
                     append_var_8(&writer, Sending);
                     append_var_16(&writer, hearingTester.react_time);
-                    append_var_16(&writer, hearingTester.elapsed_time);
-                    append_var_16(&writer, hearingTester.ampl);
-                    HearingStop(&hearingTester);
+//                    append_var_16(&writer, hearingTester.elapsed_time);/// Elapsed time and amplitude already sent via 0x12 command
+//                    append_var_16(&writer, hearingTester.ampl);
+                    hearing_stop(&hearingTester);
                     currMeasure = None;
                 }
                 prepare_for_sending(&writer, cmd, true);
