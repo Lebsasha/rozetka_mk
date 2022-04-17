@@ -134,9 +134,9 @@ int main(void)
     htim1.Instance->CCR2=0;
     TonePin tone_pins_init[2];
     Pin CS = {GPIOB, GPIO_PIN_10};
-    TonePin_ctor(&tone_pins_init[0], &(htim1.Instance->CCR3), 0, CS); ///right
+    TonePin_ctor(&tone_pins_init[0], &(htim1.Instance->CCR3), LeftDynamic, CS);
     tone_pins_init[0].dx[0]=freq_to_dx(&tone_pins_init[0], NOTE_A4);//A4 == 440 Hz
-    TonePin_ctor(&tone_pins_init[1], &(htim1.Instance->CCR2), 1, CS); ///left
+    TonePin_ctor(&tone_pins_init[1], &(htim1.Instance->CCR2), RightDynamic, CS);
     tone_pins_init[1].dx[0]=freq_to_dx(&tone_pins_init[1], NOTE_A4);
 
     tone_pins=tone_pins_init;
@@ -186,9 +186,11 @@ int main(void)
     /* USER CODE BEGIN 3 */
   }
 
+#ifdef __clang__
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "hicpp-signed-bitwise"
 #pragma ide diagnostic ignored "OCInconsistentNamingInspection"
+#endif
 
   /* USER CODE END 3 */
 }
@@ -585,6 +587,9 @@ void send_command(CommandWriter* ptr)
     write_pin_if_in_debug(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
     ptr->ifSending = false;
 }
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 /* USER CODE END 4 */
 
 /**
@@ -595,7 +600,6 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-#pragma clang diagnostic pop
   /* USER CODE END Error_Handler_Debug */
 }
 

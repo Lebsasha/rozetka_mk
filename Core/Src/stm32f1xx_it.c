@@ -240,10 +240,10 @@ void TIM1_UP_IRQHandler(void)
 //        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 0);
         GPIOB->BSRR = (uint32_t) GPIO_PIN_12<<16U;
 #endif
-        if (hearingTester.states == ChangingVolume)
+        if (hearingTester.state == ChangingVolume)
         {
             if (hearingTester.curr_volume >= hearingTester.new_volume)
-                hearingTester.states = PlayingConstantVolume;
+                hearingTester.state = PlayingConstantVolume;
             else
             {
                 const int PRESCALER = 2;
@@ -252,7 +252,7 @@ void TIM1_UP_IRQHandler(void)
                 {
                     counter = 0;
                     hearingTester.curr_volume += 1;
-                    tone_pins[hearingTester.port].volume = hearingTester.curr_volume;
+                    tone_pins[hearingTester.dynamic].volume = hearingTester.curr_volume;
                 }
                 ++counter;
             }

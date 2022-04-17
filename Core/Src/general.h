@@ -1,19 +1,14 @@
 #ifndef GENERAL
 #define GENERAL
 
-
 #include <math.h>
 #include <stdbool.h>
 #include "main.h"
 
-//#ifndef DEBUG
-//#define DEBUG
-// /// Inform that IDE does not define "DEBUG"
-//#warning DEBUG defined manually
-//#endif
-
 #define sizeof_arr(arr) (sizeof(arr)/sizeof((arr)[0]))
+/// This macro is used for performing some kind of variable type deduction
 #define static_access(type) ((type*)NULL)
+
 #define reinterpret_cast(type, expression) ((type)(expression))
 
 typedef enum Measures
@@ -21,7 +16,7 @@ typedef enum Measures
     None, Hearing, SkinConduction
 }Measures;
 
-/// For simplifying pin' coordinates passing in functions
+/// For simplifying pin transmitting via constructors in objects
 typedef struct Pin {GPIO_TypeDef* GPIOx; uint16_t pin;} Pin;
 
 /// If start_time!=0 && stop_time==0 time is measured.

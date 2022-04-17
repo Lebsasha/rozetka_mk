@@ -21,9 +21,9 @@ enum
 /**
  * 0x1 -> u8|version u8[]|"string with \0"
  * 0x4 ->
- * 0x10 u8|port u16|volume u16[]|freqs ->
- * 0x11 u8|port u16|MAX_VOLUME u16|MSECONDS_TO_MAX u16[]|freqs ->
- * 0x11 u8|port u16[]|freqs ->
+ * 0x10 u8|dynamic u16|volume u16[]|freqs ->
+ * 0x11 u8|dynamic u16|MAX_VOLUME u16|MSECONDS_TO_MAX u16[]|freqs ->
+ * 0x11 u8|dynamic u16[]|freqs ->
  * @note "*" means that presence of parameter depend on algorithm
  * 0x12 u16|new_amplitude -> u8|state *u16|elapsed_time *u16|amplitude
  * 0x13 -> u8|state *u16|react_time
@@ -35,9 +35,9 @@ enum
  *      2 - MeasureEnd
  * @note asterisk "*" near parameter means that that parameter is sent only when state reaches some predefined value
  *
- * port mean:
- * 0 - A9 pin, left channel
- * 1 - A10 pin, right channel
+ * dynamic mean:
+ * 0 - left channel
+ * 1 - right channel
  *
  *
  * If error in command CC:
@@ -47,6 +47,14 @@ uint8_t Commands[]={0x1, 0x4, 0x10, 0x11, 0x12, 0x13, 0x18};
 
 static const uint8_t SS_OFFSET = 42;
 static const size_t BUF_SIZE = 128;///USB packet size
+
+/// Possible hearing test states
+enum class HearingStates
+{
+    MeasuringHearingThreshold [[maybe_unused]] = 0, MeasuringReactionTime = 1, SendingResults = 2
+};
+
+enum class HearingDynamics {Left=0, Right=1};
 
 #define sizeof_arr(arr) (sizeof(arr)/sizeof((arr)[0]))
 //template<typename T>
@@ -184,7 +192,7 @@ public:
             cout << "0x" << std::hex << cmd << std::dec << " command";
         else if (!description.empty())
             cout << description;
-        cout << " takes " << std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_begin).count() << endl;
+        cout << " takes " << std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_begin).count() << " us" << endl;
     }
 };
 
@@ -221,9 +229,9 @@ int main (int , char** )
     time_t t = std::chrono::system_clock::to_time_t(chrono::system_clock::now());
     stat << endl << std::put_time(std::localtime(&t), "%y_%m_%d %H:%M:%S") << endl;
     Time_measurer time_measurer {};
-    int max_amplitude = 20000;
+    int max_amplitude = 0xffff;
     int milliseconds_to_max_volume = 10000;
-    int num_of_steps = 30;
+    int num_of_steps = 10;
     auto amplitudes = linear_step_algorithm(max_amplitude, milliseconds_to_max_volume, num_of_steps);
     uint16_t reaction_time;
     uint16_t elapsed_time;
@@ -245,7 +253,7 @@ int main (int , char** )
         const int cmd = *cmd_ptr; // i==0 ? 0x11 : i==1 ? 0x18 : i==2 ? 0x18 : /**i == 3*/0x18;
         writer.set_cmd(cmd);
         if (cmd == 0x10 || cmd == 0x11)
-            writer.append_var<uint8_t>(1);/// Port
+            writer.append_var<uint8_t>( (uint8_t)(HearingDynamics::Right) );/// Channel
         if (cmd == 0x10)
             writer.append_var<uint16_t>(1000);///Curr volume
         else if (cmd == 0x11)
@@ -299,7 +307,7 @@ int main (int , char** )
                         time_measurer.end(0x12);
                         assert(!reader.is_error());
                         uint8_t state = reader.get_param<uint8_t>();
-                        if (state == 1) /// Patient reacted and mk starts measuring reaction
+                        if (state == (uint8_t) HearingStates::MeasuringReactionTime) /// Patient reacted and mk starts measuring reaction
                         {
                             elapsed_time_by_mk = reader.get_param<uint16_t>();
                             amplitude_heared_by_mk = reader.get_param<uint16_t>();
@@ -334,7 +342,7 @@ int main (int , char** )
                             assert(!reader.is_error());
                             reader.get_param(state);
                             this_thread::sleep_for(1s);
-                        } while (state != 2); /// 2 - measure end
+                        } while (state != (uint8_t) HearingStates::SendingResults); /// until measure has being ended
                         reaction_time = reader.get_param<uint16_t>();//TODO If reaction time higher than elapsed_time
     //                    uint16_t elapsed_time = reader.get_param<uint16_t>();
     //                    uint16_t amplitude = reader.get_param<uint16_t>();
