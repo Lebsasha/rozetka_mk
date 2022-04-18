@@ -19,7 +19,6 @@ void ButtonStart(Button* button)
     button->stop_time = 0;
     button->state = WaitingForPress;
 
-    //TODO Maybe rewrite with Input Capture?
     //TODO Check that htim4 not used in other way (i. e. some survey may use it and we don't want to accidentally overwrite parameters)
 //    __HAL_TIM_ENABLE_IT(&htim4, TIM_IT_UPDATE);
 //    __HAL_TIM_ENABLE(&htim4);

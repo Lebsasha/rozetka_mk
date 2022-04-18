@@ -258,8 +258,9 @@ void TIM1_UP_IRQHandler(void)
             }
         }
     }
-    __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);
-    return;
+
+  __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);
+  return;
   /* USER CODE END TIM1_UP_IRQn 0 */
   HAL_TIM_IRQHandler(&htim1);
   /* USER CODE BEGIN TIM1_UP_IRQn 1 */
@@ -307,9 +308,9 @@ void TIM4_IRQHandler(void)
 
     if (currMeasure == Hearing || currMeasure == SkinConduction)
     {
-        if (HAL_GPIO_ReadPin(button.GPIOx, button.pin) == GPIO_PIN_RESET && button.state == WaitingForPress)//TODO
+        if (HAL_GPIO_ReadPin(button.GPIOx, button.pin) == GPIO_PIN_RESET && button.state == WaitingForPress)
         {
-            button.stop_time = HAL_GetTick();//TODO Replace with InputCapture
+            button.stop_time = HAL_GetTick();//TODO Maybe replace with InputCapture?
             button.state = Pressed;
         }
     }

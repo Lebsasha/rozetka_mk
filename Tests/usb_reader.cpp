@@ -41,7 +41,7 @@ enum
  *
  *
  * If error in command CC:
- * CC ... -> 0x80(128)+CC u8[]|"string with \0" ///TODO Доделать
+ * CC ... -> 0x80(128)+CC u8[]|"string with \0" ///TODO Переделать c кодами ошибок
  */
 uint8_t Commands[]={0x1, 0x4, 0x10, 0x11, 0x12, 0x13, 0x18};
 
@@ -82,7 +82,6 @@ public:
         *reinterpret_cast<T*>(buffer + length) = var;
         length += sizeof(var);
     }
-//TODO Write release conf with Tests
     void write()
     {
         dev.write(buffer, (streamsize) length);
@@ -207,7 +206,7 @@ auto linear_step_algorithm(uint16_t max_amplitude, int milliseconds_to_max_ampl,
 
 int main (int , char** )
 {
-    const char* path="stats.csv"; //TODO Rename file
+    const char* path="stats.csv";
     ofstream stat(path, ios_base::app|ios_base::out);
     const char* device_location;
 #ifdef linux
@@ -343,7 +342,7 @@ int main (int , char** )
                             reader.get_param(state);
                             this_thread::sleep_for(1s);
                         } while (state != (uint8_t) HearingStates::SendingResults); /// until measure has being ended
-                        reaction_time = reader.get_param<uint16_t>();//TODO If reaction time higher than elapsed_time
+                        reaction_time = reader.get_param<uint16_t>();
     //                    uint16_t elapsed_time = reader.get_param<uint16_t>();
     //                    uint16_t amplitude = reader.get_param<uint16_t>();
                         auto real_elapsed_time = elapsed_time_by_mk - reaction_time;

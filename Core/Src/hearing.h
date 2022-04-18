@@ -6,7 +6,7 @@
 
 /// Carrying frequency
 #define TONE_FREQ 40000
-//TODO Change channels number to 2 or higher
+//TODO Try to change number of channels to 2 or higher
 #define CHANNELS_NUM 1
 
 //#define TONE_PWM_GENERATION
@@ -60,8 +60,8 @@ typedef struct HearingTester
     Timer timer;
     volatile uint16_t react_time;
     volatile uint8_t react_surveys_elapsed;
-    uint8_t REACT_SURVEYS_COUNT; //const
-    uint8_t REACT_VOLUME_KOEF; //const
+    uint8_t REACT_SURVEYS_COUNT;
+    uint8_t REACT_VOLUME_KOEF;
     uint8_t curr_react_volume_coef;
     volatile uint16_t freq[CHANNELS_NUM];
     volatile uint16_t curr_volume;

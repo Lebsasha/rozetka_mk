@@ -15,16 +15,17 @@ enum Commands
     CC = 0, LenL = 1, LenH = 2
 };
 
-typedef struct CommandWriter //TODO rename to CamelCase (and reader same)
+typedef struct CommandWriter
 {
-    uint8_t buffer[128];///BUF_SIZE constant
+    uint8_t buffer[128]; /// It's size equals BUF_SIZE constant
+    /// @note length counted without SS byte
     size_t length;
-    size_t BUF_SIZE;///const
-    bool ifSending;
+    size_t BUF_SIZE;
+    bool is_sending;
 } CommandWriter;
 
 void CommandWriter_ctor(CommandWriter* ptr);
-//void send_command(CommandWriter* ptr);
+//void send_command(CommandWriter* ptr); /// private function in main.c
 
 void process_cmd(const uint8_t* command, const uint32_t* len);
 

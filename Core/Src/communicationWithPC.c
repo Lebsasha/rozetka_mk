@@ -10,10 +10,10 @@ static const uint8_t SS_OFFSET = 42;
 void CommandWriter_ctor(CommandWriter* ptr)
 {
     ptr->length = 3*sizeof(uint8_t);///CC, LenH, LenL
-    ptr->BUF_SIZE = 128;///This constant can be changed if needed, but with appropriate changes with buffer array //TODO
+    ptr->BUF_SIZE = 128;///This constant can be changed if needed, but with appropriate changes with buffer array size
     ptr->buffer[LenL]=0;
     ptr->buffer[LenH]=0;
-    ptr->ifSending = false;
+    ptr->is_sending = false;
 }
 
 void append_var_8(CommandWriter* ptr, uint8_t var)
@@ -48,12 +48,13 @@ void prepare_for_sending(CommandWriter* ptr, uint8_t command_code, bool if_ok)
         ptr->buffer[CC] = command_code + 128 * !if_ok;/// 128 == 1<<7
     else
         ptr->buffer[CC] = command_code; /// Error bit already set in command_code
-    ptr->ifSending = true;
+    ptr->is_sending = true;
 }
 
 typedef struct CommandReader
 {
     uint8_t* buffer;
+    /// @note length counted without SS byte
     size_t length;
     size_t read_length;
 }CommandReader;
@@ -110,7 +111,7 @@ extern RandInitializer randInitializer;
 extern Button button;
 extern SkinConductionTester skinTester;
 extern HearingTester hearingTester;
-extern TonePin* tone_pins;//TODO Move tone_pins from this file to hearingTester
+extern TonePin* tone_pins;//TODO Try to move tone_pins from this file to hearingTester
 
 #ifdef NDEBUG
 #define usb_assert(cond) ((void)0)
@@ -186,7 +187,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
             else if (cmd == 0x11)
             {
                 usb_assert(currMeasure == None);
-//                usb_assert(hearingTester.state == Idle);///Теоретически не нужно проверять, но на всякий случай пусть будет
+//                usb_assert(hearingTester.state == Idle); ///Теоретически не нужно проверять, но на всякий случай пусть будет
                 usb_assert(get_param_8(&reader, (uint8_t*) &hearingTester.dynamic));
                 usb_assert(hearingTester.dynamic < 2);
                 for (volatile uint16_t* freq = hearingTester.freq; freq < hearingTester.freq + sizeof_arr(hearingTester.freq); ++freq)
@@ -229,7 +230,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
             else if (cmd == 0x13)//TODO ASK
             {
                 usb_assert(currMeasure == Hearing);
-                usb_assert(hearingTester.state != Idle);
+//                usb_assert(hearingTester.state != Idle);
                 if (hearingTester.state == PlayingConstantVolume || hearingTester.state == ChangingVolume) /// This state unlikely to be when this command is received, but just in case we must check this
                 {
                     append_var_8(&writer, MeasuringHearingThreshold);

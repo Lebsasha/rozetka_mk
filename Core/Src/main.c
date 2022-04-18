@@ -129,7 +129,6 @@ int main(void)
 
     write_pin_if_in_debug(GPIOB, GPIO_PIN_13, 1);//show that initialisation started
 
-    /// These lines is ctor for tone_pins
     htim1.Instance->CCR3=0;//TODO Изменить после того, как поставим фильтр
     htim1.Instance->CCR2=0;
     TonePin tone_pins_init[2];
@@ -141,7 +140,7 @@ int main(void)
 
     tone_pins=tone_pins_init;
 
-    Pin button_pin = {GPIOB, GPIO_PIN_6}; //TODO
+    Pin button_pin = {GPIOB, GPIO_PIN_6};
     Button_ctor(&button, button_pin);
     CommandWriter_ctor(&writer);
     HearingTester_ctor(&hearingTester);
@@ -175,12 +174,10 @@ int main(void)
       {
           SkinConductionEnd(&skinTester);
       }
-      if (writer.ifSending)
+      if (writer.is_sending)
       {
           send_command(&writer);
       }
-//      if (mock_flag && !writer.ifSending)
-//          mock_func();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -585,7 +582,7 @@ void send_command(CommandWriter* ptr)
     ptr->buffer[LenH]=0;
     ptr->length = 1 + 1 + 1;///CC, LenH, LenL
     write_pin_if_in_debug(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
-    ptr->ifSending = false;
+    ptr->is_sending = false;
 }
 #ifdef __clang__
 #pragma clang diagnostic pop

@@ -7,16 +7,12 @@
 //TODO ? ETR instead in clock (?)
 //TODO 2 STM32CubeMX cleanup
 //TODO 1 Try disabling SPI between tests
-//TODO 2(1) Hаndling reaction_time >= elapsed_time in C++ high level program
-//TODO 1 Make possible decreasing curr_volume to new_volume, not only increasing
 //TODO 1 Change type of sine_table
-//TODO 5 Replace strings with error codes: CurrentMeasureTypeIsNone, RequiredCommandParameterMissing, CommandParameterOutOfRange, OtherError
+//TODO 5 Replace strings with error codes, e. g.: UnsupportedCommand, CurrentMeasureTypeIsNone, RequiredCommandParameterMissing, CommandParameterOutOfRange, OtherError
 //TODO 2 Set last amplitude on DAC to 0
 
-//TODO 1 Add Right and left channel enum for hearing
-//TODO 2 Add HighLevelStates in hearing (and in C++ program)
-//TODO 1 estimate curr_volume -> new_volume timing
-//TODO 1(5) Test DAC with 5 V
+//TODO 2(1) Hаndling reaction_time >= elapsed_time in C++ high level program
+//TODO 1 Make possible decreasing curr_volume to new_volume, not only increasing
 
 extern SPI_HandleTypeDef hspi1;
 extern TIM_HandleTypeDef htim1;
@@ -158,7 +154,7 @@ void hearing_stop(HearingTester* ptr)
 //    HAL_TIM_PWM_Stop(&htim1,TIM_CHANNEL_2);///stop sound at A9
 //    HAL_SPI_DeInit(&hspi1);
     HAL_TIM_Base_Stop_IT(&htim1);
-    ptr->state = Idle; //TODO Remove this state
+    ptr->state = Idle;
     ButtonStop(&button);
 }
 
@@ -179,7 +175,7 @@ void hearing_handle(HearingTester* ptr)
             timer_start(&ptr->timer, randDelay);
             ptr->state = WaitingBeforeMeasuringReaction;
         }
-        else if (button.state == Timeout) ///case elapsed time for sound testing exceed ptr->mseconds_to_max
+        else if (button.state == Timeout) ///case elapsed time for sound testing exceed ptr->milliseconds_to_max
         {
             ptr->elapsed_time = 0;
             ptr->ampl = 0;
