@@ -7,6 +7,7 @@
 #include <thread>
 #include <iomanip>
 #include <vector>
+#include <filesystem>
 #include "../Core/Inc/notes.h"
 
 using namespace std;
@@ -223,7 +224,21 @@ auto calculate_amplitude_points(Algorithms alg, std::tuple<T...> algorithm_param
 
 int main (int , char** )
 {
-    const char* path="stats.csv";
+//    auto log_dir = std::filesystem::path("Logs");
+//    const char* path = log_dir.append("stats.csv").c_str();
+//    if (! std::filesystem::exists(log_dir))
+//    {
+//        std::filesystem::create_directory(log_dir);
+//        cout << "log dir '" << log_dir << "' does not exsist" << endl;
+//        return 1;
+//    }
+//    if (! std::filesystem::exists(path))
+//    {
+//        ofstream o(path); /// Create file
+//        o << endl;
+//        o.close();
+//    }
+    const char* path="Logs/stats.csv";
     ofstream stat(path, ios_base::app|ios_base::out);
     const char* device_location;
 #ifdef linux
@@ -249,7 +264,8 @@ int main (int , char** )
     int max_amplitude = 5000;
     int milliseconds_to_max_volume = 10000;
     int num_of_steps = 10;
-    auto amplitudes = calculate_amplitude_points(Algorithms::dec_linear_by_step, tuple(max_amplitude, milliseconds_to_max_volume, num_of_steps));
+    Algorithms amplitude_algorithm = Algorithms::dec_linear_by_step;
+    auto amplitudes = calculate_amplitude_points(amplitude_algorithm, tuple(max_amplitude, milliseconds_to_max_volume, num_of_steps));
     uint16_t reaction_time;
     uint16_t elapsed_time;
     uint16_t amplitude_heared;
@@ -380,6 +396,10 @@ int main (int , char** )
                         log_string << reaction_time << del << real_elapsed_time << del << real_amplitude_heared << del
                                    << elapsed_time_by_mk << del << amplitude_heared_by_mk << del << elapsed_time << del << amplitude_heared;
                     }
+                    if (amplitude_algorithm == Algorithms::inc_linear_by_step)
+                        log_string << del << "inc";
+                    else if (amplitude_algorithm == Algorithms::dec_linear_by_step)
+                        log_string << del << "dec";
                     log_string << endl;
                     cout << log_string.str();
                     stat << log_string.str();
