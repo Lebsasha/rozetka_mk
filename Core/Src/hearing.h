@@ -6,6 +6,7 @@
 
 /// Carrying frequency
 #define TONE_FREQ 40000
+#define freq_to_dx(tone_pin_ptr, freq)  (((tone_pin_ptr)->ARR_SIZE*(freq)<<8)/TONE_FREQ)
 //TODO Try to change number of channels to 2 or higher
 #define CHANNELS_NUM 1
 
@@ -30,7 +31,7 @@ typedef struct TonePin
 
 void TonePin_ctor(TonePin* ptr, volatile uint32_t* CCR, HearingDynamics channel_bit, Pin CS_pin);
 
-uint32_t freq_to_dx(TonePin* ptr, uint16_t frequency);
+//uint32_t freq_to_dx(TonePin* ptr, uint16_t frequency);
 
 /// This is the function that generates sine wave of given frequency (or frequencies)
 void make_tone(TonePin* tonePin);
@@ -66,6 +67,7 @@ typedef struct HearingTester
     volatile uint16_t freq[CHANNELS_NUM];
     volatile uint16_t curr_volume;
     volatile uint16_t new_volume;
+    volatile uint8_t VOLUME_CHANGER_PRESCALER;
 }HearingTester;
 void HearingTester_ctor(HearingTester* ptr);
 

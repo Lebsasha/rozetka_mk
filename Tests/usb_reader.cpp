@@ -22,9 +22,7 @@ enum
  * 0x1 -> u8|version u8[]|"string with \0"
  * 0x4 ->
  * 0x10 u8|dynamic u16|volume u16[]|freqs ->
- * 0x11 u8|dynamic u16|MAX_VOLUME u16|MSECONDS_TO_MAX u16[]|freqs ->
  * 0x11 u8|dynamic u16[]|freqs ->
- * @note "*" means that presence of parameter depend on algorithm
  * 0x12 u16|new_amplitude -> u8|state *u16|elapsed_time *u16|amplitude
  * 0x13 -> u8|state *u16|react_time
  * 0x18 u16|amplitude, u16|burstPeriod, u16|numberOfBursts, u16|numberOfMeandrs, u16|maxReactionTime -> u8|ifReacted u16|reactionTime u16|amplitude (In percent?)
@@ -33,7 +31,7 @@ enum
  *      0 - MeasuringHearingThreshold
  *      1 - MeasuringReactionTime
  *      2 - MeasureEnd
- * @note asterisk "*" near parameter means that that parameter is sent only when state reaches some predefined value
+ * @note asterisk "*" near parameter means that that parameter is sent only when 'state' parameter reaches some predefined value
  *
  * dynamic mean:
  * 0 - left channel
@@ -195,12 +193,31 @@ public:
     }
 };
 
-auto linear_step_algorithm(uint16_t max_amplitude, int milliseconds_to_max_ampl, int num_of_steps)
+enum class Algorithms {inc_linear_by_step=0, dec_linear_by_step=1};
+
+template<typename ...T>
+auto calculate_amplitude_points(Algorithms alg, std::tuple<T...> algorithm_parameters)
 {
     std::vector<pair<uint16_t, uint16_t>> v;
-    v.reserve(num_of_steps + 1);
-    for (int i = 0; i <= num_of_steps; ++i)
-        v.emplace_back(milliseconds_to_max_ampl * i/num_of_steps, max_amplitude * (i+1)/num_of_steps);
+    if (alg == Algorithms::inc_linear_by_step || alg==Algorithms::dec_linear_by_step)
+    {
+        uint16_t max_amplitude = std::get<0>(algorithm_parameters);
+        uint16_t milliseconds_to_max_ampl = std::get<1>(algorithm_parameters);
+        int num_of_steps = std::get<2>(algorithm_parameters);
+        v.reserve(num_of_steps + 1);
+        if (alg == Algorithms::inc_linear_by_step)
+        {
+            for (int i = 0; i < num_of_steps; ++i)
+                v.emplace_back(milliseconds_to_max_ampl * i/num_of_steps, max_amplitude * (i + 1)/num_of_steps);
+            v.emplace_back(milliseconds_to_max_ampl, max_amplitude); /// Add one more element to make possible calculating duration of maximum amplitude via difference of time point
+        }
+        else if (alg == Algorithms::dec_linear_by_step)
+        {
+            for (int i = 0; i < num_of_steps; ++i)
+                v.emplace_back(milliseconds_to_max_ampl * i/num_of_steps, max_amplitude * (num_of_steps - i)/num_of_steps);
+            v.emplace_back(milliseconds_to_max_ampl, max_amplitude * 1/num_of_steps);
+        }
+    }
     return v;
 }
 
@@ -228,10 +245,11 @@ int main (int , char** )
     time_t t = std::chrono::system_clock::to_time_t(chrono::system_clock::now());
     stat << endl << std::put_time(std::localtime(&t), "%y_%m_%d %H:%M:%S") << endl;
     Time_measurer time_measurer {};
-    int max_amplitude = 0xffff;
+//    int max_amplitude = 0xffff;
+    int max_amplitude = 5000;
     int milliseconds_to_max_volume = 10000;
     int num_of_steps = 10;
-    auto amplitudes = linear_step_algorithm(max_amplitude, milliseconds_to_max_volume, num_of_steps);
+    auto amplitudes = calculate_amplitude_points(Algorithms::dec_linear_by_step, tuple(max_amplitude, milliseconds_to_max_volume, num_of_steps));
     uint16_t reaction_time;
     uint16_t elapsed_time;
     uint16_t amplitude_heared;
@@ -345,12 +363,22 @@ int main (int , char** )
                         reaction_time = reader.get_param<uint16_t>();
     //                    uint16_t elapsed_time = reader.get_param<uint16_t>();
     //                    uint16_t amplitude = reader.get_param<uint16_t>();
-                        auto real_elapsed_time = elapsed_time_by_mk - reaction_time;
-                        auto real_amplitude_heared = (std::find_if(amplitudes.begin(), amplitudes.end(),
-                                                              [&](const auto& item){ return item.first >= real_elapsed_time; }) - 1)->second;
+                        uint16_t real_elapsed_time;
+                        uint16_t real_amplitude_heared;
+                        if (reaction_time < elapsed_time_by_mk)
+                        {
+                            real_elapsed_time = elapsed_time_by_mk - reaction_time;
+                            real_amplitude_heared = (std::find_if(amplitudes.begin(), amplitudes.end(), [&](const auto& item)
+                                                                    { return item.first >= real_elapsed_time; }) - 1)->second;
+                        }
+                        else
+                        {
+                            real_elapsed_time = 0;
+                            real_amplitude_heared = 0;
+                        }
 
                         log_string << reaction_time << del << real_elapsed_time << del << real_amplitude_heared << del
-                            << elapsed_time_by_mk << del << amplitude_heared_by_mk << del << elapsed_time << del << amplitude_heared;
+                                   << elapsed_time_by_mk << del << amplitude_heared_by_mk << del << elapsed_time << del << amplitude_heared;
                     }
                     log_string << endl;
                     cout << log_string.str();
@@ -380,6 +408,7 @@ int main (int , char** )
             } while (c != '\0');
             cout<<endl;
         }
+        stat.flush();
     }
 
     cout<<"end"<<endl;

@@ -6,10 +6,11 @@
 //TODO 3(2) Test release config
 //TODO ? ETR instead in clock (?)
 //TODO 2 STM32CubeMX cleanup
-//TODO 1 Try disabling SPI between tests
 //TODO 1 Change type of sine_table
 //TODO 5 Replace strings with error codes, e. g.: UnsupportedCommand, CurrentMeasureTypeIsNone, RequiredCommandParameterMissing, CommandParameterOutOfRange, OtherError
 //TODO 2 Set last amplitude on DAC to 0
+//TODO 1 Try disabling SPI between tests
+//TODO 3 Make possible that reaction won't be measured
 
 //TODO 2(1) Hаndling reaction_time >= elapsed_time in C++ high level program
 //TODO 1 Make possible decreasing curr_volume to new_volume, not only increasing
@@ -38,10 +39,10 @@ void TonePin_ctor(TonePin* ptr, volatile uint32_t* CCR, HearingDynamics channel_
     ptr->CS_pin = CS_pin;
 }
 
-inline uint32_t freq_to_dx(TonePin *ptr, uint16_t frequency)
-{
-    return ptr->ARR_SIZE * frequency << 8 / TONE_FREQ;
-}
+//inline uint32_t freq_to_dx(TonePin *ptr, uint16_t frequency)
+//{
+//    return ptr->ARR_SIZE * frequency << 8 / TONE_FREQ;
+//}
 
 void make_tone(TonePin* tonePin)
 {
@@ -135,6 +136,7 @@ void HearingTester_ctor(HearingTester* ptr)
     memset((void*)ptr->freq, 0, sizeof(ptr->freq));
     ptr->curr_volume = 0;
     ptr->new_volume = 0;
+    ptr->VOLUME_CHANGER_PRESCALER = 2;
 }
 
 void hearing_start(HearingTester* ptr)

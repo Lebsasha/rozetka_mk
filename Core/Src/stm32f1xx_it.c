@@ -236,27 +236,30 @@ void TIM1_UP_IRQHandler(void)
 #endif
         make_tone(&tone_pins[0]);
         make_tone(&tone_pins[1]);
-#ifdef DEBUG
-//        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 0);
-        GPIOB->BSRR = (uint32_t) GPIO_PIN_12<<16U;
-#endif
+
         if (hearingTester.state == ChangingVolume)
         {
-            if (hearingTester.curr_volume >= hearingTester.new_volume)
+            if (hearingTester.curr_volume == hearingTester.new_volume)
                 hearingTester.state = PlayingConstantVolume;
             else
             {
-                const int PRESCALER = 2;
-                static int counter = 0;
-                if (counter == PRESCALER)
+                static uint8_t counter = 0;
+                if (counter == hearingTester.VOLUME_CHANGER_PRESCALER)
                 {
                     counter = 0;
-                    hearingTester.curr_volume += 1;
+                    if (hearingTester.curr_volume < hearingTester.new_volume)
+                        hearingTester.curr_volume += 1;
+                    else
+                        hearingTester.curr_volume -= 1;
                     tone_pins[hearingTester.dynamic].volume = hearingTester.curr_volume;
                 }
                 ++counter;
             }
         }
+#ifdef DEBUG
+//        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 0);
+        GPIOB->BSRR = (uint32_t) GPIO_PIN_12<<16U;
+#endif
     }
 
   __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);
