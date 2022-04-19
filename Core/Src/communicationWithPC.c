@@ -219,7 +219,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                     append_var_8(&writer, MeasuringHearingThreshold);
                     hearingTester.state = ChangingVolume;
                 }
-                else if (hearingTester.state == MeasuringReaction || hearingTester.state == WaitingBeforeMeasuringReaction)
+                else
                 {
                     append_var_8(&writer, MeasuringReactionTime);
                     append_var_16(&writer, hearingTester.elapsed_time);

@@ -190,7 +190,15 @@ public:
             cout << "0x" << std::hex << cmd << std::dec << " command";
         else if (!description.empty())
             cout << description;
-        cout << " takes " << std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_begin).count() << " us" << endl;
+        cout << " takes ";
+        auto diff = t_end - t_begin;
+        if (chrono::duration_cast<chrono::seconds>(diff).count() >= 2)
+            cout << chrono::duration_cast<chrono::seconds>(diff).count() << " s";
+        else if (chrono::duration_cast<chrono::milliseconds>(diff).count() >= 2)
+            cout<< chrono::duration_cast<chrono::milliseconds>(diff).count() << " ms";
+        else
+            cout << std::chrono::duration_cast<std::chrono::microseconds>(diff).count() << " us";
+        cout << endl;
     }
 };
 
@@ -224,22 +232,21 @@ auto calculate_amplitude_points(Algorithms alg, std::tuple<T...> algorithm_param
 
 int main (int , char** )
 {
-//    auto log_dir = std::filesystem::path("Logs");
-//    const char* path = log_dir.append("stats.csv").c_str();
-//    if (! std::filesystem::exists(log_dir))
-//    {
-//        std::filesystem::create_directory(log_dir);
-//        cout << "log dir '" << log_dir << "' does not exsist" << endl;
-//        return 1;
-//    }
-//    if (! std::filesystem::exists(path))
-//    {
-//        ofstream o(path); /// Create file
-//        o << endl;
-//        o.close();
-//    }
-    const char* path="Logs/stats.csv";
-    ofstream stat(path, ios_base::app|ios_base::out);
+    auto log_dir = std::filesystem::path("Logs");
+    auto stats_path = log_dir.append("stats.csv");
+    if (!std::filesystem::exists(log_dir))
+    {
+        std::filesystem::create_directory(log_dir);
+        cout << "Info: log dir '" << log_dir << "' wasn't exist and automatically created" << endl;
+    }
+    if (!std::filesystem::exists(stats_path))
+    {
+        ofstream o(stats_path); /// Create file
+        o << endl;
+        o.close();
+    }
+//    const char* stats_path="Logs/stats.csv";
+    ofstream stat(stats_path, ios_base::app | ios_base::out);
     const char* device_location;
 #ifdef linux
     device_location = "/dev/ttyACM0";
@@ -264,7 +271,7 @@ int main (int , char** )
     int max_amplitude = 5000;
     int milliseconds_to_max_volume = 10000;
     int num_of_steps = 10;
-    Algorithms amplitude_algorithm = Algorithms::dec_linear_by_step;
+    Algorithms amplitude_algorithm = Algorithms::inc_linear_by_step;
     auto amplitudes = calculate_amplitude_points(amplitude_algorithm, tuple(max_amplitude, milliseconds_to_max_volume, num_of_steps));
     uint16_t reaction_time;
     uint16_t elapsed_time;

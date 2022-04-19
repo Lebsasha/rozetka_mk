@@ -11,6 +11,8 @@
 //TODO 2 Set last amplitude on DAC to 0
 //TODO 1 Try disabling SPI between tests
 //TODO 3 Make possible that reaction won't be measured
+//TODO 1 Remove len ptr in process_command
+//TODO Pin A6 in ScinConductivity measure don't work
 
 //TODO 2(1) Hаndling reaction_time >= elapsed_time in C++ high level program
 //TODO 1 Make possible decreasing curr_volume to new_volume, not only increasing
@@ -146,7 +148,7 @@ void hearing_start(HearingTester* ptr)
 //    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);///start sound at A10
 //    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);///start sound at A9
     HAL_TIM_Base_Start_IT(&htim1);
-//    HAL_SPI_Init(&hspi1);
+    __HAL_SPI_ENABLE(&hspi1);
     ptr->state = Starting;
 }
 
@@ -154,7 +156,7 @@ void hearing_stop(HearingTester* ptr)
 {
 //    HAL_TIM_PWM_Stop(&htim1,TIM_CHANNEL_3);///stop sound at A10
 //    HAL_TIM_PWM_Stop(&htim1,TIM_CHANNEL_2);///stop sound at A9
-//    HAL_SPI_DeInit(&hspi1);
+    __HAL_SPI_DISABLE(&hspi1);
     HAL_TIM_Base_Stop_IT(&htim1);
     ptr->state = Idle;
     ButtonStop(&button);
