@@ -178,7 +178,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 {
                     if (!get_param_16(&reader, &freq))
                         freq = 0;
-                    usb_assert(freq <= 3400);
+                    usb_assert(freq <= TONE_FREQ / 2);
                     *c = freq_to_dx(&tone_pins[dynamic], freq);
                 }
                 tone_pins[dynamic].volume = volume;
@@ -194,7 +194,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 {
                     if (!get_param_16(&reader, (uint16_t*) freq))
                         *freq = 0;
-                    usb_assert(*freq <= 3400);
+                    usb_assert(*freq <= TONE_FREQ / 2);
                 }
                 for (size_t i = 0; i < sizeof_arr(hearingTester.freq); ++i)
                     tone_pins[hearingTester.dynamic].dx[i] = freq_to_dx(&tone_pins[hearingTester.dynamic], hearingTester.freq[i]);

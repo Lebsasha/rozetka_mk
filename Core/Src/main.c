@@ -127,7 +127,7 @@ int main(void)
     HAL_Delay(400);
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 
-    write_pin_if_in_debug(GPIOB, GPIO_PIN_13, 1);//show that initialisation started
+    write_pin_if_in_debug(GPIOB, GPIO_PIN_13, GPIO_PIN_SET);//show that initialisation started
 
     htim1.Instance->CCR3=0;//TODO Изменить после того, как поставим фильтр
     htim1.Instance->CCR2=0;
@@ -147,7 +147,7 @@ int main(void)
     uint16_t notes_1[] = {NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4};
     uint8_t durations_1[] = {4, 8, 8, 4, 4, 4, 4, 4};
 
-    write_pin_if_in_debug(GPIOB, GPIO_PIN_13, 0);//show that initialisation finished
+    write_pin_if_in_debug(GPIOB, GPIO_PIN_13, GPIO_PIN_RESET);//show that initialisation finished
 //#define DEBUG_BY_ST_LINK // macro need for preventing mk responding by USB
 //    uint8_t cmd_11[]={0x11, 0x03, 0x00, 0x01, 0x0b, 0x02, 0x3b};
 //    uint8_t cmd_18[]={0x18, 0x0a, 0x00,   0x64, 0x00, 0x0a, 0x00,   0x0a, 0x00, 0x0a, 0x00,   0xd0, 0x07, 0x8d};

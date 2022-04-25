@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <vector>
 #include <filesystem>
+#include <cstdint>
 #include "../Core/Inc/notes.h"
 
 using namespace std;
@@ -67,9 +68,9 @@ enum class HearingDynamics {Left=0, Right=1};
 
 class Command_writer
 {
+    ostream& dev;
     char buffer[BUF_SIZE] = {0};
     size_t length;
-    ostream& dev;
 public:
     explicit Command_writer(ostream& dev): dev(dev), length(LenH + 1)
     {}
@@ -98,7 +99,7 @@ public:
         uint8_t sum = SS_OFFSET;
         for_each(buffer + CC + 1, buffer + length, [&sum](uint8_t c)
         { sum += c; });
-        *reinterpret_cast<typeof(sum)*>(buffer+length) = sum;
+        *reinterpret_cast<decltype(sum)*>(buffer+length) = sum;
         length += sizeof(sum);
     }
 
@@ -112,10 +113,10 @@ public:
 
 class Command_reader
 {
+    istream& dev;
     char buffer[BUF_SIZE] = {0};
     size_t length;  /// Length of buffer without counting SS
     size_t read_length;
-    istream& dev;
 public:
     explicit Command_reader(istream& dev): dev(dev), length(0), read_length(0)
     {}
@@ -132,7 +133,7 @@ public:
         dev.read(buffer + length, sizeof (sum)); /// SS
         for_each(buffer + CC + 1, buffer + length, [&sum](uint8_t c)
         { sum += c; });
-        if (sum != *reinterpret_cast<typeof(sum)*>(buffer+length))
+        if (sum != *reinterpret_cast<decltype(sum)*>(buffer+length))
         {
             cerr << "SS isn't correct" << endl;
             assert(false);
@@ -182,7 +183,7 @@ public:
         t_begin = now();
     }
     
-    void end(const uint cmd = 0, const string& description = "")
+    void end(const uint8_t cmd = 0, const string& description = "")
     {
         t_end = now();
         cout << "Time for ";
@@ -248,9 +249,9 @@ int main (int , char** )
 //    const char* stats_path="Logs/stats.csv";
     ofstream stat(stats_path, ios_base::app | ios_base::out);
     const char* device_location;
-#ifdef linux
+#ifdef __linux__
     device_location = "/dev/ttyACM0";
-#elif defined(windows)
+#elif defined(_WIN32) || defined(_MSC_VER)
     device_location = "COM3"; // Untested
 #else
 #error Unsupported OS
@@ -306,7 +307,7 @@ int main (int , char** )
         }
         if (cmd == 0x10 || cmd == 0x11)
         {
-            writer.append_var<uint16_t>((NOTE_C5));/// array of 1-3 notes
+            writer.append_var<uint16_t>((4000));/// array of 1-3 notes
 //            writer.append_var<uint16_t>(NOTE_E5);
 //            writer.append_var<uint16_t>(NOTE_G5);
         }
@@ -425,15 +426,15 @@ int main (int , char** )
         }
         else
         {
-            cout<<"error: ";
+            cerr<<"error: ";
             char c=0;
             do
             {
                 reader.get_param(c);
                 if (c != '\0')
-                    cout<<c;
+                    cerr<<c;
             } while (c != '\0');
-            cout<<endl;
+            cerr<<endl;
         }
         stat.flush();
     }
