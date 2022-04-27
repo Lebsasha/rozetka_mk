@@ -150,11 +150,9 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
             {
                 if(currMeasure==Hearing)
                 {
-                    currMeasure = None;
                     tone_pins[hearingTester.dynamic].volume = 0;
                     hearing_stop(&hearingTester);
                     hearingTester.react_surveys_elapsed = 0;
-//                    hearingTester.ampl=0; //not necessary but maybe needed in some cases
                 }
                 else if (currMeasure == SkinConduction)
                 {
@@ -166,28 +164,28 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
             else if (cmd == 0x10)
             {
                 usb_assert(currMeasure == None);
-//                usb_assert(hearingTester.state == Idle);
-                uint8_t dynamic;
-                get_param_8(&reader, &dynamic);
-                usb_assert(dynamic < 2);
+                get_param_8(&reader, (uint8_t*) &hearingTester.dynamic);
+                usb_assert(hearingTester.dynamic < 2);
                 uint16_t volume;
                 get_param_16(&reader, &volume);
-                tone_pins[dynamic].volume=0;
+                tone_pins[hearingTester.dynamic].volume=0;
                 uint16_t freq = 0;
-                for (volatile uint32_t* c = tone_pins[dynamic].dx; c < tone_pins[dynamic].dx + sizeof_arr(tone_pins[dynamic].dx); ++c)
+                for (volatile uint32_t* c = tone_pins[hearingTester.dynamic].dx; c < tone_pins[hearingTester.dynamic].dx + sizeof_arr(tone_pins[hearingTester.dynamic].dx); ++c)
                 {
                     if (!get_param_16(&reader, &freq))
                         freq = 0;
                     usb_assert(freq <= TONE_FREQ / 2);
-                    *c = freq_to_dx(&tone_pins[dynamic], freq);
+                    *c = freq_to_dx(&tone_pins[hearingTester.dynamic], freq);
                 }
-                tone_pins[dynamic].volume = volume;
+                currMeasure = Hearing;
+                hearingTester.state = Idle;
+                hearing_start(&hearingTester);
+                tone_pins[hearingTester.dynamic].volume = volume;
                 prepare_for_sending(&writer, cmd, true);
             }
             else if (cmd == 0x11)
             {
                 usb_assert(currMeasure == None);
-//                usb_assert(hearingTester.state == Idle); ///Теоретически не нужно проверять, но на всякий случай пусть будет
                 usb_assert(get_param_8(&reader, (uint8_t*) &hearingTester.dynamic));
                 usb_assert(hearingTester.dynamic < 2);
                 for (volatile uint16_t* freq = hearingTester.freq; freq < hearingTester.freq + sizeof_arr(hearingTester.freq); ++freq)
@@ -199,6 +197,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 for (size_t i = 0; i < sizeof_arr(hearingTester.freq); ++i)
                     tone_pins[hearingTester.dynamic].dx[i] = freq_to_dx(&tone_pins[hearingTester.dynamic], hearingTester.freq[i]);
                 currMeasure = Hearing;
+                hearingTester.state = Starting;
                 hearing_start(&hearingTester);
                 prepare_for_sending(&writer, cmd, true);
             }

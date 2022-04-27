@@ -58,7 +58,7 @@ void timer_reset(Timer* ptr)
 void RandInitializer_ctor(RandInitializer* randInitializer)
 {
     randInitializer->isInitialised = false;
-    htim4.Instance->ARR = (((uint32_t)(1))<<16)-1;///Can be done via special microseconds counter register in STM32 core
+    htim4.Instance->ARR = UINT16_MAX;///Another way random seed could be got: via special microseconds counter register in STM32 core
     htim4.Instance->PSC = 0;
     HAL_TIM_Base_Start_IT(&htim4);
 }

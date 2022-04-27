@@ -22,7 +22,7 @@ extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim4;
 extern Button button;
 extern TonePin* tone_pins;
-const int16_t SINE_AMPL = 0x7fff;//max val of int16_t
+const int16_t SINE_AMPL = INT16_MAX;
 const uint16_t ARR_SIZE = 1024; /*!<for optimization purposes*/
 int16_t sine_table[1024];
 
@@ -138,7 +138,7 @@ void HearingTester_ctor(HearingTester* ptr)
     memset((void*)ptr->freq, 0, sizeof(ptr->freq));
     ptr->curr_volume = 0;
     ptr->new_volume = 0;
-    ptr->VOLUME_CHANGER_PRESCALER = 2;
+    ptr->VOLUME_CHANGER_PRESCALER = 1;
 }
 
 void hearing_start(HearingTester* ptr)
@@ -149,7 +149,6 @@ void hearing_start(HearingTester* ptr)
 //    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);///start sound at A9
     HAL_TIM_Base_Start_IT(&htim1);
     __HAL_SPI_ENABLE(&hspi1);
-    ptr->state = Starting;
 }
 
 void hearing_stop(HearingTester* ptr)

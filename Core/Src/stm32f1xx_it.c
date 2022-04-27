@@ -237,7 +237,7 @@ void TIM1_UP_IRQHandler(void)
         make_tone(&tone_pins[0]);
         make_tone(&tone_pins[1]);
 
-        if (hearingTester.state == ChangingVolume)
+        if (hearingTester.state == ChangingVolume)//TODO Change algorithm
         {
             if (hearingTester.curr_volume == hearingTester.new_volume)
                 hearingTester.state = PlayingConstantVolume;

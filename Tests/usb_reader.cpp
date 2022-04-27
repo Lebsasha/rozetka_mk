@@ -188,7 +188,7 @@ public:
         t_end = now();
         cout << "Time for ";
         if (cmd != 0)
-            cout << "0x" << std::hex << cmd << std::dec << " command";
+            cout << "0x" << std::hex << (int) cmd << std::dec << " command";
         else if (!description.empty())
             cout << description;
         cout << " takes ";
@@ -268,11 +268,11 @@ int main (int , char** )
     time_t t = std::chrono::system_clock::to_time_t(chrono::system_clock::now());
     stat << endl << std::put_time(std::localtime(&t), "%y_%m_%d %H:%M:%S") << endl;
     Time_measurer time_measurer {};
-//    int max_amplitude = 0xffff;
-    int max_amplitude = 5000;
+    int max_amplitude = 0xffff;
+//    int max_amplitude = 5000;
     int milliseconds_to_max_volume = 10000;
     int num_of_steps = 10;
-    Algorithms amplitude_algorithm = Algorithms::inc_linear_by_step;
+    Algorithms amplitude_algorithm = Algorithms::dec_linear_by_step;
     auto amplitudes = calculate_amplitude_points(amplitude_algorithm, tuple(max_amplitude, milliseconds_to_max_volume, num_of_steps));
     uint16_t reaction_time;
     uint16_t elapsed_time;
@@ -281,7 +281,7 @@ int main (int , char** )
     uint16_t amplitude_heared_by_mk;
 //TODO Test 0x4 (especially with 0x18)
     const uint8_t long_test[] = {0x11, 0x18, 0x11, 0x18, 0x18, 0x11, 0x11, 0x18};
-    const uint8_t short_test[] = {0x11, 0x18, 0x11};
+    const uint8_t short_test[] = {0x10, 0x4, 0x11, 0x11};
 //    const auto [cmds, cmds_l] = std::tie(short_test, sizeof_arr(short_test));
     const uint8_t* cmds = short_test;
     const size_t cmds_length = sizeof_arr(short_test);
@@ -296,7 +296,7 @@ int main (int , char** )
         if (cmd == 0x10 || cmd == 0x11)
             writer.append_var<uint8_t>( (uint8_t)(HearingDynamics::Right) );/// Channel
         if (cmd == 0x10)
-            writer.append_var<uint16_t>(1000);///Curr volume
+            writer.append_var<uint16_t>(50000);///Curr volume
         else if (cmd == 0x11)
         {
             reaction_time = 0;
