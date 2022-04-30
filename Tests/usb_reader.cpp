@@ -43,24 +43,24 @@ const string del = ", "; //Delimiter between writing to csv file results
 
 //TODO rename enums to noun form
 /// Possible hearing test states
-enum class HearingStates
+enum class HearingState
 {
     MeasuringHearingThreshold [[maybe_unused]] = 0, /*SendingThresholdResult=1, */MeasuringReactionTime = 1, SendingResults = 2
 };
 
-enum class HearingDynamics {Left=0, Right=1};
+enum class HearingDynamic {Left=0, Right=1};
 
 enum class DesiredButtonState {StartWaitingForPress=0, StartWaitingForRelease=2};
 enum class ActualButtonState {WaitingForPress=0, Pressed=1, WaitingForRelease=2, Released=3};
 
-enum class Algorithms {inc_linear_by_step=0, dec_linear_by_step=1, staircase};
+enum class Algorithm {inc_linear_by_step=0, dec_linear_by_step=1, staircase};
 
 class HearingTester
 {
 public:
     HearingTester(Command_writer& writer, Command_reader& reader, ofstream& stat);
-    void execute(uint16_t freq, HearingDynamics dynamic, uint16_t max_amplitude,
-                 uint16_t num_of_steps, uint16_t time_step, Algorithms amplitude_algorithm);
+    void execute(uint16_t freq, HearingDynamic dynamic, uint16_t max_amplitude,
+                 uint16_t num_of_steps, uint16_t time_step, Algorithm amplitude_algorithm);
 
 private:
     void send_new_amplitude_and_receive_threshold_results(uint16_t curr_amplitude);
@@ -78,7 +78,7 @@ private:
     uint16_t max_amplitude=0;
     uint16_t num_of_steps=0;
     uint16_t time_step=0;
-    Algorithms amplitude_algorithm{};
+    Algorithm amplitude_algorithm{};
 
     /// Results of measure of one pass
     uint16_t elapsed_time_by_mk=0;
@@ -128,22 +128,22 @@ public:
 };
 
 template<typename ...T>
-auto calculate_amplitude_points(Algorithms alg, std::tuple<T...> algorithm_parameters)
+auto calculate_amplitude_points(Algorithm alg, std::tuple<T...> algorithm_parameters)
 {
     std::vector<pair<uint16_t, uint16_t>> v;
-    if (alg == Algorithms::inc_linear_by_step || alg==Algorithms::dec_linear_by_step)
+    if (alg == Algorithm::inc_linear_by_step || alg == Algorithm::dec_linear_by_step)
     {
         uint16_t max_amplitude = std::get<0>(algorithm_parameters);
         uint16_t milliseconds_to_max_ampl = std::get<1>(algorithm_parameters);
         int num_of_steps = std::get<2>(algorithm_parameters);
         v.reserve(num_of_steps + 1);
-        if (alg == Algorithms::inc_linear_by_step)
+        if (alg == Algorithm::inc_linear_by_step)
         {
             for (int i = 0; i < num_of_steps; ++i)
                 v.emplace_back(milliseconds_to_max_ampl * i/num_of_steps, max_amplitude * (i + 1)/num_of_steps);
             v.emplace_back(milliseconds_to_max_ampl, max_amplitude); /// Add one more element to make possible calculating duration of maximum amplitude via difference of time point
         }
-        else if (alg == Algorithms::dec_linear_by_step)
+        else if (alg == Algorithm::dec_linear_by_step)
         {
             for (int i = 0; i < num_of_steps; ++i)
                 v.emplace_back(milliseconds_to_max_ampl * i/num_of_steps, max_amplitude * (num_of_steps - i)/num_of_steps);
@@ -194,7 +194,7 @@ int main (int , char** )
 //    int max_amplitude = 5000;
     int milliseconds_to_max_volume = 10000;
     int num_of_steps = 10;
-    Algorithms amplitude_algorithm = Algorithms::dec_linear_by_step;
+    Algorithm amplitude_algorithm = Algorithm::dec_linear_by_step;
     auto amplitudes = calculate_amplitude_points(amplitude_algorithm, tuple(max_amplitude, milliseconds_to_max_volume, num_of_steps));
     uint16_t reaction_time;
     uint16_t elapsed_time;
@@ -218,13 +218,13 @@ int main (int , char** )
         if (cmd == 0x11)
         {
             stat << cmd_ptr - cmds << ", "; /// Number of curr command
-            hearing_tester.execute(4000, HearingDynamics::Right, 0x0fff, 10, 400, Algorithms::staircase);
+            hearing_tester.execute(4000, HearingDynamic::Right, 0x0fff, 10, 400, Algorithm::staircase);
 
             continue;
         }
         writer.set_cmd(cmd);
         if (cmd == 0x10 || cmd == 0x11)
-            writer.append_var<uint8_t>( (uint8_t)(HearingDynamics::Right) );/// Channel
+            writer.append_var<uint8_t>( (uint8_t)(HearingDynamic::Right) );/// Channel
         if (cmd == 0x10)
             writer.append_var<uint16_t>(0xffff);///Curr volume
         else if (cmd == 0x11)
@@ -273,7 +273,7 @@ int main (int , char** )
                     time_measurer.log_end(0x12);
                     assert(!reader.is_error());
                     uint8_t state = reader.get_param<uint8_t>();
-                    if (state == (uint8_t) HearingStates::MeasuringReactionTime) /// Patient reacted and mk starts measuring reaction
+                    if (state == (uint8_t) HearingState::MeasuringReactionTime) /// Patient reacted and mk starts measuring reaction
                     {
                         elapsed_time_by_mk = reader.get_param<uint16_t>();
                         amplitude_heared_by_mk = reader.get_param<uint16_t>();
@@ -308,7 +308,7 @@ int main (int , char** )
                         assert(!reader.is_error());
                         reader.get_param(state);
                         this_thread::sleep_for(1s);
-                    } while (state != (uint8_t) HearingStates::SendingResults); /// until measure has being ended
+                    } while (state != (uint8_t) HearingState::SendingResults); /// until measure has being ended
                     reaction_time = reader.get_param<uint16_t>();
 //                    uint16_t elapsed_time = reader.get_param<uint16_t>();
 //                    uint16_t amplitude = reader.get_param<uint16_t>();
@@ -329,9 +329,9 @@ int main (int , char** )
                     log_string << reaction_time << del << real_elapsed_time << del << real_amplitude_heared << del
                                << elapsed_time_by_mk << del << amplitude_heared_by_mk << del << elapsed_time << del << amplitude_heared;
                 }
-                if (amplitude_algorithm == Algorithms::inc_linear_by_step)
+                if (amplitude_algorithm == Algorithm::inc_linear_by_step)
                     log_string << del << "inc";
-                else if (amplitude_algorithm == Algorithms::dec_linear_by_step)
+                else if (amplitude_algorithm == Algorithm::dec_linear_by_step)
                     log_string << del << "dec";
                 log_string << endl;
                 cout << log_string.str();
@@ -373,7 +373,7 @@ int main (int , char** )
 HearingTester::HearingTester(Command_writer& _writer, Command_reader& _reader, ofstream& _stat): writer(_writer), reader(_reader), stat(_stat)
 {}
 
-void HearingTester::execute(uint16_t _freq, HearingDynamics _dynamic, uint16_t _max_amplitude, uint16_t _num_of_steps, uint16_t _time_step, Algorithms _amplitude_algorithm)
+void HearingTester::execute(uint16_t _freq, HearingDynamic _dynamic, uint16_t _max_amplitude, uint16_t _num_of_steps, uint16_t _time_step, Algorithm _amplitude_algorithm)
 {
 //    assert(_freq < BASE_FREQ/2);
     freq = _freq;
@@ -396,7 +396,7 @@ void HearingTester::execute(uint16_t _freq, HearingDynamics _dynamic, uint16_t _
 //    uint16_t received_amplitude_from_mk = 0;
 
     writer.set_cmd(cmd);
-    writer.append_var<uint8_t>( (uint8_t)(HearingDynamics::Right) );/// Channel
+    writer.append_var<uint8_t>( (uint8_t)(HearingDynamic::Right) );/// Channel
     writer.append_var<uint16_t>((freq));/// array of 1-3 notes
 //    writer.append_var<uint16_t>(NOTE_E5);
 //    writer.append_var<uint16_t>(NOTE_G5);
@@ -411,7 +411,7 @@ void HearingTester::execute(uint16_t _freq, HearingDynamics _dynamic, uint16_t _
 
 //        int milliseconds_to_max_volume = 10000;
 
-        if (amplitude_algorithm == Algorithms::staircase)
+        if (amplitude_algorithm == Algorithm::staircase)
         {
             //Incrementing amplitude pass
             uint16_t curr_step = 0;
@@ -434,7 +434,7 @@ void HearingTester::execute(uint16_t _freq, HearingDynamics _dynamic, uint16_t _
             this_thread::sleep_for(chrono::milliseconds(1000));
         }
         else
-            assert(amplitude_algorithm == Algorithms::staircase);
+            assert(amplitude_algorithm == Algorithm::staircase);
 
         ostringstream log_string;
         if (is_result_received) /// Patient reacted
@@ -468,13 +468,13 @@ void HearingTester::execute(uint16_t _freq, HearingDynamics _dynamic, uint16_t _
         }
         switch (amplitude_algorithm)
         {
-            case Algorithms::inc_linear_by_step:
+            case Algorithm::inc_linear_by_step:
                 log_string << del << "inc";
                 break;
-            case Algorithms::dec_linear_by_step:
+            case Algorithm::dec_linear_by_step:
                 log_string << del << "dec";
                 break;
-            case Algorithms::staircase:
+            case Algorithm::staircase:
                 log_string << del << "staircase";
                 break;
         }
@@ -520,8 +520,8 @@ void HearingTester::send_new_amplitude_and_receive_threshold_results(uint16_t cu
     time_measurer.log_end(command);
     assert(!reader.is_error());
 
-    HearingStates state = (HearingStates) reader.get_param<uint8_t>();
-    assert(state == HearingStates::MeasuringHearingThreshold);
+    HearingState state = (HearingState) reader.get_param<uint8_t>();
+    assert(state == HearingState::MeasuringHearingThreshold);
     ActualButtonState button_state = (ActualButtonState) reader.get_param<uint8_t>();
     if (button_state == ActualButtonState::Pressed || button_state == ActualButtonState::Released)
     {
@@ -536,7 +536,7 @@ void HearingTester::send_new_amplitude_and_receive_threshold_results(uint16_t cu
 uint16_t HearingTester::get_reaction_time()
 {
     Time_measurer time_measurer{};
-    HearingStates state;
+    HearingState state;
     do {
         writer.set_cmd(0x13);
         writer.prepare_for_sending();
@@ -545,9 +545,9 @@ uint16_t HearingTester::get_reaction_time()
         reader.read();
         time_measurer.log_end(0x13);
         assert(!reader.is_error());
-        state = (HearingStates) reader.get_param<uint8_t>();
+        state = (HearingState) reader.get_param<uint8_t>();
         this_thread::sleep_for(1s);
-    } while (state != HearingStates::SendingResults); /// do until measure has being ended
+    } while (state != HearingState::SendingResults); /// do until measure has being ended
     uint16_t reaction_time = reader.get_param<uint16_t>();
     return reaction_time;
 }

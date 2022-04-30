@@ -129,7 +129,7 @@ int main(void)
 
     write_pin_if_in_debug(GPIOB, GPIO_PIN_13, GPIO_PIN_SET);//show that initialisation started
 
-    htim1.Instance->CCR3=0;//TODO Изменить после того, как поставим фильтр
+    htim1.Instance->CCR3=0;
     htim1.Instance->CCR2=0;
     TonePin tone_pins_init[2];
     Pin CS = {GPIOB, GPIO_PIN_10};
@@ -151,8 +151,7 @@ int main(void)
 //#define DEBUG_BY_ST_LINK // macro need for preventing mk responding by USB
 //    uint8_t cmd_10[]={0x10, 0x05, 0x00, 0x01, 0x50, 0xc3, 0xa0, 0x0f, 0xf2};
 //    uint8_t cmd_11[]={0x11, 0x03, 0x00, 0x01, 0x0b, 0x02, 0x3b};
-//    uint32_t len = sizeof_arr(cmd_10);
-//    process_cmd(cmd_10, &len);
+//    process_cmd(cmd_10, sizeof_arr(cmd_10));
 //    uint8_t cmd_12[] = {0x12, 0x02, 0x00, 0xff, 0xff, 0x2a};
 //    uint8_t cmd_18[]={0x18, 0x0a, 0x00,   0x64, 0x00, 0x0a, 0x00,   0x0a, 0x00, 0x0a, 0x00,   0xd0, 0x07, 0x8d};
 //    len = sizeof_arr(cmd_12);
@@ -263,7 +262,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_HIGH;
   hspi1.Init.CLKPhase = SPI_PHASE_2EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;

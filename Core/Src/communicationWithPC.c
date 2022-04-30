@@ -126,12 +126,12 @@ extern TonePin* tone_pins;//TODO Try to move tone_pins from this file to hearing
 
 void assertion_fail(const char*, uint8_t cmd);
 
-void process_cmd(const uint8_t* command, const uint32_t* len)
+void process_cmd(const uint8_t* command, const uint32_t len)
 {
-    if (*len)
+    if (len)
     {
         CommandReader reader;
-        if(CommandReader_ctor(&reader, command, *len))
+        if(CommandReader_ctor(&reader, command, len))
         {
             write_pin_if_in_debug(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
             if (!randInitializer.isInitialised)
@@ -237,7 +237,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                     else
                         usb_assert(button.state <= Released); //If we come in this place, state is likely Timeout or ButtonIdle, so this assertion should always fail
 
-                    hearingTester.state = ChangingVolume;//TODO Remove ChangingVolume state to another asynchronous function
+                    hearingTester.state = ChangingVolume;
                 }
                 else
                 {

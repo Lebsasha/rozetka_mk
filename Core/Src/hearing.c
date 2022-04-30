@@ -9,13 +9,8 @@
 //TODO 1 Change type of sine_table
 //TODO 5 Replace strings with error codes, e. g.: UnsupportedCommand, CurrentMeasureTypeIsNone, RequiredCommandParameterMissing, CommandParameterOutOfRange, OtherError
 //TODO 2 Set last amplitude on DAC to 0
-//TODO 1 Try disabling SPI between tests
-//TODO 3 Make possible that reaction won't be measured
-//TODO 1 Remove len ptr in process_command
-//TODO Pin A6 in ScinConductivity measure don't work
-
-//TODO 2(1) Hаndling reaction_time >= elapsed_time in C++ high level program
-//TODO 1 Make possible decreasing curr_volume to new_volume, not only increasing
+//TODO 1 make NDebug for release config
+//TODO 2 Make soft changing of volume
 
 extern SPI_HandleTypeDef hspi1;
 extern TIM_HandleTypeDef htim1;
@@ -174,7 +169,6 @@ void hearing_handle(HearingTester* ptr)
                 ptr->ampl = tone_pins[ptr->dynamic].volume;
                 ptr->is_results_on_curr_pass_captured = true;
             }
-            //TODO Make soft changing of volume
         }
         else if (button.state == WaitingForPress || button.state == WaitingForRelease)
             return; // Wait until patient press or release button

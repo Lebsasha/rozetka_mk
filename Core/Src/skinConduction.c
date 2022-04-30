@@ -165,7 +165,7 @@ void StateOn(SkinConductionTester* skinTester)
     }
     HAL_TIM_PWM_Stop(&htim1, TIM_CHANNEL_1);
     skinTester->currentBurst = 0;
-    HAL_TIM_Base_Stop_IT(&htim2);//TODO SAY Нельзя совместить с нижней строкой
+    HAL_TIM_Base_Stop_IT(&htim2);//Эту функцию нельзя совместить с нижней строкой
     HAL_TIM_PWM_Stop(&htim2, TIM_CHANNEL_1);
     HAL_TIM_PWM_Stop(&htim3, TIM_CHANNEL_1);
     skinTester->nextState = StateOff;

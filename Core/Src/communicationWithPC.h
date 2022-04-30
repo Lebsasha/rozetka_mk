@@ -27,6 +27,6 @@ typedef struct CommandWriter
 void CommandWriter_ctor(CommandWriter* ptr);
 //void send_command(CommandWriter* ptr); /// private function in main.c
 
-void process_cmd(const uint8_t* command, const uint32_t* len);
+void process_cmd(const uint8_t* command, uint32_t len);
 
 #endif //COMMUNICATIONWITHPC

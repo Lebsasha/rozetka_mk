@@ -7,7 +7,6 @@
 /// Carrying frequency
 #define TONE_FREQ 40000
 #define freq_to_dx(tone_pin_ptr, freq)  (((tone_pin_ptr)->ARR_SIZE*(freq)<<8)/TONE_FREQ)
-//TODO Try to change number of channels to 2 or higher
 #define CHANNELS_NUM 1
 
 //#define TONE_PWM_GENERATION
