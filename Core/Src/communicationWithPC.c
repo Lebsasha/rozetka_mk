@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdlib.h>
 #include "main.h"
 #include "communicationWithPC.h"
 #include "skinConduction.h"
@@ -178,7 +179,7 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                     *c = freq_to_dx(&tone_pins[hearingTester.dynamic], freq);
                 }
                 currMeasure = Hearing;
-                hearingTester.state = Idle;
+                hearingTester.state = Idle; // as we need only to set unchanging tone, we need make state Idle
                 hearing_start(&hearingTester);
                 tone_pins[hearingTester.dynamic].volume = volume;
                 prepare_for_sending(&writer, cmd, true);
@@ -196,18 +197,16 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 }
                 for (size_t i = 0; i < sizeof_arr(hearingTester.freq); ++i)
                     tone_pins[hearingTester.dynamic].dx[i] = freq_to_dx(&tone_pins[hearingTester.dynamic], hearingTester.freq[i]);
-                currMeasure = Hearing;
-                hearingTester.state = Starting;
                 hearing_start(&hearingTester);
+                currMeasure = Hearing;
+                hearingTester.state = StartingTest;
                 prepare_for_sending(&writer, cmd, true);
             }
             else if (cmd == 0x12)
             {
                 usb_assert(currMeasure == Hearing);
-//                usb_assert(hearingTester.state != Idle);
-                if (hearingTester.state == Starting)
+                if (hearingTester.state == StartingTest)
                 {
-                    ButtonStart(&button);
                     hearingTester.curr_volume = 0;
                     hearingTester.new_volume = 0;
                     hearingTester.state = ChangingVolume;
@@ -215,34 +214,48 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
                 if(hearingTester.state == PlayingConstantVolume || hearingTester.state == ChangingVolume)
                 {
                     usb_assert(get_param_16(&reader, (uint16_t *) &hearingTester.new_volume));
+                    ButtonState newButtonState;
+                    if(get_param_8(&reader, (uint8_t*) &newButtonState))
+                    {
+                        ///If button state received, this mean that we beginning new pass
+                        usb_assert(newButtonState == WaitingForPress || newButtonState == WaitingForRelease);
+                        usb_assert(button.state == Pressed || button.state == Released || button.state == ButtonIdle); ///ButtonIdle state will be when starting measure
+                        ButtonStart(&button, newButtonState);
+                        hearingTester.is_results_on_curr_pass_captured = false;
+                    }
+
                     append_var_8(&writer, MeasuringHearingThreshold);
-                    hearingTester.state = ChangingVolume;
+
+                    append_var_8(&writer, button.state);
+                    if (button.state == WaitingForPress || button.state == WaitingForRelease)
+                    {} /// Simply wait until patient press or release button
+                    else if (button.state == Pressed || button.state == Released)
+                    {
+                        append_var_16(&writer, hearingTester.elapsed_time);
+                        append_var_16(&writer, hearingTester.ampl);
+                    }
+                    else
+                        usb_assert(button.state <= Released); //If we come in this place, state is likely Timeout or ButtonIdle, so this assertion should always fail
+
+                    hearingTester.state = ChangingVolume;//TODO Remove ChangingVolume state to another asynchronous function
                 }
                 else
                 {
                     append_var_8(&writer, MeasuringReactionTime);
-                    append_var_16(&writer, hearingTester.elapsed_time);
-                    append_var_16(&writer, hearingTester.ampl);
                 }
                 prepare_for_sending(&writer, cmd, true);
             }
             else if (cmd == 0x13)//TODO ASK
             {
                 usb_assert(currMeasure == Hearing);
-//                usb_assert(hearingTester.state != Idle);
-                if (hearingTester.state == PlayingConstantVolume || hearingTester.state == ChangingVolume) /// This state unlikely to be when this command is received, but just in case we must check this
+                if (hearingTester.state == PlayingConstantVolume || hearingTester.state == ChangingVolume)
                 {
-                    append_var_8(&writer, MeasuringHearingThreshold);
-//                    append_var_16(&writer, 0);
-//                    append_var_16(&writer, 0);
-//                    append_var_16(&writer, 0);
+                    append_var_8(&writer, MeasuringReactionTime);
+                    hearingTester.state = StartingMeasuringReaction;
                 }
                 else if (hearingTester.state == MeasuringReaction || hearingTester.state == WaitingBeforeMeasuringReaction)
                 {
                     append_var_8(&writer, MeasuringReactionTime);
-//                    append_var_16(&writer, 0);
-//                    append_var_16(&writer, 0);
-//                    append_var_16(&writer, 0);
                 }
                 else if(hearingTester.state == Sending)
                 {
@@ -279,9 +292,9 @@ void process_cmd(const uint8_t* command, const uint32_t* len)
     }
 }
 
-void SkinConduction_send_result_to_PC(SkinConductionTester* skinTester)
+void SkinConduction_send_result_to_PC(SkinConductionTester* ptr)
 {
-    if (skinTester->reactionTime == 0)
+    if (ptr->reactionTime == 0)
     {
         append_var_8(&writer, false);
         append_var_16(&writer, 0);
@@ -290,8 +303,8 @@ void SkinConduction_send_result_to_PC(SkinConductionTester* skinTester)
     else
     {
         append_var_8(&writer, true);
-        append_var_16(&writer, skinTester->reactionTime);
-        append_var_16(&writer, skinTester->channel[0].amplitude);
+        append_var_16(&writer, ptr->reactionTime);
+        append_var_16(&writer, ptr->channel[0].amplitude);
     }
     prepare_for_sending(&writer, 0x18, true);
     currMeasure = None;

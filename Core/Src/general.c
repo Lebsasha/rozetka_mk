@@ -13,11 +13,15 @@ void Button_ctor(Button* button, Pin pin)
 }
 
 /// @note If called when button already started, start counting again from current point of time, regardless of what state button is in
-void ButtonStart(Button* button)
+/// @param state must be WaitingForRelease or WaitingForPress, otherwise false will be returned
+bool ButtonStart(Button *button, ButtonState state)
 {
+    if (state == WaitingForPress || state == WaitingForRelease)
+        button->state = state;
+    else
+        return false;
     button->start_time = HAL_GetTick();
     button->stop_time = 0;
-    button->state = WaitingForPress;
 
     //TODO Check that htim4 not used in other way (i. e. some survey may use it and we don't want to accidentally overwrite parameters)
 //    __HAL_TIM_ENABLE_IT(&htim4, TIM_IT_UPDATE);
@@ -25,9 +29,10 @@ void ButtonStart(Button* button)
     htim4.Instance->PSC = 3;
     htim4.Instance->ARR = 17999;
     HAL_TIM_Base_Start_IT(&htim4);
+    return true;
 }
 
-/// THis function should be called when current measure (e. g. SkinConduction) finished at all
+/// This function should be called when current measure (e. g. SkinConduction) finished at all, for releasing TIM4 from button' function
 void ButtonStop(Button* button)
 {
     HAL_TIM_Base_Stop_IT(&htim4);
@@ -76,7 +81,7 @@ void InitRand(RandInitializer* randInitializer)
 
 inline void write_pin_if_in_debug(GPIO_TypeDef* GPIOx, uint16_t pin, GPIO_PinState pinState)
 {
-#ifdef DEBUG
+#ifndef NDEBUG
 //    GPIOx->BSRR = pin;
     HAL_GPIO_WritePin(GPIOx, pin, pinState);
 #endif

@@ -13,9 +13,46 @@
 //#define TONE_PWM_GENERATION
 #define TONE_SPI_GENERATION
 
+typedef enum HearingStates
+{
+    StartingTest, PlayingConstantVolume, ChangingVolume, StartingMeasuringReaction, WaitingBeforeMeasuringReaction, MeasuringReaction, Sending, Idle
+} HearingStates;
+
+/// Possible hearing test states from high level program (i. e. from PC) point of view
+typedef enum HearingStatesOnHighLevel
+{
+    MeasuringHearingThreshold = 0, /*SendingThresholdResult=1, */MeasuringReactionTime = 1, SendingResults = 2
+} HearingStatesOnHighLevel;
+
 /// Left and right dynamics mapping to channel bit on DAC
-/// @warning this enum only states what dynamic mapped to what pin, but determining which dynamic use from HearingTester's
+/// @warning this enum only hints what dynamic mapped to what pin, but for determining which dynamic mapped to which physical pin could be done main() function in HearingTester's constructor
 typedef enum HearingDynamics{LeftDynamic=0, RightDynamic=1} HearingDynamics;
+
+typedef struct HearingTester
+{
+    volatile HearingDynamics dynamic;
+    volatile uint16_t ampl;
+    volatile uint16_t elapsed_time;
+    volatile HearingStates state;
+    bool is_results_on_curr_pass_captured;
+    Timer timer;
+    volatile uint16_t react_time;
+    volatile uint8_t react_surveys_elapsed;
+    uint8_t REACT_SURVEYS_COUNT;
+    uint8_t REACT_VOLUME_KOEF;
+    uint8_t curr_react_volume_coef;
+    volatile uint16_t freq[CHANNELS_NUM];
+    volatile uint16_t curr_volume;
+    volatile uint16_t new_volume;
+    volatile uint8_t VOLUME_CHANGER_PRESCALER;
+}HearingTester;
+void HearingTester_ctor(HearingTester* ptr);
+
+void hearing_start(HearingTester* ptr);
+void hearing_stop(HearingTester* ptr);
+void hearing_handle(HearingTester* ptr);
+
+
 
 typedef struct TonePin
 {
@@ -39,40 +76,5 @@ void make_tone(TonePin* tonePin);
 ///Play some melody with notes and durations
 /// @param durations - must be array of positive uints
 void play(TonePin* ptr, const uint16_t* notes, const uint8_t* durations, int n);
-
-
-typedef enum HearingStates
-{
-    Starting, PlayingConstantVolume, ChangingVolume, WaitingBeforeMeasuringReaction, MeasuringReaction, Sending, Idle
-} HearingStates;
-
-/// Possible hearing test states from high level program (i. e. from PC) point of view
-typedef enum HearingStatesOnHighLevel
-{
-    MeasuringHearingThreshold = 0, MeasuringReactionTime = 1, SendingResults = 2
-} HearingStatesOnHighLevel;
-
-typedef struct HearingTester
-{
-    volatile HearingDynamics dynamic;
-    volatile uint16_t ampl;
-    volatile uint16_t elapsed_time;
-    volatile HearingStates state;
-    Timer timer;
-    volatile uint16_t react_time;
-    volatile uint8_t react_surveys_elapsed;
-    uint8_t REACT_SURVEYS_COUNT;
-    uint8_t REACT_VOLUME_KOEF;
-    uint8_t curr_react_volume_coef;
-    volatile uint16_t freq[CHANNELS_NUM];
-    volatile uint16_t curr_volume;
-    volatile uint16_t new_volume;
-    volatile uint8_t VOLUME_CHANGER_PRESCALER;
-}HearingTester;
-void HearingTester_ctor(HearingTester* ptr);
-
-void hearing_start(HearingTester* ptr);
-void hearing_stop(HearingTester* ptr);
-void hearing_handle(HearingTester* ptr);
 
 #endif

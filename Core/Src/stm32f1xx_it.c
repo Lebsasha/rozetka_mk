@@ -230,7 +230,7 @@ void TIM1_UP_IRQHandler(void)
   /* USER CODE BEGIN TIM1_UP_IRQn 0 */
     if (currMeasure == Hearing)
     {
-#ifdef DEBUG
+#ifndef NDEBUG
 //        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 1);
         GPIOB->BSRR = GPIO_PIN_12;//for showing how much time this interrupt takes
 #endif
@@ -256,7 +256,7 @@ void TIM1_UP_IRQHandler(void)
                 ++counter;
             }
         }
-#ifdef DEBUG
+#ifndef NDEBUG
 //        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 0);
         GPIOB->BSRR = (uint32_t) GPIO_PIN_12<<16U;
 #endif
@@ -315,6 +315,11 @@ void TIM4_IRQHandler(void)
         {
             button.stop_time = HAL_GetTick();//TODO Maybe replace with InputCapture?
             button.state = Pressed;
+        }
+        else if (HAL_GPIO_ReadPin(button.GPIOx, button.pin) == GPIO_PIN_SET && button.state == WaitingForRelease)
+        {
+            button.stop_time = HAL_GetTick();
+            button.state = Released;
         }
     }
 

@@ -153,9 +153,7 @@ void StateWait(SkinConductionTester* skinTester)
     skinTester->currentMeandr = 0;
     htim2.Instance->ARR = skinTester->burstPeriod - 1;
     HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);
-//    HAL_TIM_IC_Start(&htim4, TIM_CHANNEL_1);
-    ButtonStart(&button);
-//    HAL_TIM_Base_Start_IT(&htim4);
+    ButtonStart(&button, WaitingForPress);
     skinTester->nextState = StateOn;
 }
 

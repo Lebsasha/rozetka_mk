@@ -19,6 +19,8 @@ typedef enum Measures
 /// For simplifying pin transmitting via constructors in objects
 typedef struct Pin {GPIO_TypeDef* GPIOx; uint16_t pin;} Pin;
 
+typedef enum ButtonState {WaitingForPress=0, Pressed=1, WaitingForRelease=2, Released=3, Timeout, ButtonIdle} ButtonState;
+
 /// If start_time!=0 && stop_time==0 time is measured.
 ///     Then if stop_time!=0 time has been measured
 /// Otherwise (i. e. start_time==0) measuring is off
@@ -26,12 +28,12 @@ typedef struct Button
 {
     volatile uint32_t start_time;
     volatile uint32_t stop_time;
-    volatile enum ButtonStates {WaitingForPress, Pressed, Timeout, ButtonIdle} state;
+    volatile ButtonState state;
     GPIO_TypeDef* GPIOx;
     uint16_t pin;
 }Button;
 void Button_ctor(Button* button, Pin pin);
-void ButtonStart(Button* button);
+bool ButtonStart(Button* button, ButtonState state);
 void ButtonStop(Button* button);
 
 typedef struct Timer

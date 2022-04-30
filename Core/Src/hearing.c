@@ -129,6 +129,7 @@ void HearingTester_ctor(HearingTester* ptr)
     ptr->ampl = 0;
     ptr->elapsed_time = 0;
     ptr->state = Idle;
+    ptr->is_results_on_curr_pass_captured = false;
     Timer t = {0};
     ptr->timer = t;
     ptr->react_time = 0;
@@ -165,30 +166,30 @@ void hearing_handle(HearingTester* ptr)
 {
     if(ptr->state == PlayingConstantVolume) //TODO Maybe make delay before measuring hearing threshold
     {
-        if (button.state == Pressed)
+        if (button.state == Pressed || button.state == Released)
         {
-            ptr->elapsed_time = button.stop_time - button.start_time/* - ptr->react_time*/;/// "- react_time" located in MeasuringReaction state
-            ptr->ampl = tone_pins[ptr->dynamic].volume;
-            tone_pins[ptr->dynamic].volume = 0;
-            ptr->react_time = 0;
-            ptr->curr_react_volume_coef = ptr->REACT_VOLUME_KOEF;// For preventing amplitude overflow
-            while (ptr->curr_react_volume_coef * ptr->ampl <= ptr->ampl)
-                ptr->curr_react_volume_coef -= 1;
-            uint32_t randDelay = rand()%1500 + 1000;
-            timer_start(&ptr->timer, randDelay);
-            ptr->state = WaitingBeforeMeasuringReaction;
+            if (ptr->is_results_on_curr_pass_captured == false)
+            {
+                ptr->elapsed_time = button.stop_time - button.start_time/* - ptr->react_time*/;/// "- react_time" located in MeasuringReaction state
+                ptr->ampl = tone_pins[ptr->dynamic].volume;
+                ptr->is_results_on_curr_pass_captured = true;
+            }
+            //TODO Make soft changing of volume
         }
-        else if (button.state == Timeout) ///case elapsed time for sound testing exceed ptr->milliseconds_to_max
-        {
-            ptr->elapsed_time = 0;
-            ptr->ampl = 0;
-            tone_pins[ptr->dynamic].volume = 0;
-            ButtonStop(&button);
-            ptr->state = Sending;
-        }
-        else if (button.state == WaitingForPress)
-            return;
+        else if (button.state == WaitingForPress || button.state == WaitingForRelease)
+            return; // Wait until patient press or release button
 //        else {;} /// If we come in this place then button is likely in state "ButtonIdle" and we need raise error (but error handling of this type is currently not supported)
+    }
+    else if (ptr->state == StartingMeasuringReaction) /// This state need, as starting timer directly in process_cmd() function lead to freezing device, therefore timer need to be started from main() function
+    {
+        ptr->react_time = 0;
+        ptr->curr_react_volume_coef = ptr->REACT_VOLUME_KOEF;// For preventing amplitude overflow
+        while (ptr->curr_react_volume_coef * ptr->ampl <= ptr->ampl)
+            ptr->curr_react_volume_coef -= 1;
+        uint32_t randDelay = rand()%1500 + 1000;
+        timer_start(&ptr->timer, randDelay);
+
+        ptr->state = WaitingBeforeMeasuringReaction;
     }
     else if (ptr->state == WaitingBeforeMeasuringReaction)
     {
@@ -196,7 +197,7 @@ void hearing_handle(HearingTester* ptr)
             return;
         timer_reset(&ptr->timer);
         tone_pins[ptr->dynamic].volume = ptr->curr_react_volume_coef * ptr->ampl;
-        ButtonStart(&button);
+        ButtonStart(&button, WaitingForPress);
         ptr->state = MeasuringReaction;
     }
     else if (ptr->state == MeasuringReaction && button.state == Pressed)
