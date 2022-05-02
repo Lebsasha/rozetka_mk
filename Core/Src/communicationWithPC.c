@@ -219,7 +219,6 @@ void process_cmd(const uint8_t* command, const uint32_t len)
                     {
                         ///If button state received, this mean that we beginning new pass
                         usb_assert(newButtonState == WaitingForPress || newButtonState == WaitingForRelease);
-                        usb_assert(button.state == Pressed || button.state == Released || button.state == ButtonIdle); ///ButtonIdle state will be when starting measure
                         ButtonStart(&button, newButtonState);
                         hearingTester.is_results_on_curr_pass_captured = false;
                     }
