@@ -83,6 +83,6 @@ inline void write_pin_if_in_debug(GPIO_TypeDef* GPIOx, uint16_t pin, GPIO_PinSta
 {
 #ifndef NDEBUG
 //    GPIOx->BSRR = pin;
-    HAL_GPIO_WritePin(GPIOx, pin, pinState);
+//    HAL_GPIO_WritePin(GPIOx, pin, pinState);
 #endif
 }

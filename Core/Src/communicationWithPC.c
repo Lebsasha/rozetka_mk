@@ -164,7 +164,7 @@ void process_cmd(const uint8_t* command, const uint32_t len)
             }
             else if (cmd == 0x10)
             {
-                usb_assert(currMeasure == None);
+                usb_assert(currMeasure == None || currMeasure == Hearing);
                 get_param_8(&reader, (uint8_t*) &hearingTester.dynamic);
                 usb_assert(hearingTester.dynamic < 2);
                 uint16_t volume;

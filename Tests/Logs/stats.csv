@@ -639,3 +639,394 @@ Hearing data: reaction_time, real_elapsed_time, real_amplitude_heared, elapsed_t
 0, 240
 1, 1200
 0, 960, staircase
+
+22_05_02 22:54:55
+
+22_05_03 00:34:42
+0, 1043, 477, 79, 1520, 79, 1600, 79
+1, 160
+1, 150
+0, 90
+0, 89
+1, 100
+1, 81
+0, 81
+0, 94
+1, 60
+1, 44
+0, 0
+0, 17
+1, 100
+1, 82
+0, 82
+0, 100
+1, 80
+1, 63
+0, 63
+0, 79, staircase
+
+22_05_03 12:59:46
+
+22_05_03 13:26:42
+0, 1762, 1051, 18, 2813, 18, 5200, 2
+1, 22
+1, 18
+0, 8
+0, 14
+1, 18
+1, 17
+0, 19
+0, 16
+1, 18
+1, 17
+0, 9
+0, 13
+1, 0
+1, 17
+0, 13
+0, 15
+1, 20
+1, 18, staircase
+
+22_05_03 20:47:19
+2, 690, 9462, 133, 10152, 133, 10400, 133
+1, 180
+1, 131
+1, 140
+1, 121
+1, 140
+1, 122
+0, 0
+0, 18
+0, 119
+0, 116
+0, 119
+0, 133
+increasing avg: 139, decreasing avg: 42, staircase
+147, 7172, 84, 7319, 84, 7600, 84
+1, 180
+1, 131
+1, 140
+1, 121
+1, 140
+1, 122
+0, 0
+0, 18
+0, 119
+0, 116
+0, 119
+0, 133
+1, 160
+1, 99
+1, 120
+1, 86
+1, 120
+1, 90
+0, 43
+0, 76
+0, 63
+0, 95
+0, 63
+0, 84
+increasing avg: 83, decreasing avg: 38, staircase
+
+22_05_03 20:56:29
+2, Results for Rightear
+303, 2862, 101, 3165, 101, 3200, 101
+1, 110
+1, 94
+1, 110
+1, 89
+1, 100
+1, 91
+0, 89
+0, 97
+0, 89
+0, 101
+increasing avg thresh: 99, decreasing avg thresh: 37, staircase
+
+22_05_03 21:01:59
+
+22_05_03 21:03:56
+2, Results for Right ear
+232, 9756, 98, 9988, 98, 10000, 98
+1, 120
+1, 95
+1, 100
+1, 87
+1, 100
+1, 0
+0, 93
+0, 95
+0, 83
+0, 104
+0, 93
+0, 98
+increasing avg thresh: 83, decreasing avg thresh: 94, staircase
+Results for Left ear
+228, 11526, 82, 11754, 82, 12000, 82
+1, 110
+1, 92
+1, 110
+1, 0
+1, 0
+0, 72
+0, 98
+0, 82
+0, 84
+0, 82
+0, 82
+increasing avg thresh: 62, decreasing avg thresh: 83, staircase
+
+:my: (old)
+
+22_05_03 21:14:41
+2, Results for Right ear
+
+1, 140
+1, 0
+1, 110
+1, 103
+1, 0
+0, 200
+0, 229
+0, 200
+0, 229
+0, 130
+0, 109236, 20135, 109, 20371, 109, 20400, 109
+increasing avg thresh: 70, decreasing avg thresh: 182, staircase
+Results for Left ear
+
+1, 70
+1, 56
+1, 70
+1, 53
+1, 60
+1, 52
+0, 160
+0, 81
+0, 70
+0, 78
+0, 60
+0, 69163, 8122, 69, 8285, 69, 8400, 69
+increasing avg thresh: 60, decreasing avg thresh: 86, staircase
+
+22_05_03 21:21:36
+2, Results for Right ear
+
+1, 110
+1, 0
+1, 120
+1, 101
+1, 120
+1, 101
+0, 88
+0, 107
+0, 128
+0, 97
+0, 358
+0, 387130, 99, 387, 229, 387, 400, 387
+increasing avg thresh: 92, decreasing avg thresh: 194, staircase
+
+22_05_03 21:36:10
+
+22_05_03 21:38:13
+2, Results for Right ear
+
+1, 100
+1, 99
+1, 110
+1, 97
+1, 100
+1, 0
+0, 108
+0, 94
+0, 0
+0, 118
+0, 93
+154, 21548, 93, 21702, 93, 22000, 93
+increasing avg thresh: 84, decreasing avg thresh: 82, staircase
+
+:my:
+
+22_05_03 22:01:11
+
+22_05_03 22:02:51
+2, Results for Right ear
+
+1, 70
+1, 55
+1, 60
+1, 37
+1, 50
+1, 36
+0, 32
+0, 60
+0, 32
+0, 47
+0, 22
+0, 44
+528, 2654, 44, 3182, 44, 3200, 44
+increasing avg thresh: 51, decreasing avg thresh: 39, staircase
+Results for Left ear
+
+1, 70
+1, 39
+1, 50
+1, 38
+1, 50
+1, 37
+0, 84
+0, 112
+0, 44
+0, 48
+0, 34
+0, 47
+1888, 4538, 47, 6426, 47, 6800, 47
+increasing avg thresh: 47, decreasing avg thresh: 61, staircase
+
+:Dima:
+
+22_05_03 22:17:xx
+2, Results for Right ear
+
+1, 100
+1, 88
+1, 100
+1, 0
+1, 100
+1, 0
+0, 88
+0, 94
+0, 78
+0, 96
+0, 78
+0, 0
+xxx
+xxx
+
+22_05_03 22:19:28
+1, Results for Right ear
+0, 0, 0, 0, 0, 0, 0, staircase
+
+22_05_03 22:22:44
+1, Results for Right ear
+
+1, 60
+1, 108
+0, 68
+0, 74
+352, 9178, 74, 9530, 74, 9600, 74
+increasing avg thresh: 84, decreasing avg thresh: 71, staircase
+
+22_05_03 22:27:xx
+1, Results for Left ear
+1, 70
+1, 40
+1, 0
+1, 60
+1, 38
+0, 32
+0, 60
+0, 0
+0, 22
+0, 36
+xxx
+xxx
+
+22_05_03 22:29:39
+1, Results for Left ear
+
+1, 90
+1, 53
+0, 122
+0, 150
+427, 162, 150, 589, 150, 800, 150
+increasing avg thresh: 71, decreasing avg thresh: 136, staircase
+
+:maksim:
+
+22_05_03 22:35:12
+1, Results for Right ear
+
+1, 100
+1, 72
+1, 110
+1, 75
+1, 0
+0, 22
+0, 31
+0, 22
+0, 35
+0, 20, 5261, 2, 5261, 2, 12400, 1
+increasing avg thresh: 71, decreasing avg thresh: 22, staircase
+
+22_05_03 22:38:23
+1, Results for Left ear
+
+1, 80
+1, 45
+1, 60
+1, 37
+1, 50
+1, 39
+0, 32
+0, 49
+0, 32
+0, 50
+0, 00, 34264, 0, 34264, 0, 11600, 1
+increasing avg thresh: 51, decreasing avg thresh: 32, staircase
+
+22_05_03 22:41:11
+1, Results for Right ear
+
+1, 100
+1, 0
+0, 70
+0, 980, 558, 98, 558, 98, 800, 98
+increasing avg thresh: 50, decreasing avg thresh: 84, staircase
+:tanya:
+
+22_05_03 23:09:21
+
+22_05_03 23:10:49
+2, Results for Right ear
+
+1, 40
+1, 18
+1, 30
+1, 20
+0, 14
+0, 16
+0, 34
+0, 31
+0, 12883, 31, 12883, 31, 13200, 31
+increasing avg thresh: 27, decreasing avg thresh: 23, staircase
+
+22_05_03 23:13:24
+1, Results for Left ear
+
+1, 60
+1, 47
+1, 60
+1, 38
+1, 0
+0, 62
+0, 47
+0, 0
+0, 22
+0, 38
+0, 5274, 38, 5274, 38, 5600, 38
+increasing avg thresh: 41, decreasing avg thresh: 33, staircase
+
+22_05_03 23:15:56
+1, Results for Left ear
+
+1, 50
+1, 39
+0, 78
+0, 107
+283, 56, 107, 339, 107, 400, 107
+increasing avg thresh: 44, decreasing avg thresh: 92, staircase
+
+:Lena:

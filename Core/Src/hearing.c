@@ -134,7 +134,7 @@ void HearingTester_ctor(HearingTester* ptr)
     memset((void*)ptr->freq, 0, sizeof(ptr->freq));
     ptr->curr_volume = 0;
     ptr->new_volume = 0;
-    ptr->VOLUME_CHANGER_PRESCALER = 1;
+    ptr->VOLUME_CHANGER_PRESCALER = 2;
 }
 
 void hearing_start(HearingTester* ptr)

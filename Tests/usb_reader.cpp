@@ -6,8 +6,8 @@
 #include <thread>
 #include <iomanip>
 #include <vector>
-#include <filesystem>
 #include <cstdint>
+#include <filesystem>
 #include "../Core/Inc/notes.h"
 #include "protocol_classes.h"
 
@@ -48,40 +48,44 @@ enum class HearingState
     MeasuringHearingThreshold [[maybe_unused]] = 0, /*SendingThresholdResult=1, */MeasuringReactionTime = 1, SendingResults = 2
 };
 
-enum class HearingDynamic {Left=0, Right=1};
+enum class HearingDynamic {Left=1, Right=0};
 
 enum class DesiredButtonState {StartWaitingForPress=0, StartWaitingForRelease=2};
 enum class ActualButtonState {WaitingForPress=0, Pressed=1, WaitingForRelease=2, Released=3};
 
 enum class Algorithm {inc_linear_by_step=0, dec_linear_by_step=1, staircase};
 
+struct HearingParameters
+{
+    uint16_t frequency=0;
+    uint16_t max_amplitude=0;
+    uint16_t initial_amplitude_step=0;
+//    uint16_t num_of_steps=0;
+    uint16_t time_step=0;
+    Algorithm amplitude_algorithm{};
+};
+
 class HearingTester
 {
 public:
     HearingTester(Command_writer& writer, Command_reader& reader, ofstream& stat);
-    void execute_for_one_ear(uint16_t _freq, HearingDynamic _dynamic, uint16_t _max_amplitude,
-                             uint16_t _num_of_steps, uint16_t _time_step, Algorithm _amplitude_algorithm);
+
+    void execute(HearingParameters parameters);
 
 private:
-    void send_new_amplitude_and_receive_threshold_results(uint16_t curr_amplitude);
-
-    void set_pass_parameters(DesiredButtonState state);
-
-    uint16_t get_reaction_time();
 
     Command_writer& writer;
     Command_reader& reader;
     ostream& stat;
 
-    /// Parameters of test
-    uint16_t freq=0;
-    uint16_t max_amplitude=0;
-    uint16_t num_of_steps=0;
-    uint16_t time_step=0;
-    Algorithm amplitude_algorithm{};
+    HearingParameters params;
+    enum class PassVariant {IncreasingLinear, DecreasingLinear};
 
     /// if_upper, amplitude
     vector<pair<bool, uint16_t>> results{};
+    uint16_t increasing_hearing_threshold=0;
+    uint16_t decreasing_hearing_threshold=0;
+    uint16_t reaction_time=0;
 
     /// Results of measure of one pass
     uint16_t elapsed_time = 0;
@@ -91,9 +95,15 @@ private:
     /// if true, all other current params defined
     bool is_result_received=false;
 
-    void make_increasing_amplitude_pass();
+    void execute_for_one_ear(HearingParameters parameters, HearingDynamic dynamic);
 
-    void make_decreasing_amplitude_pass(uint16_t beg_ampl);
+    void make_pass(PassVariant pass_variant, uint16_t first_amplitude, uint16_t amplitude_step);
+
+    void set_pass_parameters(DesiredButtonState state);
+
+    void send_new_amplitude_and_receive_threshold_results(uint16_t curr_amplitude);
+
+    uint16_t get_reaction_time();
 };
 
 #define sizeof_arr(arr) (sizeof(arr)/sizeof((arr)[0]))
@@ -122,8 +132,12 @@ public:
         t_end = now();
         cout << "Time for ";
         if (cmd != 0)
+        {
             cout << "0x" << std::hex << (int) cmd << std::dec << " command";
-        else if (!description.empty())
+            if (!description.empty())
+                cout << ", ";
+        }
+        if (!description.empty())
             cout << description;
         cout << " takes ";
         auto diff = t_end - t_begin;
@@ -214,7 +228,7 @@ int main (int , char** )
     HearingTester hearing_tester(writer, reader, stat);
 //TODO Test 0x4 (especially with 0x18)
     const uint8_t long_test[] = {0x11, 0x18, 0x11, 0x18, 0x18, 0x11, 0x11, 0x18};
-    const uint8_t short_test[] = {0x11, 0x4, 0x11, 0x11};
+    const uint8_t short_test[] = {0x10, 0x4, 0x11};
 //    const auto [cmds, cmds_l] = std::tie(short_test, sizeof_arr(short_test));
     const uint8_t* cmds = short_test;
     const size_t cmds_length = sizeof_arr(short_test);
@@ -228,7 +242,7 @@ int main (int , char** )
         if (cmd == 0x11)
         {
             stat << cmd_ptr - cmds << ", "; /// Number of curr command
-            hearing_tester.execute_for_one_ear(4000, HearingDynamic::Right, 4000, 10, 400, Algorithm::staircase);
+            hearing_tester.execute({4000, 1000, 10, 400, Algorithm::staircase});//TODO Change Max amplitude
 
             continue;
         }
@@ -236,7 +250,7 @@ int main (int , char** )
         if (cmd == 0x10 || cmd == 0x11)
             writer.append_var<uint8_t>( (uint8_t)(HearingDynamic::Right) );/// Channel
         if (cmd == 0x10)
-            writer.append_var<uint16_t>(0xffff);///Curr volume
+            writer.append_var<uint16_t>(500);///Curr volume
         else if (cmd == 0x11)
         {
             reaction_time = 0;
@@ -383,29 +397,31 @@ int main (int , char** )
 HearingTester::HearingTester(Command_writer& _writer, Command_reader& _reader, ofstream& _stat): writer(_writer), reader(_reader), stat(_stat)
 {}
 
-void HearingTester::execute_for_one_ear(uint16_t _freq, HearingDynamic _dynamic, uint16_t _max_amplitude, uint16_t _num_of_steps, uint16_t _time_step, Algorithm _amplitude_algorithm)
+void HearingTester::execute(HearingParameters parameters)
+{
+    params = parameters;
+    assert(params.amplitude_algorithm == Algorithm::staircase);
+
+//    execute_for_one_ear(params, HearingDynamic::Right);
+
+    this_thread::sleep_for(chrono::milliseconds(2000 + rand() % 500));
+
+    execute_for_one_ear(params, HearingDynamic::Left);
+}
+
+void HearingTester::execute_for_one_ear(HearingParameters parameters, HearingDynamic dynamic)
 {
 //    assert(_freq < BASE_FREQ/2);
-    freq = _freq;
-    max_amplitude = _max_amplitude;
-    if (num_of_steps * time_step > 120'000)
-    {
-        cout << "Warning! Maximum time test could take is " << num_of_steps * time_step/1000 << " seconds" << endl;
-    }
-    num_of_steps = _num_of_steps;
-    time_step = _time_step;
-    amplitude_algorithm = _amplitude_algorithm;
+    params = parameters;
 
     uint8_t cmd = 0x11;
     Time_measurer time_measurer{};
-    uint16_t reaction_time = 0;
     is_result_received = false;
-//    uint16_t elapsed_time_by_mk = 0;
-//    uint16_t received_amplitude_from_mk = 0;
+    results.clear();
 
     writer.set_cmd(cmd);
-    writer.append_var<uint8_t>( (uint8_t)(HearingDynamic::Right) );/// Channel
-    writer.append_var<uint16_t>((freq));/// array of 1-3 notes
+    writer.append_var<uint8_t>( static_cast<uint8_t>(dynamic) );/// Channel
+    writer.append_var<uint16_t>(params.frequency);/// array of 1-3 notes
 //    writer.append_var<uint16_t>(NOTE_E5);
 //    writer.append_var<uint16_t>(NOTE_G5);
     writer.prepare_for_sending();
@@ -417,33 +433,89 @@ void HearingTester::execute_for_one_ear(uint16_t _freq, HearingDynamic _dynamic,
     {
         assert(reader.is_empty());
 
-//        int milliseconds_to_max_volume = 10000;
-//TODO Move to struct parameters
-        if (amplitude_algorithm == Algorithm::staircase)
+        if (params.amplitude_algorithm == Algorithm::staircase)
         {
-            for (int i = 0; i < 5; ++i)
+            const size_t test_count = 1;
+            for (size_t i = 0; i < test_count; ++i)
             {
-
-                make_increasing_amplitude_pass();
+                make_pass(PassVariant::IncreasingLinear, 0, params.initial_amplitude_step);//TODO Откуда появляются результаты в 0 здесь?
                 if (is_result_received)
+                {
                     results.emplace_back(true, received_amplitude_from_mk);
 
-                this_thread::sleep_for(chrono::milliseconds(rand()%1000 + 500));
+                    this_thread::sleep_for(chrono::milliseconds(rand() % 1000 + 500));
+                    if (received_amplitude_from_mk >= 2*params.initial_amplitude_step)
+                        received_amplitude_from_mk -= 2*params.initial_amplitude_step;
+                    else
+                        received_amplitude_from_mk = 0;
+                    make_pass(PassVariant::IncreasingLinear, received_amplitude_from_mk - 2*params.initial_amplitude_step, 1);
+                    if (is_result_received)
+                        results.emplace_back(true, received_amplitude_from_mk);
 
-                make_decreasing_amplitude_pass(received_amplitude_from_mk);
+                    this_thread::sleep_for(chrono::milliseconds(rand() % 1000 + 1500));
+                }
+            }
+
+            increasing_hearing_threshold = 0;
+            for (auto [is_upper, amplitude]: results)
+            {
+                if (is_upper)
+                    increasing_hearing_threshold += amplitude;
+            }
+            if (increasing_hearing_threshold != 0)
+                increasing_hearing_threshold /= results.size();
+            received_amplitude_from_mk = increasing_hearing_threshold;
+
+            for (size_t i = 0; i < test_count; ++i)
+            {
+                make_pass(PassVariant::DecreasingLinear, 2*increasing_hearing_threshold,
+                          params.initial_amplitude_step);
                 if (is_result_received)
+                {
                     results.emplace_back(false, received_amplitude_from_mk);
 
-                this_thread::sleep_for(chrono::milliseconds(rand()%1000 + 500));
+                    this_thread::sleep_for(chrono::milliseconds(rand() % 1000 + 500));
+                    make_pass(PassVariant::DecreasingLinear,
+                              received_amplitude_from_mk + 3*params.initial_amplitude_step, 1);
+                    if (is_result_received)
+                        results.emplace_back(false, received_amplitude_from_mk);
+                }
+
+                this_thread::sleep_for(chrono::milliseconds(rand() % 1000 + 1500));
             }
+
+            decreasing_hearing_threshold = 0;
+            for (auto [is_upper, amplitude]: results)
+            {
+                if (! is_upper)
+                   decreasing_hearing_threshold += amplitude;
+            }
+            if (decreasing_hearing_threshold != 0)
+                decreasing_hearing_threshold /= std::count_if(results.begin(), results.end(), [&](const auto& item){
+                return item.first == false;
+        });
+
         }
         else
-            assert(amplitude_algorithm == Algorithm::staircase);
+            assert(params.amplitude_algorithm == Algorithm::staircase);
 
         ostringstream log_string;
+        log_string << "Results for ";
+        switch (dynamic)
+        {
+            case HearingDynamic::Left:
+                log_string << "Left";
+                break;
+            case HearingDynamic::Right:
+                log_string << "Right";
+                break;
+        }
+        log_string << " ear" << endl;
         if (! results.empty()) /// Patient reacted
         {
-            reaction_time = get_reaction_time();
+            set_pass_parameters(DesiredButtonState::StartWaitingForPress);
+            reaction_time = get_reaction_time();//TODO Зависает, если много измерений
+//            reaction_time = 0;//TODO Add to reaction parameters amplitude' threshold
             //uint16_t elapsed_time = reader.get_param<uint16_t>();
             //uint16_t amplitude = reader.get_param<uint16_t>();
             uint16_t real_elapsed_time;
@@ -458,10 +530,11 @@ void HearingTester::execute_for_one_ear(uint16_t _freq, HearingDynamic _dynamic,
                 real_amplitude_heard = 0;
             }
 
-            log_string << reaction_time << del << real_elapsed_time << del << real_amplitude_heard << del
-                       << elapsed_time_by_mk << del << received_amplitude_from_mk << del << elapsed_time << del << amplitude_heard;
             for (const auto &item : results)
                 log_string << endl << item.first << del << item.second;
+            log_string << endl << reaction_time << del << real_elapsed_time << del << real_amplitude_heard << del
+                       << elapsed_time_by_mk << del << received_amplitude_from_mk << del << elapsed_time << del << amplitude_heard;
+            log_string << endl << "increasing avg thresh: " << increasing_hearing_threshold << del << "decreasing avg thresh: " << decreasing_hearing_threshold;
         }
         else /// Patient never reacted, need to stop measure
         {
@@ -472,17 +545,17 @@ void HearingTester::execute_for_one_ear(uint16_t _freq, HearingDynamic _dynamic,
             assert(!reader.is_error() && reader.is_empty());
             log_string << '0' << del << '0' << del << '0' << del << '0' << del << '0' << del << '0' << del << '0';
         }
-        switch (amplitude_algorithm)
+        switch (params.amplitude_algorithm)
         {
-            case Algorithm::inc_linear_by_step:
-                log_string << del << "inc";
-                break;
-            case Algorithm::dec_linear_by_step:
-                log_string << del << "dec";
-                break;
             case Algorithm::staircase:
                 log_string << del << "staircase";
                 break;
+//            case Algorithm::inc_linear_by_step:
+//                log_string << del << "inc";
+//                break;
+//            case Algorithm::dec_linear_by_step:
+//                log_string << del << "dec";
+//                break;
         }
 
         log_string << endl;
@@ -497,68 +570,63 @@ void HearingTester::execute_for_one_ear(uint16_t _freq, HearingDynamic _dynamic,
     stat.flush();
 }
 
-void HearingTester::make_increasing_amplitude_pass()
+// Make one amplitude pass
+void HearingTester::make_pass(PassVariant pass_variant, uint16_t first_amplitude, uint16_t amplitude_step)
 {
     is_result_received = false;
-    //Incrementing amplitude pass
-    uint16_t curr_step = 0;
     uint16_t curr_time = 0;
-    uint16_t curr_amplitude = 0;
-    set_pass_parameters(DesiredButtonState::StartWaitingForPress);
-    while (curr_step < num_of_steps)
+    uint16_t curr_amplitude = first_amplitude;
+    DesiredButtonState button_state;
+    switch (pass_variant)
     {
-        curr_time = (curr_step + 1) * time_step;
-        curr_amplitude = (curr_step + 1) * max_amplitude / num_of_steps;
+        case PassVariant::IncreasingLinear:
+            button_state = DesiredButtonState::StartWaitingForPress;
+            break;
+        case PassVariant::DecreasingLinear:
+            button_state = DesiredButtonState::StartWaitingForPress;//TODO Replace to Release
+            break;
+    }
+    set_pass_parameters(button_state);
+    while (curr_amplitude <= params.max_amplitude)
+    {
+        curr_time += params.time_step;
+        switch (pass_variant)
+        {
+            case PassVariant::IncreasingLinear:
+                curr_amplitude += amplitude_step;
+                break;
+            case PassVariant::DecreasingLinear: //TODO Handle decreasing step in first pass
+                if (curr_amplitude > amplitude_step)
+                    curr_amplitude -= amplitude_step;
+                else
+                    goto end;
+                break;
+        }
         send_new_amplitude_and_receive_threshold_results(curr_amplitude);
         if (is_result_received)
             break;
-        this_thread::sleep_for(chrono::milliseconds(time_step));
-        curr_step++;
+        this_thread::sleep_for(chrono::milliseconds(params.time_step));
         amplitude_heard = curr_amplitude;
         elapsed_time = curr_time;
     }
+    end:
     send_new_amplitude_and_receive_threshold_results(0);
 }
 
-void HearingTester::make_decreasing_amplitude_pass(uint16_t beg_ampl)
-{
-    is_result_received = false;
-    //Decrementing amplitude pass
-    uint16_t curr_step = 0;
-    uint16_t curr_time = 0;
-    uint16_t curr_amplitude = 0;
-    set_pass_parameters(DesiredButtonState::StartWaitingForPress);
-    while (curr_step < num_of_steps)
-    {
-        curr_time = (curr_step + 1) * time_step;
-        curr_amplitude = (num_of_steps - curr_step - 1) * beg_ampl / num_of_steps;
-        send_new_amplitude_and_receive_threshold_results(curr_amplitude);
-        if (is_result_received)
-            break;
-        this_thread::sleep_for(chrono::milliseconds(time_step));
-        curr_step++;
-        amplitude_heard = curr_amplitude;
-        elapsed_time = curr_time;
-    }
-    send_new_amplitude_and_receive_threshold_results(0);
-}
-
-/// set parameters for pass
+/// set parameters for one pass
 void HearingTester::set_pass_parameters(DesiredButtonState state)
 {
     Time_measurer time_measurer{};
     uint8_t command = 0x12;
     writer.set_cmd(command);
-    writer.append_var(0); // temporary need add amplitude to this command
+    writer.append_var(0); // TODO temporary need add amplitude to this command
     writer.append_var(state);
     writer.prepare_for_sending();
     time_measurer.begin();
     writer.write();
     reader.read();
-    time_measurer.log_end(command);
-//    if (reader.is_error())
-//        cerr << "Error " << reader.read_error();
-    assert(!reader.is_error());//TODO Determine what error with button states
+    time_measurer.log_end(command, "Set pass parameters");
+    assert(!reader.is_error());
 }
 
 void HearingTester::send_new_amplitude_and_receive_threshold_results(uint16_t curr_amplitude)
@@ -571,7 +639,7 @@ void HearingTester::send_new_amplitude_and_receive_threshold_results(uint16_t cu
     time_measurer.begin();
     writer.write();
     reader.read();
-    time_measurer.log_end(command);
+    time_measurer.log_end(command, string("Set new amplitude ").append(to_string(curr_amplitude)));
     assert(!reader.is_error());
 
     HearingState state = (HearingState) reader.get_param<uint8_t>();
