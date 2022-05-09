@@ -13,7 +13,8 @@ void Button_ctor(Button* button, Pin pin)
 }
 
 /// @note If called when button already started, start counting again from current point of time, regardless of what state button is in
-/// @param state must be WaitingForRelease or WaitingForPress, otherwise false will be returned
+/// @param state must be @c WaitingForRelease or @c WaitingForPress, otherwise state will be unchanged and false will be returned
+/// @return false if argument @a state is invalid, otherwise true
 bool ButtonStart(Button *button, ButtonState state)
 {
     if (state == WaitingForPress || state == WaitingForRelease)
@@ -68,6 +69,7 @@ void RandInitializer_ctor(RandInitializer* randInitializer)
     HAL_TIM_Base_Start_IT(&htim4);
 }
 
+/// Get seed for setting @code srand(seed)
 void InitRand(RandInitializer* randInitializer)
 {
     if (!randInitializer->isInitialised)
@@ -83,6 +85,6 @@ inline void write_pin_if_in_debug(GPIO_TypeDef* GPIOx, uint16_t pin, GPIO_PinSta
 {
 #ifndef NDEBUG
 //    GPIOx->BSRR = pin;
-//    HAL_GPIO_WritePin(GPIOx, pin, pinState);
+    HAL_GPIO_WritePin(GPIOx, pin, pinState);
 #endif
 }

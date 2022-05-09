@@ -70,6 +70,7 @@ extern Button button;
 extern SkinConductionTester skinTester;
 extern HearingTester hearingTester;
 extern TonePin* tone_pins;
+extern const uint32_t SHIFTED_ARR_SIZE;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -237,23 +238,15 @@ void TIM1_UP_IRQHandler(void)
         make_tone(&tone_pins[0]);
         make_tone(&tone_pins[1]);
 
-        if (hearingTester.state == ChangingVolume)
+        if (hearingTester.is_volume_need_to_be_changed)
         {
-            if (hearingTester.curr_volume == hearingTester.new_volume)
-                hearingTester.state = PlayingConstantVolume;
-            else
+            TonePin* ptr = &tone_pins[hearingTester.dynamic];
+            if (ptr->volume == 0)
+                ptr->curr_phase[0] = SHIFTED_ARR_SIZE/2;
+            if (ptr->curr_phase[0] <= SHIFTED_ARR_SIZE/2 && ptr->curr_phase[0] + ptr->dx[0] > SHIFTED_ARR_SIZE/2) /// Middle value, i. e. phase in this point == 0
             {
-                static uint8_t counter = 0;
-                if (counter == hearingTester.VOLUME_CHANGER_PRESCALER)
-                {
-                    counter = 0;
-                    if (hearingTester.curr_volume < hearingTester.new_volume)
-                        hearingTester.curr_volume += 1;
-                    else
-                        hearingTester.curr_volume -= 1;
-                    tone_pins[hearingTester.dynamic].volume = hearingTester.curr_volume;
-                }
-                ++counter;
+                ptr->volume = hearingTester.new_volume;
+                hearingTester.is_volume_need_to_be_changed = false;
             }
         }
 #ifndef NDEBUG
@@ -326,7 +319,22 @@ void TIM4_IRQHandler(void)
     static uint16_t measuredTime=0;
     measuredTime = HAL_GetTick() - button.start_time;
 
-    if (currMeasure == SkinConduction)
+    if (currMeasure == Hearing)
+    {
+        if (hearingTester.state == PlayingConstantVolume)
+        {
+            if (button.state == Pressed || button.state == Released)
+            {
+                if (hearingTester.is_results_on_curr_pass_captured == false)
+                {
+                    hearingTester.elapsed_time = button.stop_time - button.start_time;
+                    hearingTester.ampl = tone_pins[hearingTester.dynamic].volume;
+                    hearingTester.is_results_on_curr_pass_captured = true;
+                }
+            }
+        }
+    }
+    else if (currMeasure == SkinConduction)
     {
         if(measuredTime > skinTester.maxReactionTime)
             button.state = Timeout;

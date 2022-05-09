@@ -129,13 +129,10 @@ int main(void)
 
     write_pin_if_in_debug(GPIOB, GPIO_PIN_13, GPIO_PIN_SET);//show that initialisation started
 
-    htim1.Instance->CCR3=0;
-    htim1.Instance->CCR2=0;
     TonePin tone_pins_init[2];
-    Pin CS = {GPIOB, GPIO_PIN_10};
-    TonePin_ctor(&tone_pins_init[0], &(htim1.Instance->CCR3), LeftDynamic, CS);
+    TonePin_ctor(&tone_pins_init[0], LeftDynamic);
     tone_pins_init[0].dx[0]=freq_to_dx(&tone_pins_init[0], NOTE_A4);//A4 == 440 Hz
-    TonePin_ctor(&tone_pins_init[1], &(htim1.Instance->CCR2), RightDynamic, CS);
+    TonePin_ctor(&tone_pins_init[1], RightDynamic);
     tone_pins_init[1].dx[0]=freq_to_dx(&tone_pins_init[1], NOTE_A4);
 
     tone_pins=tone_pins_init;
@@ -149,9 +146,17 @@ int main(void)
 
     write_pin_if_in_debug(GPIOB, GPIO_PIN_13, GPIO_PIN_RESET);//show that initialisation finished
 //#define DEBUG_BY_ST_LINK // macro need for preventing mk responding by USB
-//    uint8_t cmd_10[]={0x10, 0x05, 0x00, 0x01, 0x50, 0xc3, 0xa0, 0x0f, 0xf2};
-//    uint8_t cmd_11[]={0x11, 0x03, 0x00, 0x01, 0x0b, 0x02, 0x3b};
-//    process_cmd(cmd_10, sizeof_arr(cmd_10));
+//    uint8_t cmd_10[]={0x10, 0x05, 0x00, 0x01, 0x50, 0xc3, 0xa0, 0x0f, 0xf2}; // volume - 50000, freq - 4000
+//    uint8_t cmd_11[]={0x11, 0x03, 0x00, 0x01, 0x0b, 0x02, 0x3b}; // freq - 523
+//    uint8_t cmd_11[] = {0x11, 0x03, 0x00, 0x01, 0xa0, 0x0f, 0xdd}; // freq - 4000
+//    uint8_t cmd_12_prep[] = {0x12, 0x03, 0x00, 0x00, 0x00, 0x00, 0x2d}; // wait_for_press
+//    uint8_t cmd_12[] = {0x12, 0x02, 0x00, 0xd6, 0x01, 0x03}; // ampl - 470
+//    uint8_t cmd_13[] = {0x13, 0x00, 0x00, 0x2a};
+//    process_cmd(cmd_11, sizeof_arr(cmd_11));
+//    process_cmd(cmd_12_prep, sizeof_arr(cmd_12_prep));
+//    process_cmd(cmd_12, sizeof_arr(cmd_12));
+//    process_cmd(cmd_13, sizeof_arr(cmd_13));
+//    process_cmd(cmd_13, sizeof_arr(cmd_13));
 //    uint8_t cmd_12[] = {0x12, 0x02, 0x00, 0xff, 0xff, 0x2a};
 //    uint8_t cmd_18[]={0x18, 0x0a, 0x00,   0x64, 0x00, 0x0a, 0x00,   0x0a, 0x00, 0x0a, 0x00,   0xd0, 0x07, 0x8d};
 //    len = sizeof_arr(cmd_12);

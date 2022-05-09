@@ -18,10 +18,11 @@ extern TIM_HandleTypeDef htim4;
 extern Button button;
 extern TonePin* tone_pins;
 const int16_t SINE_AMPL = INT16_MAX;
-const uint16_t ARR_SIZE = 1024; /*!<for optimization purposes*/
+const uint16_t ARR_SIZE = 1024;
+const uint32_t SHIFTED_ARR_SIZE = ARR_SIZE << 8; /*!<for optimization purposes*/
 int16_t sine_table[1024];
 
-void TonePin_ctor(TonePin* ptr, volatile uint32_t* CCR, HearingDynamics channel_bit, Pin CS_pin)
+void TonePin_ctor(TonePin* ptr, HearingDynamics channel_bit)
 {
     for (int i = 0; i < ARR_SIZE; ++i)
         sine_table[i] = (int16_t)(SINE_AMPL / 2.0 - SINE_AMPL / 2.0 * sin(i * 2 * M_PI / ARR_SIZE));
@@ -30,10 +31,7 @@ void TonePin_ctor(TonePin* ptr, volatile uint32_t* CCR, HearingDynamics channel_
     ptr->volume = 0;
     memset((void*)ptr->dx, 0, sizeof(ptr->dx));
     memset((void*)ptr->curr_phase, 0, sizeof(ptr->curr_phase));
-    ptr->PWM_register = CCR;
-    *ptr->PWM_register = 0;
     ptr->channel_bit = channel_bit;
-    ptr->CS_pin = CS_pin;
 }
 
 //inline uint32_t freq_to_dx(TonePin *ptr, uint16_t frequency)
@@ -43,25 +41,6 @@ void TonePin_ctor(TonePin* ptr, volatile uint32_t* CCR, HearingDynamics channel_
 
 void make_tone(TonePin* tonePin)
 {
-#if defined(TONE_PWM_GENERATION)
-    if (tonePin->volume != 0)
-    {
-        const uint16_t COUNTER_PERIOD = 72000000/TONE_FREQ;
-        for (uint8_t i = 0; i < (uint8_t) sizeof_arr(tonePin->dx); ++i)
-        {
-            if (i == 0)
-                *tonePin->PWM_register = (uint32_t) (tonePin->sine_table[tonePin->curr_phase[i] >> 8]) * COUNTER_PERIOD / SINE_AMPL / sizeof_arr(tonePin->dx);
-            else
-                *tonePin->PWM_register += (uint32_t) (tonePin->sine_table[tonePin->curr_phase[i] >> 8]) * COUNTER_PERIOD / SINE_AMPL / sizeof_arr(tonePin->dx);
-            tonePin->curr_phase[i] += tonePin->dx[i];
-            if (tonePin->curr_phase[i] >= ARR_SIZE << 8)
-            {
-                tonePin->curr_phase[i] -= ARR_SIZE << 8;
-            }
-        }
-    }
-    *tonePin->PWM_register = (*tonePin->PWM_register * tonePin->volume) >> 16;
-#elif defined(TONE_SPI_GENERATION)
     if (tonePin->volume != 0)
     {
         const uint16_t MAX_VAL = (1<<12)-1;
@@ -74,9 +53,9 @@ void make_tone(TonePin* tonePin)
             else
                 command += (uint32_t) (tonePin->sine_table[tonePin->curr_phase[i] >> 8]) * MAX_VAL / SINE_AMPL / sizeof_arr(tonePin->dx);
             tonePin->curr_phase[i] += tonePin->dx[i];
-            if (tonePin->curr_phase[i] >= ARR_SIZE << 8)
+            if (tonePin->curr_phase[i] >= SHIFTED_ARR_SIZE)
             {
-                tonePin->curr_phase[i] -= ARR_SIZE << 8;
+                tonePin->curr_phase[i] -= SHIFTED_ARR_SIZE;
             }
         }
         command = (command * tonePin->volume)>>16;
@@ -86,14 +65,11 @@ void make_tone(TonePin* tonePin)
         command |= 0<<14; /// BUF
         command |= 1<<13; /// !GA
         command |= 1<<12; /// !SHDN
-        HAL_GPIO_WritePin(tonePin->CS_pin.GPIOx, tonePin->CS_pin.pin, GPIO_PIN_RESET);
+        GPIOB->BSRR = GPIO_PIN_10<<16; // RESET B10 (!CS) pin
         HAL_SPI_Transmit(&hspi1, reinterpret_cast(uint8_t*, &command), sizeof(command)/sizeof(uint16_t), HAL_MAX_DELAY); // NOLINT(bugprone-sizeof-expression)
         // TODO Test Maybe delay for at least 2 operations for Release config
-        HAL_GPIO_WritePin(tonePin->CS_pin.GPIOx, tonePin->CS_pin.pin, GPIO_PIN_SET);
+        GPIOB->BSRR = GPIO_PIN_10; // SET B10 (!CS) pin
     }
-#else
-#error Not defined generation type for make_tone()
-#endif
 }
 
 void play(TonePin* ptr, const uint16_t* notes, const uint8_t* durations, int n)
@@ -125,61 +101,41 @@ void HearingTester_ctor(HearingTester* ptr)
     ptr->elapsed_time = 0;
     ptr->state = Idle;
     ptr->is_results_on_curr_pass_captured = false;
+    ptr->is_volume_need_to_be_changed = false;
     Timer t = {0};
     ptr->timer = t;
-    ptr->react_time = 0;
+    memset((void*)ptr->react_times, 0, sizeof(ptr->react_times));
     ptr->react_surveys_elapsed = 0;
-    ptr->REACT_SURVEYS_COUNT = 3;
-    ptr->REACT_VOLUME_KOEF = 4;
+    ptr->amplitude_for_react_survey = 0;
     memset((void*)ptr->freq, 0, sizeof(ptr->freq));
-    ptr->curr_volume = 0;
     ptr->new_volume = 0;
-    ptr->VOLUME_CHANGER_PRESCALER = 2;
 }
 
 void hearing_start(HearingTester* ptr)
 {
     htim1.Instance->PSC = 0;
     htim1.Instance->ARR = 1799;
-//    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_3);///start sound at A10
-//    HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_2);///start sound at A9
-    HAL_TIM_Base_Start_IT(&htim1);
     __HAL_SPI_ENABLE(&hspi1);
+    HAL_TIM_Base_Start_IT(&htim1);
 }
 
 void hearing_stop(HearingTester* ptr)
 {
-//    HAL_TIM_PWM_Stop(&htim1,TIM_CHANNEL_3);///stop sound at A10
-//    HAL_TIM_PWM_Stop(&htim1,TIM_CHANNEL_2);///stop sound at A9
-    __HAL_SPI_DISABLE(&hspi1);
     HAL_TIM_Base_Stop_IT(&htim1);
+    __HAL_SPI_DISABLE(&hspi1);
     ptr->state = Idle;
     ButtonStop(&button);
 }
 
-void hearing_handle(HearingTester* ptr)
+void hearing_handle(HearingTester* const ptr)
 {
-    if(ptr->state == PlayingConstantVolume) //TODO Maybe make delay before measuring hearing threshold
+    if(ptr->state == PlayingConstantVolume)
     {
-        if (button.state == Pressed || button.state == Released)
-        {
-            if (ptr->is_results_on_curr_pass_captured == false)
-            {
-                ptr->elapsed_time = button.stop_time - button.start_time/* - ptr->react_time*/;/// "- react_time" located in MeasuringReaction state
-                ptr->ampl = tone_pins[ptr->dynamic].volume;
-                ptr->is_results_on_curr_pass_captured = true;
-            }
-        }
-        else if (button.state == WaitingForPress || button.state == WaitingForRelease)
-            return; // Wait until patient press or release button
-//        else {;} /// If we come in this place then button is likely in state "ButtonIdle" and we need raise error (but error handling of this type is currently not supported)
+        return; // Nothing need to be done in this state in this function
     }
     else if (ptr->state == StartingMeasuringReaction) /// This state need, as starting timer directly in process_cmd() function lead to freezing device, therefore timer need to be started from main() function
     {
-        ptr->react_time = 0;
-        ptr->curr_react_volume_coef = ptr->REACT_VOLUME_KOEF;// For preventing amplitude overflow
-        while (ptr->curr_react_volume_coef * ptr->ampl <= ptr->ampl)
-            ptr->curr_react_volume_coef -= 1;
+        ptr->react_surveys_elapsed = 0;
         uint32_t randDelay = rand()%1500 + 1000;
         timer_start(&ptr->timer, randDelay);
 
@@ -190,15 +146,15 @@ void hearing_handle(HearingTester* ptr)
         if (!is_time_passed(&ptr->timer))
             return;
         timer_reset(&ptr->timer);
-        tone_pins[ptr->dynamic].volume = ptr->curr_react_volume_coef * ptr->ampl;
+        set_new_tone_volume(ptr, ptr->amplitude_for_react_survey);
         ButtonStart(&button, WaitingForPress);
         ptr->state = MeasuringReaction;
     }
     else if (ptr->state == MeasuringReaction && button.state == Pressed)
     {
-        ptr->react_time += button.stop_time - button.start_time;
-        tone_pins[ptr->dynamic].volume = 0;
-        if (ptr->react_surveys_elapsed < ptr->REACT_SURVEYS_COUNT - 1)
+        ptr->react_times[ptr->react_surveys_elapsed] = button.stop_time - button.start_time;
+        set_new_tone_volume(ptr, 0);
+        if (ptr->react_surveys_elapsed < REACT_SURVEYS_COUNT - 1)
         {
             ++ptr->react_surveys_elapsed;
             uint16_t randDelay = rand() % 800 + 1000;
@@ -207,12 +163,16 @@ void hearing_handle(HearingTester* ptr)
         }
         else
         {
-            ptr->react_surveys_elapsed = 0;
-            ptr->react_time /= ptr->REACT_SURVEYS_COUNT;
             ButtonStop(&button);
-
             ptr->state = Sending;
         }
     }
     //else {;} // Nothing needs to be done, waiting until something happens
+}
+
+/// We cannot write directly to @code tone_pins[hearingTester.dynamic].volume = volume @endcode as it will cause a click on the speaker
+void set_new_tone_volume(HearingTester *ptr, uint16_t volume)
+{
+    ptr->new_volume = volume;
+    ptr->is_volume_need_to_be_changed = true;
 }

@@ -1000,7 +1000,8 @@ increasing avg thresh: 50, decreasing avg thresh: 84, staircase
 0, 16
 0, 34
 0, 31
-0, 12883, 31, 12883, 31, 13200, 31
+0, 12
+883, 31, 12883, 31, 13200, 31
 increasing avg thresh: 27, decreasing avg thresh: 23, staircase
 
 22_05_03 23:13:24
@@ -1030,3 +1031,292 @@ increasing avg thresh: 41, decreasing avg thresh: 33, staircase
 increasing avg thresh: 44, decreasing avg thresh: 92, staircase
 
 :Lena:
+
+22_05_04 15:59:25
+2, Results for Left ear
+
+1, 80
+1, 67
+0, 76
+0, 68
+149, 14760, 68, 14909, 68, 15200, 68
+increasing avg thresh: 73, decreasing avg thresh: 72, staircase
+
+22_05_04 16:02:48
+
+22_05_04 16:10:01
+2, Results for Left ear
+
+1, 80
+1, 67
+1, 70
+1, 0
+1, 80
+1, 68
+0, 60
+0, 61
+0, 50
+0, 60
+0, 60
+0, 64
+4405, 5813, 64, 10218, 64, 10400, 64
+increasing avg thresh: 60, decreasing avg thresh: 59, staircase
+
+22_05_04 16:15:47
+
+22_05_04 16:19:10
+
+22_05_04 16:21:39
+
+22_05_04 16:23:58
+
+22_05_04 17:37:48
+
+22_05_04 17:38:49
+2, Results for Right ear
+
+1, 190
+1, 175
+1, 400
+1, 384
+1, 400
+1, 386
+0, 304
+0, 327
+0, 324
+0, 352
+0, 604
+0, 632
+147, 279, 632, 426, 632, 800, 632
+increasing avg thresh: 322, decreasing avg thresh: 423, staircase
+
+22_05_04 17:43:27
+
+22_05_04 17:45:27
+
+22_05_04 17:47:20
+
+22_05_04 17:51:10
+
+22_05_04 17:51:39
+2, Results for Right ear
+
+1, 380
+1, 367
+1, 320
+1, 357
+1, 370
+1, 376
+0, 0
+0, 352
+0, 369
+0, 402
+0, 373
+231, 23159, 373, 23390, 373, 23600, 373
+increasing avg thresh: 361, decreasing avg thresh: 299, staircase
+
+22_05_04 18:11:09
+
+22_05_04 18:11:26
+2, Results for Right ear
+
+1, 210
+1, 195
+1, 200
+1, 187
+1, 200
+1, 190
+0, 0
+0, 374
+0, 170
+0, 134
+0, 106
+177, 23039, 106, 23216, 106, 23200, 106
+increasing avg thresh: 197, decreasing avg thresh: 156, staircase
+
+22_05_04 19:58:41
+
+22_05_04 20:00:45
+2, Results for Right ear
+
+1, 220
+1, 203
+1, 210
+1, 201
+1, 220
+1, 203
+0, 0
+0, 158
+0, 159
+0, 208
+0, 205
+405, 12563, 205, 12968, 205, 13200, 205
+increasing avg thresh: 209, decreasing avg thresh: 146, staircase
+:NV Levkovich:
+
+22_05_06 14:05:59
+
+22_05_06 14:08:42
+2, Results for Right ear
+
+1, 110
+1, 98
+1, 90
+1, 92
+1, 190
+1, 174
+0, 70
+0, 87
+0, 90
+0, 92
+0, 100
+0, 104
+136, 155, 5407
+10396, 104, 10400, 104
+increasing avg thresh: 125, decreasing avg thresh: 90, staircase
+
+22_05_07 23:02:43
+
+22_05_08 17:50:20
+
+22_05_08 22:00:12
+
+22_05_08 22:06:21
+2, Results for Right ear
+Threshold results:
+
+1, 220
+1, 201
+1, 20
+1, 3
+1, 20
+1, 0
+0, 114
+0, 142
+0, 134
+0, 163
+0, 134
+0, 162
+Reaction time results:
+6177, 1, 1
+552, 162, 800, 162
+increasing avg thresh: 77, decreasing avg thresh: 141, staircase
+
+22_05_09 12:49:09
+
+22_05_09 12:49:59
+
+22_05_09 12:50:19
+2, Results for Right ear
+Threshold results:
+
+1, 150
+1, 132
+1, 130
+1, 116
+1, 150
+1, 134
+0, 120
+0, 113
+0, 100
+0, 115
+0, 130
+0, 133
+Reaction time results:
+1249, 1, 1
+10432, 133, 10800, 133
+increasing avg thresh: 135, decreasing avg thresh: 118, staircase
+
+22_05_09 13:19:01
+
+22_05_09 13:20:37
+2, Results for Right ear
+Threshold results:
+
+1, 150
+1, 133
+1, 130
+1, 114
+1, 40
+1, 59
+0, 208
+0, 206
+0, 138
+0, 142
+0, 208
+0, 226
+Reaction time results:
+141, 138, 147
+8707, 226, 8800, 226
+increasing avg thresh: 104, decreasing avg thresh: 188, staircase
+
+22_05_09 13:27:49
+
+22_05_09 13:43:45
+
+22_05_09 13:47:13
+2, Results for Right ear
+Threshold results:
+
+1, 120
+1, 105
+1, 120
+1, 102
+1, 0
+1, 99
+0, 132
+0, 124
+0, 112
+0, 116
+0, 102
+0, 100
+Reaction time results:
+174, 515, 471
+8180, 100, 8400, 100
+increasing avg thresh: 91, decreasing avg thresh: 114, staircase
+
+22_05_09 13:52:47
+2, Results for Right ear
+Threshold results:
+
+1, 100
+1, 90
+1, 110
+1, 94
+1, 100
+1, 86
+0, 102
+0, 118
+0, 52
+0, 84
+0, 52
+0, 80
+Reaction time results:
+141, 137, 112
+2121, 80, 2400, 80
+increasing avg thresh: 96, decreasing avg thresh: 81, staircase
+
+22_05_09 14:15:32
+2, Results for Right ear
+Threshold results:
+
+1, 100
+1, 85
+1, 100
+1, 86
+1, 100
+1, 85
+0, 74
+0, 74
+0, 74
+0, 90
+0, 84
+0, 90
+Reaction time results:
+142, 8, 136
+6651, 90, 6800, 90
+increasing avg thresh: 92, decreasing avg thresh: 81, staircase
+
+22_05_09 14:38:13
+
+22_05_09 14:47:09

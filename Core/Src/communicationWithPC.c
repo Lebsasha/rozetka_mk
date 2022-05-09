@@ -17,19 +17,21 @@ void CommandWriter_ctor(CommandWriter* ptr)
     ptr->is_sending = false;
 }
 
-void append_var_8(CommandWriter* ptr, uint8_t var)
+bool append_var_8(CommandWriter* ptr, uint8_t var)
 {
     if (ptr->length + sizeof(var) + sizeof(uint8_t) > ptr->BUF_SIZE)
-        return;
+        return false;
     *reinterpret_cast(uint8_t*, ptr->buffer + ptr->length) = var;
     ptr->length += sizeof(var);
+    return true;
 }
-void append_var_16(CommandWriter* ptr, uint16_t var)
+bool append_var_16(CommandWriter* ptr, uint16_t var)
 {
     if (ptr->length + sizeof(var) + sizeof(uint8_t) > ptr->BUF_SIZE)
-        return;
+        return false;
     *reinterpret_cast(uint16_t*, ptr->buffer + ptr->length) = var;
     ptr->length += sizeof(var);
+    return true;
 }
 
 void reset_buffer(CommandWriter* ptr)
@@ -45,10 +47,10 @@ void prepare_for_sending(CommandWriter* ptr, uint8_t command_code, bool if_ok)
         checksum += *c;
     *reinterpret_cast(typeof(checksum)*, ptr->buffer + ptr->length) = checksum;
     ptr->length += sizeof(checksum);
-    if (command_code < 128)
-        ptr->buffer[CC] = command_code + 128 * !if_ok;/// 128 == 1<<7
+    if ((command_code & 1<<7) == 0)
+        ptr->buffer[CC] = command_code + (1<<7) * !if_ok;
     else
-        ptr->buffer[CC] = command_code; /// Error bit already set in command_code
+        ptr->buffer[CC] = command_code; /// Error bit already set in received from PC command_code, so we setting command as it arrived (with error code) even when @a if_ok == true (i. e. there are no errors occurred)
     ptr->is_sending = true;
 }
 
@@ -151,7 +153,7 @@ void process_cmd(const uint8_t* command, const uint32_t len)
             {
                 if(currMeasure==Hearing)
                 {
-                    tone_pins[hearingTester.dynamic].volume = 0;
+                    set_new_tone_volume(&hearingTester, 0);
                     hearing_stop(&hearingTester);
                     hearingTester.react_surveys_elapsed = 0;
                 }
@@ -169,7 +171,6 @@ void process_cmd(const uint8_t* command, const uint32_t len)
                 usb_assert(hearingTester.dynamic < 2);
                 uint16_t volume;
                 get_param_16(&reader, &volume);
-                tone_pins[hearingTester.dynamic].volume=0;
                 uint16_t freq = 0;
                 for (volatile uint32_t* c = tone_pins[hearingTester.dynamic].dx; c < tone_pins[hearingTester.dynamic].dx + sizeof_arr(tone_pins[hearingTester.dynamic].dx); ++c)
                 {
@@ -180,8 +181,8 @@ void process_cmd(const uint8_t* command, const uint32_t len)
                 }
                 currMeasure = Hearing;
                 hearingTester.state = Idle; // as we need only to set unchanging tone, we need make state Idle
+                set_new_tone_volume(&hearingTester, volume);
                 hearing_start(&hearingTester);
-                tone_pins[hearingTester.dynamic].volume = volume;
                 prepare_for_sending(&writer, cmd, true);
             }
             else if (cmd == 0x11)
@@ -199,21 +200,17 @@ void process_cmd(const uint8_t* command, const uint32_t len)
                     tone_pins[hearingTester.dynamic].dx[i] = freq_to_dx(&tone_pins[hearingTester.dynamic], hearingTester.freq[i]);
                 hearing_start(&hearingTester);
                 currMeasure = Hearing;
-                hearingTester.state = StartingTest;
+                hearingTester.state = PlayingConstantVolume;
                 prepare_for_sending(&writer, cmd, true);
             }
             else if (cmd == 0x12)
             {
                 usb_assert(currMeasure == Hearing);
-                if (hearingTester.state == StartingTest)
+                if(hearingTester.state == PlayingConstantVolume)
                 {
-                    hearingTester.curr_volume = 0;
-                    hearingTester.new_volume = 0;
-                    hearingTester.state = ChangingVolume;
-                }
-                if(hearingTester.state == PlayingConstantVolume || hearingTester.state == ChangingVolume)
-                {
-                    usb_assert(get_param_16(&reader, (uint16_t *) &hearingTester.new_volume));
+                    uint16_t new_volume;
+                    usb_assert(get_param_16(&reader, &new_volume));
+                    set_new_tone_volume(&hearingTester, new_volume);
                     ButtonState newButtonState;
                     if(get_param_8(&reader, (uint8_t*) &newButtonState))
                     {
@@ -234,21 +231,29 @@ void process_cmd(const uint8_t* command, const uint32_t len)
                         append_var_16(&writer, hearingTester.ampl);
                     }
                     else
-                        usb_assert(button.state <= Released); //If we come in this place, state is likely Timeout or ButtonIdle, so this assertion should always fail
-
-                    hearingTester.state = ChangingVolume;
+                        assertion_fail("Wrong button state", cmd); //If we come in this place, state is likely Timeout or ButtonIdle, so this assertion should always fail
                 }
-                else
+                else if (hearingTester.state == StartingMeasuringReaction || hearingTester.state == WaitingBeforeMeasuringReaction
+                            || hearingTester.state == MeasuringReaction)
                 {
                     append_var_8(&writer, MeasuringReactionTime);
+                }
+                else // We shouldn't come to this section, but if this occurred, we must report about this error to high level program
+                {
+                    append_var_8(&writer, MeasuringHearingThreshold);
+                    append_var_8(&writer, hearingTester.state);
+                    prepare_for_sending(&writer, cmd, false);
+                    return;
                 }
                 prepare_for_sending(&writer, cmd, true);
             }
             else if (cmd == 0x13)//TODO ASK
             {
                 usb_assert(currMeasure == Hearing);
-                if (hearingTester.state == PlayingConstantVolume || hearingTester.state == ChangingVolume)
+                if (hearingTester.state == PlayingConstantVolume)
                 {
+                    if(!get_param_16(&reader, (uint16_t* ) &hearingTester.amplitude_for_react_survey))
+                        hearingTester.amplitude_for_react_survey = 0;
                     append_var_8(&writer, MeasuringReactionTime);
                     hearingTester.state = StartingMeasuringReaction;
                 }
@@ -259,11 +264,22 @@ void process_cmd(const uint8_t* command, const uint32_t len)
                 else if(hearingTester.state == Sending)
                 {
                     append_var_8(&writer, SendingResults);
-                    append_var_16(&writer, hearingTester.react_time);
+                    for (int i = 0; i < REACT_SURVEYS_COUNT; ++i)
+                    {
+                        usb_assert(append_var_16(&writer, hearingTester.react_times[i]));
+                    }
 //                    append_var_16(&writer, hearingTester.elapsed_time);/// Elapsed time and amplitude already sent via 0x12 command
 //                    append_var_16(&writer, hearingTester.ampl);
                     hearing_stop(&hearingTester);
                     currMeasure = None;
+                }
+                else
+                {
+                    /// Normally we shouldn't come to this section, but if error occurred we must report about this to high level program
+                    append_var_8(&writer, SendingResults);
+                    append_var_8(&writer, hearingTester.state);
+                    prepare_for_sending(&writer, cmd, false);
+                    return;
                 }
                 prepare_for_sending(&writer, cmd, true);
             }
@@ -311,7 +327,7 @@ void SkinConduction_send_result_to_PC(SkinConductionTester* ptr)
 
 void assertion_fail(const char* cond, const uint8_t cmd)
 {
-    reset_buffer(&writer); ///clean writer if I already have appended something; this line replaces CommandWriter_ctor() call
+    reset_buffer(&writer); ///clean writer if I already have appended something
     size_t str_length = strlen(cond) + 3*sizeof(uint8_t) + 1*sizeof(uint8_t) + 1 >= writer.BUF_SIZE ? writer.BUF_SIZE - 3*sizeof(uint8_t) - 1*sizeof(uint8_t) - 1 : strlen(cond);///3 - CC, LenL, LenH; 1 - SS (checksum byte); 1 - size of '\0'
     for (const char* c = cond; c < cond + str_length; ++c)
         append_var_8(&writer, *c);

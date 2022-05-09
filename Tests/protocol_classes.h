@@ -26,17 +26,24 @@ public:
     explicit Command_writer(std::ostream& dev): dev(dev), length(LenH + 1)
     {}
 
-    template<typename T>
+    template<typename T = uint16_t>
     void append_var(T var)
     {
         assert(length + sizeof(var) + sizeof(uint8_t) <= BUF_SIZE);/// sizeof(uint8_t) is sizeof(SS)
         *reinterpret_cast<T*>(buffer + length) = var;
         length += sizeof(var);
     }
+
     void write()
     {
         dev.write(buffer, (std::streamsize) length);
         dev.flush();
+        if (! dev.good())
+        {
+            std::stringstream error {};
+            error << "Cannot write to COM port, because one of error flag had set when last command " << std::hex << (int) buffer[CC] << " was sent to device";
+            throw std::runtime_error(error.str());
+        }
         for(char* c=buffer+length-1;c>=buffer;--c)
         {
             *c=0;
@@ -122,7 +129,7 @@ public:
         return buffer[CC];
     }
 
-    std::string read_error()
+    std::string get_error_string()
     {
         std::stringstream err;
         char c=0;

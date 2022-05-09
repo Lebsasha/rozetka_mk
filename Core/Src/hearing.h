@@ -7,14 +7,14 @@
 /// Carrying frequency
 #define TONE_FREQ 40000
 #define freq_to_dx(tone_pin_ptr, freq)  (((tone_pin_ptr)->ARR_SIZE*(freq)<<8)/TONE_FREQ)
+/// Defines number of tones, which can be played simultaneously on dynamic
 #define CHANNELS_NUM 1
 
-//#define TONE_PWM_GENERATION
-#define TONE_SPI_GENERATION
+#define REACT_SURVEYS_COUNT 3
 
 typedef enum HearingStates
 {
-    StartingTest, PlayingConstantVolume, ChangingVolume, StartingMeasuringReaction, WaitingBeforeMeasuringReaction, MeasuringReaction, Sending, Idle
+    PlayingConstantVolume, StartingMeasuringReaction, WaitingBeforeMeasuringReaction, MeasuringReaction, Sending, Idle
 } HearingStates;
 
 /// Possible hearing test states from high level program (i. e. from PC) point of view
@@ -34,29 +34,25 @@ typedef struct HearingTester
     volatile uint16_t elapsed_time;
     volatile HearingStates state;
     bool is_results_on_curr_pass_captured;
+    volatile bool is_volume_need_to_be_changed;
     Timer timer;
-    volatile uint16_t react_time;
+    volatile uint16_t react_times[REACT_SURVEYS_COUNT];
     volatile uint8_t react_surveys_elapsed;
-    uint8_t REACT_SURVEYS_COUNT;
-    uint8_t REACT_VOLUME_KOEF;
-    uint8_t curr_react_volume_coef;
+    volatile uint16_t amplitude_for_react_survey; //!< Tone volume for estimating reaction time
     volatile uint16_t freq[CHANNELS_NUM];
-    volatile uint16_t curr_volume;
     volatile uint16_t new_volume;
-    volatile uint8_t VOLUME_CHANGER_PRESCALER;
 }HearingTester;
 void HearingTester_ctor(HearingTester* ptr);
 
 void hearing_start(HearingTester* ptr);
 void hearing_stop(HearingTester* ptr);
 void hearing_handle(HearingTester* ptr);
+void set_new_tone_volume(HearingTester *ptr, uint16_t volume);
 
 
 
 typedef struct TonePin
 {
-    volatile uint32_t* PWM_register;
-    Pin CS_pin;
     HearingDynamics channel_bit;
     int16_t* sine_table;
     uint16_t ARR_SIZE;
@@ -65,7 +61,7 @@ typedef struct TonePin
     uint32_t curr_phase[CHANNELS_NUM];
 }TonePin;
 
-void TonePin_ctor(TonePin* ptr, volatile uint32_t* CCR, HearingDynamics channel_bit, Pin CS_pin);
+void TonePin_ctor(TonePin* ptr, HearingDynamics channel_bit);
 
 //uint32_t freq_to_dx(TonePin* ptr, uint16_t frequency);
 
