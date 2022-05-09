@@ -14,29 +14,33 @@
 using namespace std;
 
 /**
- * 0x1 -> u8|version u8[]|"string with \0"
- * 0x4 ->
- * 0x10 u8|dynamic u16|volume u16[]|freqs ->
- * 0x11 u8|dynamic u16[]|freqs ->
- * 0x12 u16|new_amplitude *u8|new_button_state -> u8|state u8|button_state *u16|elapsed_time *u16|amplitude
- * new_button_state - sets desired value that button must measure (i. e. if patient presses or released button). This parameter need to sent before one ascending or descending threshold measure. 
- * 0x13 *u16|amplitude_for_react_survey -> u8|state *u16|react_time
- * First time received, this command starts measuring reaction if hearing threshold already estimated, after this it will sent reaction time, when it has been measured
- * 0x18 u16|amplitude, u16|burstPeriod, u16|numberOfBursts, u16|numberOfMeandrs, u16|maxReactionTime -> u8|ifReacted u16|reactionTime u16|amplitude (In percent?)
- * @note react_time in ms
- * @note state can be:
+ * @code 0x1 -> u8|version u8[]|"string with \0" @endcode
+ * @code 0x4 -> @endcode
+ * @code 0x10 u8|dynamic u16|volume u16[]|freqs -> @endcode
+ * @code 0x11 u8|dynamic u16[]|freqs -> @endcode
+ * @code 0x12 u8|new_button_state -> u8|state @endcode
+ * new_button_state - sets desired value that button must measure (e. g. if patient presses or releases button). This parameter should be sent before one pass (ascending or descending threshold measure)
+ * @code 0x13 u16|new_amplitude -> u8|state u8|button_state *u16|elapsed_time *u16|amplitude @endcode
+ * If @a 0x12 or @a 0x13 command received when device stand in inappropriate state (for example, when device sending reaction time results), then it will send these parameters with error bit set
+ * @code 0x1X ... -> u8|state (that will be equal to MeasuringHearingThreshold) u8|internal_state @endcode
+ * @a internal_state parameter describes what actually device does when error occurred. Refer to @c HearingStates enum in file @c src/Core/hearing.h for finding out possible states of this parameter
+ * @code 0x14 *u16|amplitude_for_react_survey -> u8|state *u16|react_time @endcode
+ * First time received, this command starts measuring reaction time, after this it will sent reaction time, when it has been measured
+ * @code 0x18 u16|amplitude, u16|burstPeriod, u16|numberOfBursts, u16|numberOfMeandrs, u16|maxReactionTime -> u8|ifReacted u16|reactionTime u16|amplitude (In percent?) @endcode
+ * state can be:
  *      0 - MeasuringHearingThreshold
  *      1 - MeasuringReactionTime
  *      2 - MeasureEnd
- * @note asterisk "*" near parameter means that that parameter is sent only when 'state'(s) parameter(s) reaches some predefined value
+ *
+ * Asterisk ("*") near parameter means that that parameter is sent only when 'state'(s) parameter(s) reaches some predefined value
  *
  * dynamic mean:
- * 0 - left channel
- * 1 - right channel
+ * 0 - right channel
+ * 1 - left channel
  *
  *
- * If error in command CC:
- * CC ... -> 0x80(128)+CC u8[]|"string with \0" ///TODO Переделать c кодами ошибок
+ * If error occur in command with code CC, then device will send command with raised 1'th bit in command code and string description about this error, i. e.:
+ * @code 1<<7 | CC ... -> u8[]|"string with \0" @endcode ///TODO Переделать c кодами ошибок
  */
 
 const string del = ", "; //Delimiter between writing to csv file results
@@ -102,7 +106,7 @@ private:
 
     void set_pass_parameters(DesiredButtonState state);
 
-    void send_new_amplitude_and_receive_threshold_results(uint16_t curr_amplitude);
+    void set_up_new_amplitude_and_receive_threshold_results(uint16_t curr_amplitude);
 
     std::array<uint16_t, HearingTester::REACTION_SURVEYS_COUNT> get_reaction_time(uint16_t amplitude);
 };
@@ -293,13 +297,13 @@ int main (int , char** )
                 {
                     auto [time, amplitude] = *iter;
                     auto next_time = (iter+1)->first;
-                    writer.set_cmd(0x12);
+                    writer.set_cmd(0x13);
                     writer.append_var(amplitude);
                     writer.prepare_for_sending();
                     time_measurer.begin();
                     writer.write();
                     reader.read();
-                    time_measurer.log_end(0x12);
+                    time_measurer.log_end(0x13);
                     assert(!reader.is_error());
                     uint8_t state = reader.get_param<uint8_t>();
                     if (state == (uint8_t) HearingState::MeasuringReactionTime) /// Patient reacted and mk starts measuring reaction
@@ -328,12 +332,12 @@ int main (int , char** )
 //                    assert(elapsed_time <= elapsed_time_by_mk);
                     uint8_t state;
                     do {
-                        writer.set_cmd(0x13);
+                        writer.set_cmd(0x14);
                         writer.prepare_for_sending();
                         time_measurer.begin();
                         writer.write();
                         reader.read();
-                        time_measurer.log_end(0x13);
+                        time_measurer.log_end(0x14);
                         assert(!reader.is_error());
                         reader.get_param(state);
                         this_thread::sleep_for(1s);
@@ -522,8 +526,9 @@ void HearingTester::execute_for_one_ear(HearingParameters parameters, HearingDyn
         log_string << " ear" << endl;
         if (! threshold_results.empty()) /// Patient reacted
         {
-            set_pass_parameters(DesiredButtonState::StartWaitingForPress);
+            this_thread::sleep_for(chrono::milliseconds(rand() % 1000 + 2000));
             uint16_t amplitude_for_react_survey = 4 * increasing_hearing_threshold;
+            set_pass_parameters(DesiredButtonState::StartWaitingForPress);
             reaction_times = get_reaction_time(amplitude_for_react_survey);
 
             log_string << "Threshold results:" << endl;
@@ -537,8 +542,9 @@ void HearingTester::execute_for_one_ear(HearingParameters parameters, HearingDyn
                 if (it != reaction_times.cend() - 1)
                     log_string << del;
             }
-            log_string << endl << elapsed_time_by_mk << del << received_amplitude_from_mk << del << elapsed_time << del << amplitude_heard;
-            log_string << endl << "increasing avg thresh: " << increasing_hearing_threshold << del << "decreasing avg thresh: " << decreasing_hearing_threshold;
+//            log_string << endl << elapsed_time_by_mk << del << received_amplitude_from_mk << del << elapsed_time << del << amplitude_heard;
+            log_string << endl;
+            log_string << "increasing avg thresh: " << increasing_hearing_threshold << del << "decreasing avg thresh: " << decreasing_hearing_threshold;
         }
         else /// Patient never reacted, need to stop measure
         {
@@ -582,7 +588,7 @@ void HearingTester::make_pass(PassVariant pass_variant, uint16_t first_amplitude
 
         for (size_t i = 1; i <= NUM_OF_STEPS; ++i)
         {
-            send_new_amplitude_and_receive_threshold_results(i*first_amplitude/NUM_OF_STEPS);
+            set_up_new_amplitude_and_receive_threshold_results(i * first_amplitude / NUM_OF_STEPS);
             this_thread::sleep_for(chrono::milliseconds(time_step));
         }
     }
@@ -615,7 +621,7 @@ void HearingTester::make_pass(PassVariant pass_variant, uint16_t first_amplitude
                     goto end;
                 break;
         }
-        send_new_amplitude_and_receive_threshold_results(curr_amplitude);
+        set_up_new_amplitude_and_receive_threshold_results(curr_amplitude);
         if (is_result_received)
             break;
         this_thread::sleep_for(chrono::milliseconds(params.time_step));
@@ -623,7 +629,7 @@ void HearingTester::make_pass(PassVariant pass_variant, uint16_t first_amplitude
         elapsed_time = curr_time;
     }
     end:
-    send_new_amplitude_and_receive_threshold_results(0);
+    set_up_new_amplitude_and_receive_threshold_results(0);
 }
 
 /// set parameters for one pass
@@ -632,20 +638,19 @@ void HearingTester::set_pass_parameters(DesiredButtonState state)
     Time_measurer time_measurer{};
     uint8_t command = 0x12;
     writer.set_cmd(command);
-    writer.append_var<uint16_t> (0); // TODO temporary need add amplitude to this command
     writer.append_var<uint8_t> ((uint8_t) state);
     writer.prepare_for_sending();
     time_measurer.begin();
     writer.write();
     reader.read();
-    time_measurer.log_end(command, "Set pass parameters");
+    time_measurer.log_end(command);
     assert(!reader.is_error());
 }
 
-void HearingTester::send_new_amplitude_and_receive_threshold_results(uint16_t curr_amplitude)
+void HearingTester::set_up_new_amplitude_and_receive_threshold_results(uint16_t curr_amplitude)
 {
     Time_measurer time_measurer{};
-    uint8_t command = 0x12;
+    uint8_t command = 0x13;
     writer.set_cmd(command);
     writer.append_var<uint16_t>(curr_amplitude);
     writer.prepare_for_sending();
@@ -673,13 +678,13 @@ std::array<uint16_t, HearingTester::REACTION_SURVEYS_COUNT> HearingTester::get_r
     Time_measurer time_measurer{};
     HearingState state;
     do {
-        writer.set_cmd(0x13);
+        writer.set_cmd(0x14);
         writer.append_var<uint16_t> (amplitude);
         writer.prepare_for_sending();
         time_measurer.begin();
         writer.write();
         reader.read();
-        time_measurer.log_end(0x13);
+        time_measurer.log_end(0x14);
         assert(!reader.is_error());
         state = (HearingState) reader.get_param<uint8_t>();
         this_thread::sleep_for(1s);

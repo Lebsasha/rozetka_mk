@@ -116,8 +116,10 @@ extern SkinConductionTester skinTester;
 extern HearingTester hearingTester;
 extern TonePin* tone_pins;//TODO Try to move tone_pins from this file to hearingTester
 
+/// @note There is difference between standard @a assert implementation and this implementation of @a assert:
+/// Even when defined NDEBUG, expression @a cond will still be evaluated
 #ifdef NDEBUG
-#define usb_assert(cond) ((void)0)
+#define usb_assert(cond) ((void)(cond))
 #else
 #define usb_assert(cond) do{if(!(cond)) \
 {                                   \
@@ -208,18 +210,37 @@ void process_cmd(const uint8_t* command, const uint32_t len)
                 usb_assert(currMeasure == Hearing);
                 if(hearingTester.state == PlayingConstantVolume)
                 {
+                    /// We beginning new pass
+                    ButtonState newButtonState;
+                    usb_assert(get_param_8(&reader, (uint8_t*) &newButtonState));
+                    usb_assert(newButtonState == WaitingForPress || newButtonState == WaitingForRelease);
+                    ButtonStart(&button, newButtonState);
+                    hearingTester.is_results_on_curr_pass_captured = false;
+
+                    append_var_8(&writer, MeasuringHearingThreshold);
+                }
+                else if (hearingTester.state == StartingMeasuringReaction || hearingTester.state == WaitingBeforeMeasuringReaction
+                         || hearingTester.state == MeasuringReaction)
+                {
+                    append_var_8(&writer, MeasuringReactionTime);
+                }
+                else // We shouldn't come to this section, but if this occurred, we must report about this error to high level program
+                {
+                    append_var_8(&writer, MeasuringHearingThreshold);
+                    append_var_8(&writer, hearingTester.state);
+                    prepare_for_sending(&writer, cmd, false);
+                    return;
+                }
+                prepare_for_sending(&writer, cmd, true);
+            }
+            else if (cmd == 0x13)
+            {
+                usb_assert(currMeasure == Hearing);
+                if(hearingTester.state == PlayingConstantVolume)
+                {
                     uint16_t new_volume;
                     usb_assert(get_param_16(&reader, &new_volume));
                     set_new_tone_volume(&hearingTester, new_volume);
-                    ButtonState newButtonState;
-                    if(get_param_8(&reader, (uint8_t*) &newButtonState))
-                    {
-                        ///If button state received, this mean that we beginning new pass
-                        usb_assert(newButtonState == WaitingForPress || newButtonState == WaitingForRelease);
-                        ButtonStart(&button, newButtonState);
-                        hearingTester.is_results_on_curr_pass_captured = false;
-                    }
-
                     append_var_8(&writer, MeasuringHearingThreshold);
 
                     append_var_8(&writer, button.state);
@@ -247,7 +268,7 @@ void process_cmd(const uint8_t* command, const uint32_t len)
                 }
                 prepare_for_sending(&writer, cmd, true);
             }
-            else if (cmd == 0x13)//TODO ASK
+            else if (cmd == 0x14)//TODO ASK
             {
                 usb_assert(currMeasure == Hearing);
                 if (hearingTester.state == PlayingConstantVolume)
