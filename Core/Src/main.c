@@ -127,7 +127,7 @@ int main(void)
     HAL_Delay(400);
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 
-    write_pin_if_in_debug(GPIOB, GPIO_PIN_13, GPIO_PIN_SET);//show that initialisation started
+    write_pin_if_in_debug(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);//show that initialisation started
 
     TonePin tone_pins_init[2];
     TonePin_ctor(&tone_pins_init[0], LeftDynamic);
@@ -144,9 +144,10 @@ int main(void)
     uint16_t notes_1[] = {NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4};
     uint8_t durations_1[] = {4, 8, 8, 4, 4, 4, 4, 4};
 
-    write_pin_if_in_debug(GPIOB, GPIO_PIN_13, GPIO_PIN_RESET);//show that initialisation finished
+    write_pin_if_in_debug(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);//show that initialisation finished
 //#define DEBUG_BY_ST_LINK // macro need for preventing mk responding by USB
-//    uint8_t cmd_10[]={0x10, 0x05, 0x00, 0x01, 0x50, 0xc3, 0xa0, 0x0f, 0xf2}; // volume - 50000, freq - 4000
+//    uint8_t cmd_10[]={0x10, 0x05, 0x00, 0x00, 0x50, 0xc3, 0xa0, 0x0f, 0xf1}; // volume - 50000, freq - 4000
+//    process_cmd(cmd_10, sizeof_arr(cmd_10));
 //    uint8_t cmd_11[]={0x11, 0x03, 0x00, 0x01, 0x0b, 0x02, 0x3b}; // freq - 523
 //    uint8_t cmd_11[] = {0x11, 0x03, 0x00, 0x01, 0xa0, 0x0f, 0xdd}; // freq - 4000
 //    uint8_t cmd_12_prep[] = {0x12, 0x03, 0x00, 0x00, 0x00, 0x00, 0x2d}; // wait_for_press
@@ -587,7 +588,7 @@ void send_command(CommandWriter* ptr)
 #endif
     ptr->buffer[LenL]=0;
     ptr->buffer[LenH]=0;
-    ptr->length = 1 + 1 + 1;///CC, LenH, LenL
+    ptr->length = (1 + 1 + 1) * sizeof(uint8_t);///CC, LenH, LenL
     write_pin_if_in_debug(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
     ptr->is_sending = false;
 }

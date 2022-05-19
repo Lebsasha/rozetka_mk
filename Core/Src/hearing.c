@@ -25,7 +25,7 @@ int16_t sine_table[1024];
 void TonePin_ctor(TonePin* ptr, HearingDynamics channel_bit)
 {
     for (int i = 0; i < ARR_SIZE; ++i)
-        sine_table[i] = (int16_t)(SINE_AMPL / 2.0 - SINE_AMPL / 2.0 * sin(i * 2 * M_PI / ARR_SIZE));
+        sine_table[i] = (int16_t)(SINE_AMPL * sin(i * 2 * M_PI / ARR_SIZE));
     ptr->sine_table = sine_table;
     ptr->ARR_SIZE = ARR_SIZE;
     ptr->volume = 0;
@@ -43,23 +43,21 @@ void make_tone(TonePin* tonePin)
 {
     if (tonePin->volume != 0)
     {
-        const uint16_t MAX_VAL = (1<<12)-1;
-        uint16_t command;
+// This constant need for accessing values for curr_phase and dx variables in Tone_pin struct
+        const uint8_t i = 0;
 
-        for (uint8_t i = 0; i < (uint8_t) sizeof_arr(tonePin->dx); ++i)
+        uint32_t curr_tone_value;
+        const int32_t NEGATIVE_TO_ZERO_SHIFT = SINE_AMPL * HEARING_VOLUME_MAX;
+        curr_tone_value = ((tonePin->sine_table[tonePin->curr_phase[i] >> 8] * tonePin->volume + NEGATIVE_TO_ZERO_SHIFT)/(2*SINE_AMPL));
+//        curr_tone_value = ((tonePin->sine_table[tonePin->curr_phase[i]>>8] * (tonePin->volume>>4) + 0x7ff8000)>>16);
+
+        tonePin->curr_phase[i] += tonePin->dx[i];
+        if (tonePin->curr_phase[i] >= SHIFTED_ARR_SIZE)
         {
-            if (i == 0)
-                command = (uint32_t) (tonePin->sine_table[tonePin->curr_phase[i] >> 8]) * MAX_VAL / SINE_AMPL / sizeof_arr(tonePin->dx);
-            else
-                command += (uint32_t) (tonePin->sine_table[tonePin->curr_phase[i] >> 8]) * MAX_VAL / SINE_AMPL / sizeof_arr(tonePin->dx);
-            tonePin->curr_phase[i] += tonePin->dx[i];
-            if (tonePin->curr_phase[i] >= SHIFTED_ARR_SIZE)
-            {
-                tonePin->curr_phase[i] -= SHIFTED_ARR_SIZE;
-            }
+            tonePin->curr_phase[i] -= SHIFTED_ARR_SIZE;
         }
-        command = (command * tonePin->volume)>>16;
 
+        uint16_t command = curr_tone_value;
         command &= (1<<12)-1; /// If command > 4095, we reset all bits higher 12th
         command |= tonePin->channel_bit<<15; /// DAC channel (!A/B)
         command |= 0<<14; /// BUF
@@ -114,7 +112,8 @@ void HearingTester_ctor(HearingTester* ptr)
 void hearing_start(HearingTester* ptr)
 {
     htim1.Instance->PSC = 0;
-    htim1.Instance->ARR = 1799;
+    const uint16_t COUNTER_RANGE = 72000000/TONE_FREQ;
+    htim1.Instance->ARR = COUNTER_RANGE - 1;
     __HAL_SPI_ENABLE(&hspi1);
     HAL_TIM_Base_Start_IT(&htim1);
 }

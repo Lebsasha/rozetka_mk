@@ -49,7 +49,7 @@ const string del = ", "; //Delimiter between writing to csv file results
 /// Possible hearing test states
 enum class HearingState
 {
-    MeasuringHearingThreshold [[maybe_unused]] = 0, /*SendingThresholdResult=1, */MeasuringReactionTime = 1, SendingResults = 2
+    MeasuringHearingThreshold [[maybe_unused]] = 0, MeasuringReactionTime = 1, SendingResults = 2
 };
 
 enum class HearingDynamic {Left=1, Right=0};
@@ -57,7 +57,13 @@ enum class HearingDynamic {Left=1, Right=0};
 enum class DesiredButtonState {StartWaitingForPress=0, StartWaitingForRelease=2};
 enum class ActualButtonState {WaitingForPress=0, Pressed=1, WaitingForRelease=2, Released=3};
 
-enum class Algorithm {inc_linear_by_step=0, dec_linear_by_step=1, staircase};
+enum class PassAlgorithm {inc_linear_by_step=0, dec_linear_by_step=1, staircase};
+
+enum class AmplitudeChangingAlgorithm {linear, exp_on_high_linear_at_low};
+
+/// How time step need to be modified on each pass
+/// @a random_deviation time step - i. e. when adding or subtracting random_deviation value to given time step
+enum class TimeStepChangingAlgorithm {constant, random_deviation};
 
 struct HearingParameters
 {
@@ -66,7 +72,9 @@ struct HearingParameters
     uint16_t initial_amplitude_step=0;
 //    uint16_t num_of_steps=0;
     uint16_t time_step=0;
-    Algorithm amplitude_algorithm{};
+    PassAlgorithm pass_algorithm{};
+    AmplitudeChangingAlgorithm amplitude_algorithm{};
+    TimeStepChangingAlgorithm time_step_changing_algorithm{};
 };
 
 class HearingTester
@@ -93,8 +101,6 @@ private:
     std::array<uint16_t, REACTION_SURVEYS_COUNT> reaction_times ={0};
 
     /// Results of measure of one pass
-    uint16_t elapsed_time = 0;
-    uint16_t amplitude_heard = 0;
     uint16_t elapsed_time_by_mk=0;
     uint16_t received_amplitude_from_mk=0;
     /// if true, all other current params defined
@@ -121,6 +127,15 @@ private:
 // //    return std::tuple(arr, sizeof_arr(arr));
 //}
 
+#define USE_SLEEP
+template<typename Rep, typename Period>
+inline void sleep(const chrono::duration<Rep, Period>& rtime)
+{
+#ifdef USE_SLEEP
+    this_thread::sleep_for(rtime);
+#endif
+}
+
 class Time_measurer
 {
     constexpr const static auto now = std::chrono::steady_clock::now;
@@ -136,7 +151,7 @@ public:
     {
         t_end = now();
         cout << "Time ";
-        if (cmd != 0 && !description.empty())
+        if (cmd != 0 || !description.empty())
             cout << "for ";
         if (cmd != 0)
         {
@@ -159,22 +174,22 @@ public:
 };
 
 template<typename ...T>
-auto calculate_amplitude_points(Algorithm alg, std::tuple<T...> algorithm_parameters)
+auto calculate_amplitude_points(PassAlgorithm alg, std::tuple<T...> algorithm_parameters)
 {
     std::vector<pair<uint16_t, uint16_t>> v;
-    if (alg == Algorithm::inc_linear_by_step || alg == Algorithm::dec_linear_by_step)
+    if (alg == PassAlgorithm::inc_linear_by_step || alg == PassAlgorithm::dec_linear_by_step)
     {
         uint16_t max_amplitude = std::get<0>(algorithm_parameters);
         uint16_t milliseconds_to_max_ampl = std::get<1>(algorithm_parameters);
         int num_of_steps = std::get<2>(algorithm_parameters);
         v.reserve(num_of_steps + 1);
-        if (alg == Algorithm::inc_linear_by_step)
+        if (alg == PassAlgorithm::inc_linear_by_step)
         {
             for (int i = 0; i < num_of_steps; ++i)
                 v.emplace_back(milliseconds_to_max_ampl * i/num_of_steps, max_amplitude * (i + 1)/num_of_steps);
             v.emplace_back(milliseconds_to_max_ampl, max_amplitude); /// Add one more element to make possible calculating duration of maximum amplitude via difference of time point
         }
-        else if (alg == Algorithm::dec_linear_by_step)
+        else if (alg == PassAlgorithm::dec_linear_by_step)
         {
             for (int i = 0; i < num_of_steps; ++i)
                 v.emplace_back(milliseconds_to_max_ampl * i/num_of_steps, max_amplitude * (num_of_steps - i)/num_of_steps);
@@ -204,11 +219,6 @@ int main (int , char** )
     const char* device_location;
 #ifdef __linux__
     device_location = "/dev/ttyACM0";
-#elif defined(_WIN32) || defined(_MSC_VER)
-    device_location = "COM3"; // Untested
-#else
-#error Unsupported OS
-#endif
     ofstream dev_write(device_location);
     ifstream dev_read(device_location);
     if(!dev_write || !dev_read)
@@ -216,8 +226,14 @@ int main (int , char** )
         std::cout << "Error opening COM file" << std::endl;
         return 1;
     }
+    system("stty -F /dev/ttyACM0 -parenb -parodd -cmspar cs8 hupcl -cstopb cread -clocal -crtscts -ignbrk -brkint ignpar -parmrk -inpck -istrip -inlcr -igncr -icrnl -ixon -ixoff -iuclc -ixany -imaxbel -iutf8 -opost -olcuc -ocrnl -onlcr -onocr -onlret -ofill -ofdel nl0 cr0 tab0 bs0 vt0 ff0 -isig -icanon -iexten -echo -echoe -echok -echonl -noflsh -xcase -tostop -echoprt -echoctl -echoke -flusho -extproc");
     Command_writer writer(dev_write);
     Command_reader reader(dev_read);
+//#elif defined(_WIN32) || defined(_MSC_VER)
+//    device_location = "COM3"; // Untested
+#else
+#error Unsupported OS
+#endif
     time_t t = std::chrono::system_clock::to_time_t(chrono::system_clock::now());
     stat << endl << std::put_time(std::localtime(&t), "%y_%m_%d %H:%M:%S") << endl;
     Time_measurer time_measurer {};
@@ -225,7 +241,7 @@ int main (int , char** )
 //    int max_amplitude = 5000;
     int milliseconds_to_max_volume = 10000;
     int num_of_steps = 10;
-    Algorithm amplitude_algorithm = Algorithm::dec_linear_by_step;
+    PassAlgorithm amplitude_algorithm = PassAlgorithm::dec_linear_by_step;
     auto amplitudes = calculate_amplitude_points(amplitude_algorithm, tuple(max_amplitude, milliseconds_to_max_volume, num_of_steps));
     uint16_t reaction_time;
     uint16_t elapsed_time;
@@ -246,12 +262,12 @@ int main (int , char** )
     {
     for(const uint8_t* cmd_ptr = cmds; cmd_ptr < cmds + cmds_length; ++cmd_ptr)
     {
-        this_thread::sleep_for(1s);
+        sleep(1s);
         const int cmd = *cmd_ptr;
         if (cmd == 0x11)
         {
             stat << cmd_ptr - cmds << ", "; /// Number of curr command
-            hearing_tester.execute({4000, 1000, 10, 400, Algorithm::staircase});//TODO Change Max amplitude
+            hearing_tester.execute({4000, 2500, 10, 300, PassAlgorithm::staircase, AmplitudeChangingAlgorithm::linear, TimeStepChangingAlgorithm::constant});
 
             continue;
         }
@@ -283,6 +299,7 @@ int main (int , char** )
             writer.append_var<uint16_t>(2000);/// max reaction time
         }
         writer.prepare_for_sending();
+
         time_measurer.begin();
         writer.write();
         reader.read();
@@ -312,7 +329,7 @@ int main (int , char** )
                         amplitude_heared_by_mk = reader.get_param<uint16_t>();
                         break;
                     }
-                    this_thread::sleep_for(chrono::milliseconds(next_time - time));
+                    sleep(chrono::milliseconds(next_time - time));
                     amplitude_heared = amplitude;
                     elapsed_time = time;
                 }
@@ -340,7 +357,7 @@ int main (int , char** )
                         time_measurer.log_end(0x14);
                         assert(!reader.is_error());
                         reader.get_param(state);
-                        this_thread::sleep_for(1s);
+                        sleep(1s);
                     } while (state != (uint8_t) HearingState::SendingResults); /// until measure has being ended
                     reaction_time = reader.get_param<uint16_t>();
 //                    uint16_t elapsed_time = reader.get_param<uint16_t>();
@@ -362,9 +379,9 @@ int main (int , char** )
                     log_string << reaction_time << del << real_elapsed_time << del << real_amplitude_heared << del
                                << elapsed_time_by_mk << del << amplitude_heared_by_mk << del << elapsed_time << del << amplitude_heared;
                 }
-                if (amplitude_algorithm == Algorithm::inc_linear_by_step)
+                if (amplitude_algorithm == PassAlgorithm::inc_linear_by_step)
                     log_string << del << "inc";
-                else if (amplitude_algorithm == Algorithm::dec_linear_by_step)
+                else if (amplitude_algorithm == PassAlgorithm::dec_linear_by_step)
                     log_string << del << "dec";
                 log_string << endl;
                 cout << log_string.str();
@@ -414,12 +431,10 @@ HearingTester::HearingTester(Command_writer& _writer, Command_reader& _reader, o
 void HearingTester::execute(HearingParameters parameters)
 {
     params = parameters;
-    assert(params.amplitude_algorithm == Algorithm::staircase);
+    assert(params.pass_algorithm == PassAlgorithm::staircase);
 
     execute_for_one_ear(params, HearingDynamic::Right);
-
-//    this_thread::sleep_for(chrono::milliseconds(2000 + rand() % 500));
-
+    sleep(chrono::milliseconds(rand() % 500 + 2000));
 //    execute_for_one_ear(params, HearingDynamic::Left);
 }
 
@@ -447,17 +462,17 @@ void HearingTester::execute_for_one_ear(HearingParameters parameters, HearingDyn
     {
         assert(reader.is_empty());
 
-        if (params.amplitude_algorithm == Algorithm::staircase)
+        if (params.pass_algorithm == PassAlgorithm::staircase)
         {
-            const size_t test_count = 3;
-            for (size_t i = 0; i < test_count; ++i)
+            const size_t increasing_pass_count = 3;
+            for (size_t i = 0; i < increasing_pass_count; ++i)
             {
                 make_pass(PassVariant::IncreasingLinear, 0, params.initial_amplitude_step);//TODO Откуда появляются результаты в 0 здесь?
                 if (is_result_received)
                 {
                     threshold_results.emplace_back(true, received_amplitude_from_mk);
 
-                    this_thread::sleep_for(chrono::milliseconds(rand() % 1000 + 500));
+                    sleep(chrono::milliseconds(rand() % 1000 + 500));
                     if (received_amplitude_from_mk >= 2 * params.initial_amplitude_step)
                         received_amplitude_from_mk -= 2 * params.initial_amplitude_step;
                     else
@@ -467,7 +482,7 @@ void HearingTester::execute_for_one_ear(HearingParameters parameters, HearingDyn
                         threshold_results.emplace_back(true, received_amplitude_from_mk);
                 }
 
-                this_thread::sleep_for(chrono::milliseconds(rand() % 1000 + 1500));
+                sleep(chrono::milliseconds(rand() % 1000 + 1500));
             }
 
             increasing_hearing_threshold = 0;
@@ -479,7 +494,8 @@ void HearingTester::execute_for_one_ear(HearingParameters parameters, HearingDyn
             if (increasing_hearing_threshold != 0)
                 increasing_hearing_threshold /= threshold_results.size();
 
-            for (size_t i = 0; i < test_count; ++i)
+            const size_t decreasing_pass_count = 3;
+            for (size_t i = 0; i < decreasing_pass_count; ++i)
             {
                 make_pass(PassVariant::DecreasingLinear, 2*increasing_hearing_threshold,
                           params.initial_amplitude_step);
@@ -487,14 +503,14 @@ void HearingTester::execute_for_one_ear(HearingParameters parameters, HearingDyn
                 {
                     threshold_results.emplace_back(false, received_amplitude_from_mk);
 
-                    this_thread::sleep_for(chrono::milliseconds(rand() % 1000 + 500));
+                    sleep(chrono::milliseconds(rand() % 1000 + 500));
                     make_pass(PassVariant::DecreasingLinear,
                               received_amplitude_from_mk + 4 * params.initial_amplitude_step, 2);
                     if (is_result_received)
                         threshold_results.emplace_back(false, received_amplitude_from_mk);
                 }
 
-                this_thread::sleep_for(chrono::milliseconds(rand() % 1000 + 1500));
+                sleep(chrono::milliseconds(rand() % 1000 + 1500));
             }
 
             decreasing_hearing_threshold = 0;
@@ -510,7 +526,7 @@ void HearingTester::execute_for_one_ear(HearingParameters parameters, HearingDyn
 
         }
         else
-            assert(params.amplitude_algorithm == Algorithm::staircase);
+            assert(params.pass_algorithm == PassAlgorithm::staircase); // Currently, only staircase algorithm is supported
 
         ostringstream log_string;
         log_string << "Results for ";
@@ -526,7 +542,7 @@ void HearingTester::execute_for_one_ear(HearingParameters parameters, HearingDyn
         log_string << " ear" << endl;
         if (! threshold_results.empty()) /// Patient reacted
         {
-            this_thread::sleep_for(chrono::milliseconds(rand() % 1000 + 2000));
+            sleep(chrono::milliseconds(rand() % 1000 + 2000));
             uint16_t amplitude_for_react_survey = 4 * increasing_hearing_threshold;
             set_pass_parameters(DesiredButtonState::StartWaitingForPress);
             reaction_times = get_reaction_time(amplitude_for_react_survey);
@@ -542,7 +558,6 @@ void HearingTester::execute_for_one_ear(HearingParameters parameters, HearingDyn
                 if (it != reaction_times.cend() - 1)
                     log_string << del;
             }
-//            log_string << endl << elapsed_time_by_mk << del << received_amplitude_from_mk << del << elapsed_time << del << amplitude_heard;
             log_string << endl;
             log_string << "increasing avg thresh: " << increasing_hearing_threshold << del << "decreasing avg thresh: " << decreasing_hearing_threshold;
         }
@@ -555,9 +570,9 @@ void HearingTester::execute_for_one_ear(HearingParameters parameters, HearingDyn
             assert(!reader.is_error() && reader.is_empty());
             log_string << '0' << del << '0' << del << '0' << del << '0' << del << '0' << del << '0' << del << '0';
         }
-        switch (params.amplitude_algorithm)
+        switch (params.pass_algorithm)
         {
-            case Algorithm::staircase:
+            case PassAlgorithm::staircase:
                 log_string << del << "staircase algorithm";
                 break;
             default:
@@ -589,12 +604,22 @@ void HearingTester::make_pass(PassVariant pass_variant, uint16_t first_amplitude
         for (size_t i = 1; i <= NUM_OF_STEPS; ++i)
         {
             set_up_new_amplitude_and_receive_threshold_results(i * first_amplitude / NUM_OF_STEPS);
-            this_thread::sleep_for(chrono::milliseconds(time_step));
+            sleep(chrono::milliseconds(time_step));
         }
     }
     is_result_received = false;
     uint16_t curr_time = 0;
     uint16_t curr_amplitude = first_amplitude;
+    uint16_t time_step;
+    switch (params.time_step_changing_algorithm)
+    {
+        case TimeStepChangingAlgorithm::constant:
+            time_step = params.time_step;
+            break;
+        case TimeStepChangingAlgorithm::random_deviation:
+            time_step = params.time_step + rand() % 20 - rand() % 10;
+            break;
+    }
     DesiredButtonState button_state;
     switch (pass_variant)
     {
@@ -606,9 +631,20 @@ void HearingTester::make_pass(PassVariant pass_variant, uint16_t first_amplitude
             break;
     }
     set_pass_parameters(button_state);
-    while (curr_amplitude <= params.max_amplitude)
+    while (true)
     {
         curr_time += params.time_step;
+        switch (params.amplitude_algorithm)
+        {
+            case AmplitudeChangingAlgorithm::linear:
+                break;
+            case AmplitudeChangingAlgorithm::exp_on_high_linear_at_low:
+                if (curr_amplitude <= 100)
+                    amplitude_step = 10;
+                else
+                    amplitude_step = curr_amplitude / 10;
+                break;
+        }
         switch (pass_variant)
         {
             case PassVariant::IncreasingLinear:
@@ -621,12 +657,20 @@ void HearingTester::make_pass(PassVariant pass_variant, uint16_t first_amplitude
                     goto end;
                 break;
         }
+        if (curr_amplitude > params.max_amplitude)
+            break;
         set_up_new_amplitude_and_receive_threshold_results(curr_amplitude);
         if (is_result_received)
-            break;
-        this_thread::sleep_for(chrono::milliseconds(params.time_step));
-        amplitude_heard = curr_amplitude;
-        elapsed_time = curr_time;
+        {
+            if (pass_variant == PassVariant::DecreasingLinear && curr_amplitude >= first_amplitude - 5 * amplitude_step)
+            {
+                set_pass_parameters(button_state);
+                is_result_received = false;
+            }
+            else
+                break;
+        }
+        sleep(chrono::milliseconds(time_step));
     }
     end:
     set_up_new_amplitude_and_receive_threshold_results(0);
@@ -669,8 +713,10 @@ void HearingTester::set_up_new_amplitude_and_receive_threshold_results(uint16_t 
         elapsed_time_by_mk = reader.get_param<uint16_t>();
         received_amplitude_from_mk = reader.get_param<uint16_t>();
     }
-    else  ///nothing needs to be read, we waiting until patient press or release the button (or when time has gone)
-    { }
+    else if (button_state == ActualButtonState::WaitingForPress || button_state == ActualButtonState::WaitingForRelease)  ///nothing needs to be read, we waiting until patient press or release the button (or when time has gone)
+    {}
+    else
+        assert(false && static_cast<bool>(button_state));
 }
 
 std::array<uint16_t, HearingTester::REACTION_SURVEYS_COUNT> HearingTester::get_reaction_time(uint16_t amplitude)
@@ -687,7 +733,7 @@ std::array<uint16_t, HearingTester::REACTION_SURVEYS_COUNT> HearingTester::get_r
         time_measurer.log_end(0x14);
         assert(!reader.is_error());
         state = (HearingState) reader.get_param<uint8_t>();
-        this_thread::sleep_for(1s);
+        sleep(1s);
     } while (state != HearingState::SendingResults); /// do until measure has being ended
     std::array<uint16_t, REACTION_SURVEYS_COUNT> _reaction_times ={0};
     for (auto& react_time: _reaction_times)

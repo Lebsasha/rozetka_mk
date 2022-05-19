@@ -235,8 +235,11 @@ void TIM1_UP_IRQHandler(void)
 //        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 1);
         GPIOB->BSRR = GPIO_PIN_12;//for showing how much time this interrupt takes
 #endif
-        make_tone(&tone_pins[0]);
-        make_tone(&tone_pins[1]);
+//        if (tone_pins[0].volume != 0)
+//            make_tone(&tone_pins[0]);
+//        else if (tone_pins[1].volume != 0)
+//            make_tone(&tone_pins[1]);
+        make_tone(&tone_pins[hearingTester.dynamic]);
 
         if (hearingTester.is_volume_need_to_be_changed)
         {

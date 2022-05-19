@@ -5,7 +5,9 @@
 #include "general.h"
 
 /// Carrying frequency
-#define TONE_FREQ 40000
+#define TONE_FREQ 60000
+#define DAC_MAX_VALUE ((1<<12) - 1)
+#define HEARING_VOLUME_MAX DAC_MAX_VALUE
 #define freq_to_dx(tone_pin_ptr, freq)  (((tone_pin_ptr)->ARR_SIZE*(freq)<<8)/TONE_FREQ)
 /// Defines number of tones, which can be played simultaneously on dynamic
 #define CHANNELS_NUM 1

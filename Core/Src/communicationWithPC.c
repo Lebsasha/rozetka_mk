@@ -173,6 +173,7 @@ void process_cmd(const uint8_t* command, const uint32_t len)
                 usb_assert(hearingTester.dynamic < 2);
                 uint16_t volume;
                 get_param_16(&reader, &volume);
+                usb_assert(volume <= HEARING_VOLUME_MAX);
                 uint16_t freq = 0;
                 for (volatile uint32_t* c = tone_pins[hearingTester.dynamic].dx; c < tone_pins[hearingTester.dynamic].dx + sizeof_arr(tone_pins[hearingTester.dynamic].dx); ++c)
                 {
@@ -181,10 +182,10 @@ void process_cmd(const uint8_t* command, const uint32_t len)
                     usb_assert(freq <= TONE_FREQ / 2);
                     *c = freq_to_dx(&tone_pins[hearingTester.dynamic], freq);
                 }
-                currMeasure = Hearing;
-                hearingTester.state = Idle; // as we need only to set unchanging tone, we need make state Idle
+                hearingTester.state = Idle; // as we need only to set unchanging tone and nothing else needs to be done, we make state Idle
                 set_new_tone_volume(&hearingTester, volume);
                 hearing_start(&hearingTester);
+                currMeasure = Hearing;
                 prepare_for_sending(&writer, cmd, true);
             }
             else if (cmd == 0x11)
@@ -201,8 +202,8 @@ void process_cmd(const uint8_t* command, const uint32_t len)
                 for (size_t i = 0; i < sizeof_arr(hearingTester.freq); ++i)
                     tone_pins[hearingTester.dynamic].dx[i] = freq_to_dx(&tone_pins[hearingTester.dynamic], hearingTester.freq[i]);
                 hearing_start(&hearingTester);
-                currMeasure = Hearing;
                 hearingTester.state = PlayingConstantVolume;
+                currMeasure = Hearing;
                 prepare_for_sending(&writer, cmd, true);
             }
             else if (cmd == 0x12)
@@ -224,7 +225,7 @@ void process_cmd(const uint8_t* command, const uint32_t len)
                 {
                     append_var_8(&writer, MeasuringReactionTime);
                 }
-                else // We shouldn't come to this section, but if this occurred, we must report about this error to high level program
+                else // We shouldn't come to this section, but if this occurred, we must report about this as error to high level program
                 {
                     append_var_8(&writer, MeasuringHearingThreshold);
                     append_var_8(&writer, hearingTester.state);
@@ -240,6 +241,7 @@ void process_cmd(const uint8_t* command, const uint32_t len)
                 {
                     uint16_t new_volume;
                     usb_assert(get_param_16(&reader, &new_volume));
+                    usb_assert(new_volume <= HEARING_VOLUME_MAX);
                     set_new_tone_volume(&hearingTester, new_volume);
                     append_var_8(&writer, MeasuringHearingThreshold);
 
@@ -259,7 +261,7 @@ void process_cmd(const uint8_t* command, const uint32_t len)
                 {
                     append_var_8(&writer, MeasuringReactionTime);
                 }
-                else // We shouldn't come to this section, but if this occurred, we must report about this error to high level program
+                else // We shouldn't come to this section, but if this occurred, we must report about this as error to high level program
                 {
                     append_var_8(&writer, MeasuringHearingThreshold);
                     append_var_8(&writer, hearingTester.state);
@@ -273,8 +275,8 @@ void process_cmd(const uint8_t* command, const uint32_t len)
                 usb_assert(currMeasure == Hearing);
                 if (hearingTester.state == PlayingConstantVolume)
                 {
-                    if(!get_param_16(&reader, (uint16_t* ) &hearingTester.amplitude_for_react_survey))
-                        hearingTester.amplitude_for_react_survey = 0;
+                    usb_assert(get_param_16(&reader, (uint16_t* ) &hearingTester.amplitude_for_react_survey));
+                    usb_assert(hearingTester.amplitude_for_react_survey <= HEARING_VOLUME_MAX);
                     append_var_8(&writer, MeasuringReactionTime);
                     hearingTester.state = StartingMeasuringReaction;
                 }
