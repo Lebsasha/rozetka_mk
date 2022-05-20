@@ -7,4 +7,6 @@ link_libraries(pthread stdc++fs)
 
 add_executable(Tests
         usb_reader.cpp
+        hearing_tester.cpp
+        time_measurer.cpp
         )

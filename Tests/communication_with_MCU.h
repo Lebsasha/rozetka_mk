@@ -1,9 +1,14 @@
-#ifndef PROTOCOL_CLASSES
-#define PROTOCOL_CLASSES
+#ifndef COMMUNICATION_WITH_MCU
+#define COMMUNICATION_WITH_MCU
 
+#include <cassert>
+#include <sstream>
 #include <iostream>
+#include <algorithm>
 
 #define sizeof_arr(arr) (sizeof(arr)/sizeof((arr)[0]))
+
+///General constants for Writer and Reader classes
 
 ///@brief this enum points on appropriate indexes in bin. prot.
 ///e. g. buffer[CC], ...
@@ -12,7 +17,7 @@ enum
     CC = 0, LenL = 1, LenH = 2
 };
 
-uint8_t Commands[]={0x1, 0x4, 0x10, 0x11, 0x12, 0x13, 0x14, 0x18};
+static const uint8_t Commands[]={0x1, 0x4, 0x10, 0x11, 0x12, 0x13, 0x14, 0x18};
 
 static const uint8_t SS_OFFSET = 42;
 static const size_t BUF_SIZE = 128;///USB packet size
@@ -104,18 +109,18 @@ public:
     {
         return length==3*sizeof(uint8_t) || length==0;
     }
+
     [[nodiscard]] uint8_t is_error() const
     {
         return buffer[CC]&(1<<7);
     }
+
     template<typename T>
     T get_param(T& param)
     {
-        assert(length != 0);
+        assert(!is_empty());
         assert(read_length + sizeof(T) <= length);
-        param = *reinterpret_cast<T*>(buffer + read_length);
-        read_length += sizeof(T);
-        return param;
+        return __get_param(param);
     }
 
     template<typename T>
@@ -124,6 +129,7 @@ public:
         T param;
         return get_param(param);
     }
+
     [[nodiscard]] uint8_t get_command() const
     {
         return buffer[CC];
@@ -135,12 +141,24 @@ public:
         char c=0;
         do
         {
-            get_param(c);
+            if (is_empty() || read_length + sizeof(c) > length)
+                break;
+            __get_param(c);
             if (c != '\0')
                 err<<c;
         } while (c != '\0');
         return err.str();
     }
+
+private:
+
+    template<typename T>
+    T __get_param(T& param) // NOLINT(bugprone-reserved-identifier)
+    {
+        param = *reinterpret_cast<T*>(buffer + read_length);
+        read_length += sizeof(T);
+        return param;
+    }
 };
 
-#endif //PROTOCOL_CLASSES
+#endif //COMMUNICATION_WITH_MCU
