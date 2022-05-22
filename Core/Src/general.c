@@ -15,10 +15,16 @@ void Button_ctor(Button* button, Pin pin)
 /// @note If called when button already started, start counting again from current point of time, regardless of what state button is in
 /// @param state must be @c WaitingForRelease or @c WaitingForPress, otherwise state will be unchanged and false will be returned
 /// @return false if argument @a state is invalid, otherwise true
-bool ButtonStart(Button *button, ButtonState state)
+bool ButtonStart(Button *button, ButtonStateOnHighLevel state)
 {
-    if (state == WaitingForPress || state == WaitingForRelease)
-        button->state = state;
+    if (state == HL_WaitingForPress)
+    {
+        button->state = WaitingForPress;
+    }
+    else if (state == HL_WaitingForRelease)
+    {
+        button->state = WaitingForRelease;
+    }
     else
         return false;
     button->start_time = HAL_GetTick();

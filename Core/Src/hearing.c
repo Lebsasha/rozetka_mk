@@ -146,7 +146,7 @@ void hearing_handle(HearingTester* const ptr)
             return;
         timer_reset(&ptr->timer);
         set_new_tone_volume(ptr, ptr->amplitude_for_react_survey);
-        ButtonStart(&button, WaitingForPress);
+        ButtonStart(&button, HL_WaitingForPress);
         ptr->state = MeasuringReaction;
     }
     else if (ptr->state == MeasuringReaction && button.state == Pressed)

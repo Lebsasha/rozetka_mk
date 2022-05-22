@@ -1,6 +1,12 @@
 #include <string>
 #include <iostream>
+#include "general.h"
 #include "time_measurer.h"
+
+Time_measurer::Time_measurer()
+{
+    begin();
+}
 
 void Time_measurer::begin()
 {
@@ -15,13 +21,15 @@ void Time_measurer::log_end(const uint8_t cmd, const std::__cxx11::string& descr
         std::cout << "for ";
     if (cmd != 0)
     {
-        std::cout << "0x" << std::hex << (int) cmd << std::dec << " command";
+        std::cout << print_cmd(cmd) << " command";
         if (!description.empty())
             std::cout << ", ";
     }
     if (!description.empty())
         std::cout << description;
-    std::cout << " takes ";
+    if (cmd != 0 || !description.empty())
+        std::cout << " ";
+    std::cout << "takes ";
     auto diff = t_end - t_begin;
     if (std::chrono::duration_cast<std::chrono::seconds>(diff).count() >= 2)
         std::cout << std::chrono::duration_cast<std::chrono::seconds>(diff).count() << " s";

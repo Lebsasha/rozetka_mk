@@ -117,34 +117,40 @@ int main(void)
   MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
 
-    currMeasure = None;
-    RandInitializer_ctor(&randInitializer);
-    ConstructDiode(&skinTester);
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
     HAL_Delay(300);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
     HAL_Delay(400);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-    HAL_Delay(400);
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+    HAL_Delay(200);
+//    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 
     write_pin_if_in_debug(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);//show that initialisation started
 
+    currMeasure = None;
+    RandInitializer_ctor(&randInitializer);
+
+    ConstructDiode(&skinTester);
+
     TonePin tone_pins_init[2];
     TonePin_ctor(&tone_pins_init[0], LeftDynamic);
-    tone_pins_init[0].dx[0]=freq_to_dx(&tone_pins_init[0], NOTE_A4);//A4 == 440 Hz
+    tone_pins_init[0].dx[0] = freq_to_dx(&tone_pins_init[0], NOTE_A4);//A4 == 440 Hz
     TonePin_ctor(&tone_pins_init[1], RightDynamic);
-    tone_pins_init[1].dx[0]=freq_to_dx(&tone_pins_init[1], NOTE_A4);
-
+    tone_pins_init[1].dx[0] = freq_to_dx(&tone_pins_init[1], NOTE_A4);
     tone_pins=tone_pins_init;
 
     Pin button_pin = {GPIOB, GPIO_PIN_6};
     Button_ctor(&button, button_pin);
+
     CommandWriter_ctor(&writer);
+
     HearingTester_ctor(&hearingTester);
     uint16_t notes_1[] = {NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4};
     uint8_t durations_1[] = {4, 8, 8, 4, 4, 4, 4, 4};
 
     write_pin_if_in_debug(GPIOB, GPIO_PIN_12, GPIO_PIN_RESET);//show that initialisation finished
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+
 //#define DEBUG_BY_ST_LINK // macro need for preventing mk responding by USB
 //    uint8_t cmd_10[]={0x10, 0x05, 0x00, 0x00, 0x50, 0xc3, 0xa0, 0x0f, 0xf1}; // volume - 50000, freq - 4000
 //    process_cmd(cmd_10, sizeof_arr(cmd_10));

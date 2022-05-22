@@ -212,9 +212,9 @@ void process_cmd(const uint8_t* command, const uint32_t len)
                 if(hearingTester.state == PlayingConstantVolume)
                 {
                     /// We beginning new pass
-                    ButtonState newButtonState;
+                    ButtonStateOnHighLevel newButtonState;
                     usb_assert(get_param_8(&reader, (uint8_t*) &newButtonState));
-                    usb_assert(newButtonState == WaitingForPress || newButtonState == WaitingForRelease);
+                    usb_assert(newButtonState == HL_WaitingForPress || newButtonState == HL_WaitingForRelease);
                     ButtonStart(&button, newButtonState);
                     hearingTester.is_results_on_curr_pass_captured = false;
 
@@ -245,11 +245,19 @@ void process_cmd(const uint8_t* command, const uint32_t len)
                     set_new_tone_volume(&hearingTester, new_volume);
                     append_var_8(&writer, MeasuringHearingThreshold);
 
-                    append_var_8(&writer, button.state);
-                    if (button.state == WaitingForPress || button.state == WaitingForRelease)
-                    {} /// Simply wait until patient press or release button
-                    else if (button.state == Pressed || button.state == Released)
+                    if (button.state == WaitingForPress)
+                        append_var_8(&writer, HL_WaitingForPress);
+                    else if (button.state == WaitingForRelease)
+                        append_var_8(&writer, HL_WaitingForRelease); /// Simply wait until patient press or release button
+                    else if (button.state == Pressed)
                     {
+                        append_var_8(&writer, HL_Pressed);
+                        append_var_16(&writer, hearingTester.elapsed_time);
+                        append_var_16(&writer, hearingTester.ampl);
+                    }
+                    else if (button.state == Released)
+                    {
+                        append_var_8(&writer, HL_Released);
                         append_var_16(&writer, hearingTester.elapsed_time);
                         append_var_16(&writer, hearingTester.ampl);
                     }
@@ -325,8 +333,14 @@ void process_cmd(const uint8_t* command, const uint32_t len)
             else
                 assertion_fail("Command not recognised", cmd);
         }
-//        if (command[0] == '0')
-//            HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+        if (command[0] == '0')
+        {
+//            HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+           HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+            append_var_8(&writer, 11);
+            prepare_for_sending(&writer, 0x11, true);
+//            HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+        }
     }
 }
 

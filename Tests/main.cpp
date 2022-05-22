@@ -9,9 +9,10 @@
 #include <cstdint>
 #include <filesystem>
 #include "../Core/Inc/notes.h"
+#include "general.h"
 #include "communication_with_MCU.h"
-#include "hearing_tester.h"
 #include "time_measurer.h"
+#include "hearing_tester.h"
 
 /**
  * @code 0x1 -> u8|version u8[]|"string with \0" @endcode
@@ -45,8 +46,6 @@
 
 using namespace std;
 
-const string del = ", "; //Delimiter between writing to csv file results
-
 //template<typename T>
 //std::enable_if_t<std::is_array<T>::value_type, bool > arr_size(T arr)
 //{
@@ -55,8 +54,6 @@ const string del = ", "; //Delimiter between writing to csv file results
 //    return t;
 // //    return std::tuple(arr, sizeof_arr(arr));
 //}
-
-#define USE_SLEEP
 
 template<typename Rep, typename Period>
 inline void sleep(const chrono::duration<Rep, Period>& rtime)
@@ -129,6 +126,7 @@ int main (int , char** )
 #endif
     time_t t = std::chrono::system_clock::to_time_t(chrono::system_clock::now());
     stat << endl << std::put_time(std::localtime(&t), "%y_%m_%d %H:%M:%S") << endl;
+    srand(t);
     Time_measurer time_measurer {};
     int max_amplitude = 0xffff;
 //    int max_amplitude = 5000;
@@ -144,7 +142,7 @@ int main (int , char** )
     HearingTester hearing_tester(writer, reader, stat);
 //TODO Test 0x4 (especially with 0x18)
     const vector<uint8_t> long_test = {0x11, 0x18, 0x11, 0x18, 0x18, 0x11, 0x11, 0x18};
-    const vector<uint8_t> short_test = {0x10, 0x4, 0x11};
+    const vector<uint8_t> short_test = {0x11/*, 0x4, 0x11*/};
 //    const auto [cmds, cmds_l] = std::tie(short_test, sizeof_arr(short_test));
     auto& cmds = short_test;
 //    const size_t cmds_length = sizeof_arr(short_test);
@@ -153,14 +151,14 @@ int main (int , char** )
 //    for(size_t i =0;i<4;++i)
     try
     {
-    for(auto cmd_ptr = cmds.cbegin(); cmd_ptr < cmds.cend() + 4; ++cmd_ptr) // NOLINT(cppcoreguidelines-narrowing-conversions)
+    for(auto cmd_ptr = cmds.cbegin(); cmd_ptr < cmds.cend(); ++cmd_ptr) // NOLINT(cppcoreguidelines-narrowing-conversions)
     {
         sleep(1s);
         const int cmd = *cmd_ptr;
         if (cmd == 0x11)
         {
             stat << cmd_ptr - cmds.cbegin() << ", "; /// Number of curr command
-            hearing_tester.execute({4000, 4000, 10, 400, PassAlgorithm::staircase, AmplitudeChangingAlgorithm::linear, TimeStepChangingAlgorithm::constant});
+            hearing_tester.execute({4000, 4000, 20, 400, PassAlgorithm::staircase, AmplitudeChangingAlgorithm::linear, TimeStepChangingAlgorithm::random_deviation});
 
             continue;
         }

@@ -1,5 +1,6 @@
 #include <chrono>
 #include <thread>
+#include "general.h"
 #include "time_measurer.h"
 #include "hearing_tester.h"
 
@@ -14,19 +15,32 @@ inline void sleep(const chrono::duration<Rep, Period>& rtime)
 #endif
 }
 
-const string del = ", "; //Delimiter between writing to csv file results
+template <typename T>
+auto safe_unsigned_decrease(T& var, size_t amount) -> typename enable_if<is_unsigned_v<T>, T>::type
+{
+    if (var >= amount)
+        var -= amount;
+    else
+        var = 0;
+    return var;
+}
 
 HearingTester::HearingTester(Command_writer& _writer, Command_reader& _reader, ostream& _stat): writer(_writer), reader(_reader), stat(_stat)
 {}
 
 void HearingTester::execute(HearingParameters parameters)
 {
+    assert(parameters.frequency <= 20'000);
+    assert(parameters.max_amplitude <= MAX_VOLUME);
+    assert(parameters.initial_amplitude_step < parameters.max_amplitude);
+    assert(parameters.time_step <= 5'000);
+    assert(parameters.pass_algorithm == PassAlgorithm::staircase);
     params = parameters;
-    assert(params.pass_algorithm == PassAlgorithm::staircase);
 
+    sleep(chrono::milliseconds(rand() % 250 + 500));
     execute_for_one_ear(params, HearingDynamic::Right);
-    sleep(chrono::milliseconds(rand() % 500 + 2000));
-//    execute_for_one_ear(params, HearingDynamic::Left);
+    sleep(chrono::milliseconds(rand() % 1000 + 2000));
+    execute_for_one_ear(params, HearingDynamic::Left);
 }
 
 void HearingTester::execute_for_one_ear(HearingParameters parameters, HearingDynamic dynamic)
@@ -49,158 +63,201 @@ void HearingTester::execute_for_one_ear(HearingParameters parameters, HearingDyn
     writer.write();
     reader.read();
     time_measurer.log_end(cmd);
-    if (!reader.is_error())
+
+    if (reader.is_error())
     {
-        assert(reader.is_empty());
+        string err = reader.get_error_string();
+        cout << "error occurred when sending command " << print_cmd(cmd) << ": '" << err << '\'' << endl;
+        return;
+    }
 
-        if (params.pass_algorithm == PassAlgorithm::staircase)
+    assert(reader.is_empty());
+
+    if (params.pass_algorithm == PassAlgorithm::staircase)
+    {
+        const size_t increasing_pass_count = 3;
+        const size_t increasing_accurate_pass_count = 3;
+        const size_t decreasing_pass_count = 3;
+        const size_t decreasing_accurate_pass_count = 3;
+
+        const size_t previous_same_results_lookback_count = 2;
+        const uint16_t same_result_threshold = 10;
+        const uint16_t amplitude_change_if_thresholds_same = 20;
+
+        for (size_t i = 0; i < increasing_pass_count; ++i)
         {
-            const size_t increasing_pass_count = 3;
-            for (size_t i = 0; i < increasing_pass_count; ++i)
+            make_pass(PassVariant::IncreasingLinear, 0, params.initial_amplitude_step);//TODO Откуда появляются результаты в 0 здесь?
+            if (is_result_received)
             {
-                make_pass(PassVariant::IncreasingLinear, 0, params.initial_amplitude_step);//TODO Откуда появляются результаты в 0 здесь?
-                if (is_result_received)
-                {
-                    threshold_results.emplace_back(true, received_amplitude_from_mk);
+                threshold_results.emplace_back(true, received_amplitude_from_mk);
 
-                    sleep(chrono::milliseconds(rand() % 1000 + 500));
-                    if (received_amplitude_from_mk >= 2 * params.initial_amplitude_step)
-                        received_amplitude_from_mk -= 2 * params.initial_amplitude_step;
-                    else
-                        received_amplitude_from_mk = 0;
-                    make_pass(PassVariant::IncreasingLinear, received_amplitude_from_mk, 1);
+                uint16_t start_amplitude = received_amplitude_from_mk;
+                safe_unsigned_decrease(start_amplitude, 2 * params.initial_amplitude_step);
+                for (size_t j = 0; j < increasing_accurate_pass_count; ++j)
+                {
+                    sleep(chrono::milliseconds(rand() % 1500 + 500));
+                    if (j >= previous_same_results_lookback_count)
+                    {
+                        size_t same_results_count = std::count_if(threshold_results.end() - previous_same_results_lookback_count, threshold_results.end(),
+                                [&](const auto& item) {
+                                    if (abs(item.second - start_amplitude) <= same_result_threshold)
+                                        return true;
+                                    return false;
+                                });
+                        if (same_results_count >= previous_same_results_lookback_count)
+                        {
+                            cout << "Warning! Changing start volume from " << start_amplitude;
+                            safe_unsigned_decrease(start_amplitude, amplitude_change_if_thresholds_same);
+                            cout << " to " << start_amplitude << ", because " << previous_same_results_lookback_count << " last patient' responses are located near start volume" << endl;
+                        }
+                    }
+                    make_pass(PassVariant::IncreasingLinear, start_amplitude, 1);
                     if (is_result_received)
                         threshold_results.emplace_back(true, received_amplitude_from_mk);
                 }
-
-                sleep(chrono::milliseconds(rand() % 1000 + 1500));
             }
 
-            increasing_hearing_threshold = 0;
-            for (auto [is_upper, amplitude]: threshold_results)
-            {
-                if (is_upper)
-                    increasing_hearing_threshold += amplitude;
-            }
-            if (increasing_hearing_threshold != 0)
-                increasing_hearing_threshold /= threshold_results.size();
+            sleep(chrono::milliseconds(rand() % 2000 + 1000));
+        }
 
-            const size_t decreasing_pass_count = 3;
-            for (size_t i = 0; i < decreasing_pass_count; ++i)
+        increasing_hearing_threshold = 0;
+        for (auto [is_upper, amplitude]: threshold_results)
+        {
+            if (is_upper)
+                increasing_hearing_threshold += amplitude;
+        }
+        if (increasing_hearing_threshold != 0)
+            increasing_hearing_threshold /= threshold_results.size();
+
+        for (size_t i = 0; i < decreasing_pass_count; ++i)
+        {
+            make_pass(PassVariant::DecreasingLinear, 2*increasing_hearing_threshold,
+                      params.initial_amplitude_step);
+            if (is_result_received)
             {
-                make_pass(PassVariant::DecreasingLinear, 2*increasing_hearing_threshold,
-                          params.initial_amplitude_step);
-                if (is_result_received)
+                threshold_results.emplace_back(false, received_amplitude_from_mk);
+
+                uint16_t start_amplitude = received_amplitude_from_mk;
+                start_amplitude +=  4 * params.initial_amplitude_step;
+                for (size_t j = 0; j < decreasing_accurate_pass_count; ++j)
                 {
-                    threshold_results.emplace_back(false, received_amplitude_from_mk);
-
-                    sleep(chrono::milliseconds(rand() % 1000 + 500));
+                    sleep(chrono::milliseconds(rand() % 1500 + 500));
+                    if (j >= previous_same_results_lookback_count)
+                    {
+                        size_t same_results_count = std::count_if(threshold_results.end() - previous_same_results_lookback_count, threshold_results.end(),
+                                [&](const auto& item) {
+                                    if (abs(item.second - start_amplitude) <= same_result_threshold)
+                                        return true;
+                                    return false;
+                                });
+                        if (same_results_count >= previous_same_results_lookback_count)
+                        {
+                            cout << "Warning! Changing start volume from " << start_amplitude;
+                            safe_unsigned_decrease(start_amplitude, amplitude_change_if_thresholds_same);
+                            cout << " to " << start_amplitude << ", because " << previous_same_results_lookback_count << " last patient' responses are located near start volume" << endl;
+                        }
+                    }
                     make_pass(PassVariant::DecreasingLinear,
-                              received_amplitude_from_mk + 4 * params.initial_amplitude_step, 2);
+                              start_amplitude, 5);
                     if (is_result_received)
                         threshold_results.emplace_back(false, received_amplitude_from_mk);
                 }
-
-                sleep(chrono::milliseconds(rand() % 1000 + 1500));
             }
 
-            decreasing_hearing_threshold = 0;
-            for (auto [is_upper, amplitude]: threshold_results)
-            {
-                if (! is_upper)
-                    decreasing_hearing_threshold += amplitude;
-            }
-            if (decreasing_hearing_threshold != 0)
-                decreasing_hearing_threshold /= std::count_if(threshold_results.begin(), threshold_results.end(), [&](const auto& item){
-                    return item.first == false;
-                });
-
-        }
-        else
-            assert(params.pass_algorithm == PassAlgorithm::staircase); // Currently, only staircase algorithm is supported
-
-        ostringstream log_string;
-        log_string << "Results for ";
-        switch (dynamic)
-        {
-            case HearingDynamic::Left:
-                log_string << "Left";
-                break;
-            case HearingDynamic::Right:
-                log_string << "Right";
-                break;
-        }
-        log_string << " ear" << endl;
-        if (! threshold_results.empty()) /// Patient reacted
-        {
-            sleep(chrono::milliseconds(rand() % 1000 + 1500));
-            uint16_t amplitude_for_react_survey = 4 * increasing_hearing_threshold;
-            set_pass_parameters(DesiredButtonState::StartWaitingForPress);
-            reaction_times = get_reaction_time(amplitude_for_react_survey);
-
-            log_string << "Threshold results:" << endl;
-            for (const auto &item: threshold_results)
-                log_string << item.first << del << item.second << endl;
-            log_string << endl;
-            log_string << "Reaction time results:" << endl;
-            for (auto it = reaction_times.cbegin(); it < reaction_times.cend(); ++it)
-            {
-                log_string << *it;
-                if (it != reaction_times.cend() - 1)
-                    log_string << del;
-            }
-            log_string << endl;
-            log_string << "increasing avg thresh: " << increasing_hearing_threshold << del << "decreasing avg thresh: " << decreasing_hearing_threshold;
-        }
-        else /// Patient never reacted, need to stop measure
-        {
-            writer.set_cmd(0x4);
-            writer.prepare_for_sending();
-            writer.write();
-            reader.read();
-            assert(!reader.is_error() && reader.is_empty());
-            log_string << '0' << del << '0' << del << '0' << del << '0' << del << '0' << del << '0' << del << '0';
-        }
-        switch (params.pass_algorithm)
-        {
-            case PassAlgorithm::staircase:
-                log_string << del << "staircase algorithm";
-                break;
-            default:
-                log_string << del << "unknown algorithm";
+            sleep(chrono::milliseconds(rand() % 2000 + 1000));
         }
 
-        log_string << endl;
-        cout << log_string.str();
-        stat << log_string.str();
+        decreasing_hearing_threshold = 0;
+        for (auto [is_upper, amplitude]: threshold_results)
+        {
+            if (! is_upper)
+                decreasing_hearing_threshold += amplitude;
+        }
+        if (decreasing_hearing_threshold != 0)
+            decreasing_hearing_threshold /= std::count_if(threshold_results.begin(), threshold_results.end(), [&](const auto& item){
+                return item.first == false;
+            });
+
     }
     else
+        assert(params.pass_algorithm == PassAlgorithm::staircase); // Currently, only staircase algorithm is supported
+
+    ostringstream log_string;
+    log_string << "Results for ";
+    switch (dynamic)
     {
-        string err = reader.get_error_string();
-        cout << "error occurred when sending command: " << err << endl;
+        case HearingDynamic::Left:
+            log_string << "Left";
+            break;
+        case HearingDynamic::Right:
+            log_string << "Right";
+            break;
     }
+    log_string << " ear" << endl;
+    if (! threshold_results.empty()) /// Patient reacted
+    {
+        sleep(chrono::milliseconds(rand() % 1000 + 750));
+        uint16_t amplitude_for_react_survey = 4 * increasing_hearing_threshold;
+//            set_pass_parameters(DesiredButtonState::StartWaitingForPress);
+        reaction_times = get_reaction_time(amplitude_for_react_survey);//TODO Make as another survey
+
+        log_string << "Threshold results:" << endl;
+        for (const auto &item: threshold_results)
+            log_string << item.first << del << item.second << endl;
+        log_string << "Reaction time results:" << endl;
+        for (auto it = reaction_times.cbegin(); it < reaction_times.cend(); ++it)
+        {
+            log_string << *it;
+            if (it != reaction_times.cend() - 1)
+                log_string << del;
+        }
+        log_string << endl;
+        log_string << "increasing avg threshold: " << increasing_hearing_threshold << del << "decreasing avg threshold: " << decreasing_hearing_threshold;
+    }
+    else /// Patient never reacted, need to stop measure
+    {
+        writer.set_cmd(0x4);
+        writer.prepare_for_sending();
+        writer.write();
+        reader.read();
+        assert(!reader.is_error() && reader.is_empty());
+        log_string << "Patient isn't reacted";
+    }
+    log_string << del << "algorithm: ";
+    switch (params.pass_algorithm)
+    {
+        case PassAlgorithm::staircase:
+            log_string << "staircase";
+            break;
+        default:
+            log_string << "unknown";
+    }
+
+    log_string << endl << endl;
+    cout << log_string.str();
+    stat << log_string.str();
     stat.flush();
 }
 
 // Make one amplitude pass
-void HearingTester::make_pass(PassVariant pass_variant, uint16_t first_amplitude, uint16_t amplitude_step)
+void HearingTester::make_pass(PassVariant pass_variant, uint16_t start_amplitude, uint16_t amplitude_step)
 {
     if (pass_variant == PassVariant::DecreasingLinear)
     {
         const uint16_t TONE_INCREASING_TIME = 700;
         const size_t NUM_OF_STEPS = 30;
-        uint16_t time_step = TONE_INCREASING_TIME / NUM_OF_STEPS;
-        assert(time_step >= 10); // Approximately minimum OS task scheduler time for sleep
+        const uint16_t time_step = TONE_INCREASING_TIME / NUM_OF_STEPS;
+        static_assert(time_step >= 10); // Approximately minimum OS task scheduler time for sleep
 
         for (size_t i = 1; i <= NUM_OF_STEPS; ++i)
         {
-            set_up_new_amplitude_and_receive_threshold_results(i * first_amplitude / NUM_OF_STEPS);
+            set_up_new_amplitude_and_receive_threshold_results(i * start_amplitude / NUM_OF_STEPS);
             sleep(chrono::milliseconds(time_step));
         }
     }
     is_result_received = false;
     uint16_t curr_time = 0;
-    uint16_t curr_amplitude = first_amplitude;
+    uint16_t curr_amplitude = start_amplitude;
     uint16_t time_step;
     switch (params.time_step_changing_algorithm)
     {
@@ -253,9 +310,9 @@ void HearingTester::make_pass(PassVariant pass_variant, uint16_t first_amplitude
         set_up_new_amplitude_and_receive_threshold_results(curr_amplitude);
         if (is_result_received)
         {
-            if (pass_variant == PassVariant::DecreasingLinear && curr_amplitude >= first_amplitude - 5 * amplitude_step)
+            if (pass_variant == PassVariant::DecreasingLinear && curr_amplitude >= start_amplitude - 5 * amplitude_step)
             {
-                set_pass_parameters(button_state);
+                reset_current_result_on_device(button_state);
                 is_result_received = false;
             }
             else
@@ -282,8 +339,23 @@ void HearingTester::set_pass_parameters(DesiredButtonState state)
     assert(!reader.is_error());
 }
 
+void HearingTester::reset_current_result_on_device(DesiredButtonState state)
+{
+    Time_measurer time_measurer{};
+    uint8_t command = 0x12;
+    writer.set_cmd(command);
+    writer.append_var<uint8_t> ((uint8_t) state);
+    writer.prepare_for_sending();
+    time_measurer.begin();
+    writer.write();
+    reader.read();
+    time_measurer.log_end(command, "previous result was cleared");
+    assert(!reader.is_error());
+}
+
 void HearingTester::set_up_new_amplitude_and_receive_threshold_results(uint16_t curr_amplitude)
 {
+    assert(curr_amplitude <= MAX_VOLUME);
     Time_measurer time_measurer{};
     uint8_t command = 0x13;
     writer.set_cmd(command);
@@ -312,6 +384,7 @@ void HearingTester::set_up_new_amplitude_and_receive_threshold_results(uint16_t 
 
 std::array<uint16_t, HearingTester::REACTION_SURVEYS_COUNT> HearingTester::get_reaction_time(uint16_t amplitude)
 {
+    assert(amplitude <= MAX_VOLUME);
     Time_measurer time_measurer{};
     HearingState state;
     do {

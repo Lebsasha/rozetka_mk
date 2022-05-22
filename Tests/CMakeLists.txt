@@ -6,7 +6,8 @@ set(CMAKE_CXX_FLAGS "-pipe")
 link_libraries(pthread stdc++fs)
 
 add_executable(Tests
-        usb_reader.cpp
+        main.cpp
         hearing_tester.cpp
         time_measurer.cpp
-        )
+        general.cpp
+        stat_aggregator.cpp)

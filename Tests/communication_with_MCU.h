@@ -6,8 +6,6 @@
 #include <iostream>
 #include <algorithm>
 
-#define sizeof_arr(arr) (sizeof(arr)/sizeof((arr)[0]))
-
 ///General constants for Writer and Reader classes
 
 ///@brief this enum points on appropriate indexes in bin. prot.

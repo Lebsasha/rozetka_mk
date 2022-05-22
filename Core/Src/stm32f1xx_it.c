@@ -244,13 +244,13 @@ void TIM1_UP_IRQHandler(void)
         if (hearingTester.is_volume_need_to_be_changed)
         {
             TonePin* ptr = &tone_pins[hearingTester.dynamic];
-            if (ptr->volume == 0)
-                ptr->curr_phase[0] = SHIFTED_ARR_SIZE/2;
             if (ptr->curr_phase[0] <= SHIFTED_ARR_SIZE/2 && ptr->curr_phase[0] + ptr->dx[0] > SHIFTED_ARR_SIZE/2) /// Middle value, i. e. phase in this point == 0
             {
                 ptr->volume = hearingTester.new_volume;
                 hearingTester.is_volume_need_to_be_changed = false;
             }
+            else if (ptr->volume == 0/* && hearingTester.new_volume != 0*/)
+                ptr->volume = 1; //Set low volume and wait until desired phase will run
         }
 #ifndef NDEBUG
 //        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, 0);
@@ -307,12 +307,13 @@ void TIM4_IRQHandler(void)
 
     if (currMeasure == Hearing || currMeasure == SkinConduction)
     {
-        if (HAL_GPIO_ReadPin(button.GPIOx, button.pin) == GPIO_PIN_RESET && button.state == WaitingForPress)
+        bool ifButtonPressed = HAL_GPIO_ReadPin(button.GPIOx, button.pin) == GPIO_PIN_RESET;
+        if (ifButtonPressed && button.state == WaitingForPress)
         {
             button.stop_time = HAL_GetTick();//TODO Maybe replace with InputCapture?
             button.state = Pressed;
         }
-        else if (HAL_GPIO_ReadPin(button.GPIOx, button.pin) == GPIO_PIN_SET && button.state == WaitingForRelease)
+        else if (!ifButtonPressed && button.state == WaitingForRelease)
         {
             button.stop_time = HAL_GetTick();
             button.state = Released;

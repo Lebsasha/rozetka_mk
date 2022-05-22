@@ -6,9 +6,6 @@
 #include <vector>
 #include "communication_with_MCU.h"
 
-#define USE_SLEEP_IN_HEARING_TEST
-
-//TODO rename enums to noun form
 /// Possible hearing test states
 enum class HearingState
 {
@@ -28,12 +25,13 @@ enum class AmplitudeChangingAlgorithm {linear, exp_on_high_linear_at_low};
 /// @a random_deviation time step - i. e. when adding or subtracting random_deviation value to given time step
 enum class TimeStepChangingAlgorithm {constant, random_deviation};
 
+static const uint16_t MAX_VOLUME = 4095;
+
 struct HearingParameters
 {
     uint16_t frequency=0;
     uint16_t max_amplitude=0;
     uint16_t initial_amplitude_step=0;
-//    uint16_t num_of_steps=0;
     uint16_t time_step=0;
     PassAlgorithm pass_algorithm{};
     AmplitudeChangingAlgorithm amplitude_algorithm{};
@@ -71,9 +69,11 @@ private:
 
     void execute_for_one_ear(HearingParameters parameters, HearingDynamic dynamic);
 
-    void make_pass(PassVariant pass_variant, uint16_t first_amplitude, uint16_t amplitude_step);
+    void make_pass(PassVariant pass_variant, uint16_t start_amplitude, uint16_t amplitude_step);
 
     void set_pass_parameters(DesiredButtonState state);
+
+    void reset_current_result_on_device(DesiredButtonState state);
 
     void set_up_new_amplitude_and_receive_threshold_results(uint16_t curr_amplitude);
 
