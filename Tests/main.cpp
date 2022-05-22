@@ -129,7 +129,7 @@ int main (int , char** )
     srand(t);
     Time_measurer time_measurer {};
     int max_amplitude = 0xffff;
-//    int max_amplitude = 5000;
+//    int max_amplitude_in_increasing_pass = 5000;
     int milliseconds_to_max_volume = 10000;
     int num_of_steps = 10;
     PassAlgorithm amplitude_algorithm = PassAlgorithm::dec_linear_by_step;
@@ -142,7 +142,7 @@ int main (int , char** )
     HearingTester hearing_tester(writer, reader, stat);
 //TODO Test 0x4 (especially with 0x18)
     const vector<uint8_t> long_test = {0x11, 0x18, 0x11, 0x18, 0x18, 0x11, 0x11, 0x18};
-    const vector<uint8_t> short_test = {0x11/*, 0x4, 0x11*/};
+    const vector<uint8_t> short_test = {/*0x10, */ 0x4, 0x11};
 //    const auto [cmds, cmds_l] = std::tie(short_test, sizeof_arr(short_test));
     auto& cmds = short_test;
 //    const size_t cmds_length = sizeof_arr(short_test);
@@ -157,7 +157,7 @@ int main (int , char** )
         const int cmd = *cmd_ptr;
         if (cmd == 0x11)
         {
-            stat << cmd_ptr - cmds.cbegin() << ", "; /// Number of curr command
+//            stat << cmd_ptr - cmds.cbegin() << ", "; /// Number of curr command
             hearing_tester.execute({4000, 4000, 20, 400, PassAlgorithm::staircase, AmplitudeChangingAlgorithm::linear, TimeStepChangingAlgorithm::random_deviation});
 
             continue;

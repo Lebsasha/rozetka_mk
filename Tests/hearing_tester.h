@@ -30,12 +30,19 @@ static const uint16_t MAX_VOLUME = 4095;
 struct HearingParameters
 {
     uint16_t frequency=0;
-    uint16_t max_amplitude=0;
+    uint16_t max_amplitude_in_increasing_pass=0;
     uint16_t initial_amplitude_step=0;
     uint16_t time_step=0;
     PassAlgorithm pass_algorithm{};
     AmplitudeChangingAlgorithm amplitude_algorithm{};
     TimeStepChangingAlgorithm time_step_changing_algorithm{};
+};
+
+struct HearingThresholdResult
+{
+    bool is_result_received;
+    uint16_t elapsed_time;
+    uint16_t threshold;
 };
 
 class HearingTester
@@ -55,27 +62,16 @@ private:
     enum class PassVariant {IncreasingLinear, DecreasingLinear};
     static const size_t REACTION_SURVEYS_COUNT = 3;
 
-    /// if_upper, amplitude
-    std::vector<std::pair<bool, uint16_t>> threshold_results{};
-    uint16_t increasing_hearing_threshold=0;
-    uint16_t decreasing_hearing_threshold=0;
-    std::array<uint16_t, REACTION_SURVEYS_COUNT> reaction_times ={0};
-
-    /// Results of measure of one pass
-    uint16_t elapsed_time_by_mk=0;
-    uint16_t received_amplitude_from_mk=0;
-    /// if true, all other current params defined
-    bool is_result_received=false;
 
     void execute_for_one_ear(HearingParameters parameters, HearingDynamic dynamic);
 
-    void make_pass(PassVariant pass_variant, uint16_t start_amplitude, uint16_t amplitude_step);
+    HearingThresholdResult make_pass(PassVariant pass_variant, uint16_t start_amplitude, uint16_t amplitude_step);
 
     void set_pass_parameters(DesiredButtonState state);
 
     void reset_current_result_on_device(DesiredButtonState state);
 
-    void set_up_new_amplitude_and_receive_threshold_results(uint16_t curr_amplitude);
+    HearingThresholdResult set_up_new_amplitude_and_receive_threshold_results(uint16_t curr_amplitude);
 
     std::array<uint16_t, HearingTester::REACTION_SURVEYS_COUNT> get_reaction_time(uint16_t amplitude);
 };
