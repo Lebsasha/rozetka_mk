@@ -56,7 +56,7 @@ using namespace std;
 //}
 
 template<typename Rep, typename Period>
-inline void sleep(const chrono::duration<Rep, Period>& rtime)
+static inline void sleep(const chrono::duration<Rep, Period>& rtime)
 {
 #ifdef USE_SLEEP
     this_thread::sleep_for(rtime);
@@ -142,7 +142,8 @@ int main (int , char** )
     HearingTester hearing_tester(writer, reader, stat);
 //TODO Test 0x4 (especially with 0x18)
     const vector<uint8_t> long_test = {0x11, 0x18, 0x11, 0x18, 0x18, 0x11, 0x11, 0x18};
-    const vector<uint8_t> short_test = {/*0x10, */ 0x4, 0x11};
+    const vector<uint8_t> short_test = {/*0x10,  */0x4, 0x11};
+    const vector<uint8_t> x10_cmd = {0x10};
 //    const auto [cmds, cmds_l] = std::tie(short_test, sizeof_arr(short_test));
     auto& cmds = short_test;
 //    const size_t cmds_length = sizeof_arr(short_test);
@@ -158,7 +159,7 @@ int main (int , char** )
         if (cmd == 0x11)
         {
 //            stat << cmd_ptr - cmds.cbegin() << ", "; /// Number of curr command
-            hearing_tester.execute({4000, 4000, 20, 400, PassAlgorithm::staircase, AmplitudeChangingAlgorithm::linear, TimeStepChangingAlgorithm::random_deviation});
+            hearing_tester.execute({4000, 4000, 1, 300, PassAlgorithm::staircase, AmplitudeChangingAlgorithm::linear, TimeStepChangingAlgorithm::random_deviation});
 
             continue;
         }
@@ -166,7 +167,7 @@ int main (int , char** )
         if (cmd == 0x10 || cmd == 0x11)
             writer.append_var<uint8_t>( (uint8_t)(HearingDynamic::Right) );/// Channel
         if (cmd == 0x10)
-            writer.append_var<uint16_t>(500);///Curr volume
+            writer.append_var<uint16_t>(40);///Curr volume
         else if (cmd == 0x11)
         {
             reaction_time = 0;

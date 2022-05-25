@@ -24,14 +24,27 @@ int16_t sine_table[1024];
 
 void TonePin_ctor(TonePin* ptr, HearingDynamics channel_bit)
 {
+    ptr->channel_bit = channel_bit;
     for (int i = 0; i < ARR_SIZE; ++i)
         sine_table[i] = (int16_t)(SINE_AMPL * sin(i * 2 * M_PI / ARR_SIZE));
     ptr->sine_table = sine_table;
     ptr->ARR_SIZE = ARR_SIZE;
+    const size_t step_num_to_middle_phase = 1000;
+    ptr->volume = HEARING_VOLUME_MAX; // For soft changing
+    for (int i = 0; i < sizeof_arr(ptr->curr_phase); ++i)
+    {
+        ptr->curr_phase[i] = (uint32_t) (3*SHIFTED_ARR_SIZE/4);
+        ptr->dx[i] = SHIFTED_ARR_SIZE / (4 * step_num_to_middle_phase);
+    }
+    for (int i = 0; i < step_num_to_middle_phase; ++i)
+    {
+        make_tone(ptr);
+//        HAL_Delay(1);
+    }
+    ptr->dx[0] = SHIFTED_ARR_SIZE;
+    make_tone(ptr);
+    __HAL_SPI_DISABLE(&hspi1);
     ptr->volume = 0;
-    memset((void*)ptr->dx, 0, sizeof(ptr->dx));
-    memset((void*)ptr->curr_phase, 0, sizeof(ptr->curr_phase));
-    ptr->channel_bit = channel_bit;
 }
 
 //inline uint32_t freq_to_dx(TonePin *ptr, uint16_t frequency)

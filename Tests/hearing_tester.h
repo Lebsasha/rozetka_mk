@@ -63,7 +63,7 @@ private:
     static const size_t REACTION_SURVEYS_COUNT = 3;
 
 
-    void execute_for_one_ear(HearingParameters parameters, HearingDynamic dynamic);
+    void execute_for_one_ear(HearingParameters result, HearingDynamic dynamic);
 
     HearingThresholdResult make_pass(PassVariant pass_variant, uint16_t start_amplitude, uint16_t amplitude_step);
 
@@ -74,6 +74,8 @@ private:
     HearingThresholdResult set_up_new_amplitude_and_receive_threshold_results(uint16_t curr_amplitude);
 
     std::array<uint16_t, HearingTester::REACTION_SURVEYS_COUNT> get_reaction_time(uint16_t amplitude);
+
+    void stop_current_measure();
 };
 
 

@@ -44,7 +44,7 @@ public:
         if (! dev.good())
         {
             std::stringstream error {};
-            error << "Cannot write to COM port, because one of error flag had set when last command " << std::hex << (int) buffer[CC] << " was sent to device";
+            error << "Cannot write to COM port, because one of error flag had set when last command 0x" << std::hex << (int) buffer[CC] << " was sent to device";
             throw std::runtime_error(error.str());
         }
         for(char* c=buffer+length-1;c>=buffer;--c)
