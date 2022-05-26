@@ -311,6 +311,7 @@ void process_cmd(const uint8_t* command, const uint32_t len)
                 usb_assert(get_param_16(&reader, &skinTester.numberOfBursts));
                 usb_assert(get_param_16(&reader, &skinTester.numberOfMeandrs));
                 usb_assert(get_param_16(&reader, &skinTester.maxReactionTime));
+                usb_assert(get_param_16(&reader, &skinTester.fillingFrequency));
 
 //TODO Даник, напиши здесь проверки на диапазон допустимых значений для параметров, например, как у меня "usb_assert(hearingTester.dynamic < 2);"
                 skinTester.numberOfBursts -= 1;

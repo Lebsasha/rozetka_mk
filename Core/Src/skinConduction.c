@@ -28,6 +28,8 @@ void ConstructDiode(SkinConductionTester* skinTester)
 
 	skinTester->maxReactionTime = 0;
 	skinTester->maxReactionTime = 10000;
+
+	skinTester->fillingFrequency = 0;
 }
 
 void SkinConductionStart(SkinConductionTester* skinTester)
@@ -41,7 +43,8 @@ void SkinConductionStart(SkinConductionTester* skinTester)
     htim2.Instance->ARR = 9;
     htim2.Instance->PSC = 719;
     htim3.Instance->ARR = 1;
-    htim3.Instance->PSC = 359;
+    htim3.Instance->PSC = 72000 / (skinTester->fillingFrequency * 2);
+
     HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3);
     HAL_TIM_Base_Start_IT(&htim2);
     //HAL_TIM_Base_Start(&htim1);//TODO Даник, скорее всего это не нужно вызывать, поэтому если без этой строки хорошо работает, то удаляй ее

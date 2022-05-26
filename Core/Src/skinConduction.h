@@ -16,6 +16,8 @@ typedef struct SkinConductionTester
 	uint16_t amplitude;
 	volatile uint32_t* pwmPin;
 
+	uint16_t fillingFrequency; //in kHz
+
 	uint16_t reactionTime;
 	uint16_t maxReactionTime;//in ms
 }SkinConductionTester;
