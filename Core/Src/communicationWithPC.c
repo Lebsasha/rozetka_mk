@@ -159,10 +159,6 @@ void process_cmd(const uint8_t* command, const uint32_t len)
                     hearing_stop(&hearingTester);
                     hearingTester.react_surveys_elapsed = 0;
                 }
-                else if (currMeasure == SkinConduction)
-                {
-                    SkinConductionStop(&skinTester);
-                }
                 currMeasure = None;
                 prepare_for_sending(&writer, cmd, true);
             }
@@ -310,7 +306,7 @@ void process_cmd(const uint8_t* command, const uint32_t len)
             {
                 usb_assert(currMeasure == None);
 
-                usb_assert(get_param_16(&reader, &skinTester.channel[0].amplitude));
+                usb_assert(get_param_16(&reader, &skinTester.amplitude));
                 usb_assert(get_param_16(&reader, (uint16_t*) &skinTester.burstPeriod));
                 usb_assert(get_param_16(&reader, &skinTester.numberOfBursts));
                 usb_assert(get_param_16(&reader, &skinTester.numberOfMeandrs));
@@ -342,7 +338,7 @@ void SkinConduction_send_result_to_PC(SkinConductionTester* ptr)
     {
         append_var_8(&writer, true);
         append_var_16(&writer, ptr->reactionTime);
-        append_var_16(&writer, ptr->channel[0].amplitude);
+        append_var_16(&writer, ptr->amplitude);
     }
     prepare_for_sending(&writer, 0x18, true);
     currMeasure = None;
