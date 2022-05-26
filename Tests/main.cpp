@@ -1,3 +1,6 @@
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
+
 #include <string>
 #include <fstream>
 #include <algorithm>
@@ -71,17 +74,17 @@ auto calculate_amplitude_points(PassAlgorithm alg, std::tuple<T...> algorithm_pa
     {
         uint16_t max_amplitude = std::get<0>(algorithm_parameters);
         uint16_t milliseconds_to_max_ampl = std::get<1>(algorithm_parameters);
-        int num_of_steps = std::get<2>(algorithm_parameters);
+        size_t num_of_steps = std::get<2>(algorithm_parameters);
         v.reserve(num_of_steps + 1);
         if (alg == PassAlgorithm::inc_linear_by_step)
         {
-            for (int i = 0; i < num_of_steps; ++i)
+            for (size_t i = 0; i < num_of_steps; ++i)
                 v.emplace_back(milliseconds_to_max_ampl * i/num_of_steps, max_amplitude * (i + 1)/num_of_steps);
             v.emplace_back(milliseconds_to_max_ampl, max_amplitude); /// Add one more element to make possible calculating duration of maximum amplitude via difference of time point
         }
         else if (alg == PassAlgorithm::dec_linear_by_step)
         {
-            for (int i = 0; i < num_of_steps; ++i)
+            for (size_t i = 0; i < num_of_steps; ++i)
                 v.emplace_back(milliseconds_to_max_ampl * i/num_of_steps, max_amplitude * (num_of_steps - i)/num_of_steps);
             v.emplace_back(milliseconds_to_max_ampl, max_amplitude * 1/num_of_steps);
         }
@@ -131,7 +134,7 @@ int main (int , char** )
     int max_amplitude = 0xffff;
 //    int max_amplitude_in_increasing_pass = 5000;
     int milliseconds_to_max_volume = 10000;
-    int num_of_steps = 10;
+    size_t num_of_steps = 10;
     PassAlgorithm amplitude_algorithm = PassAlgorithm::dec_linear_by_step;
     auto amplitudes = calculate_amplitude_points(amplitude_algorithm, tuple(max_amplitude, milliseconds_to_max_volume, num_of_steps));
     uint16_t reaction_time;
@@ -159,7 +162,9 @@ int main (int , char** )
         if (cmd == 0x11)
         {
 //            stat << cmd_ptr - cmds.cbegin() << ", "; /// Number of curr command
-            hearing_tester.execute({4000, 4000, 1, 300, PassAlgorithm::staircase, AmplitudeChangingAlgorithm::linear, TimeStepChangingAlgorithm::random_deviation});
+            HearingParameters parameters = {4000, 4000, 1, 700, PassAlgorithm::staircase, 6, 0, 0, 0};
+//            hearing_tester.execute(parameters);
+            hearing_tester.execute_for_one_ear(parameters, HearingDynamic::Left);
 
             continue;
         }

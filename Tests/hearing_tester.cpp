@@ -1,7 +1,11 @@
+// This is a personal academic project. Dear PVS-Studio, please check it.
+// PVS-Studio Static Code Analyzer for C, C++, C#, and Java: https://pvs-studio.com
+
 #include <chrono>
 #include <thread>
 #include <numeric>
 #include <cmath>
+#include <cstring>
 #include "general.h"
 #include "time_measurer.h"
 #include "hearing_tester.h"
@@ -39,7 +43,13 @@ auto safe_unsigned_increase(T& var, size_t amount) -> typename enable_if<is_unsi
 }
 
 HearingTester::HearingTester(Command_writer& _writer, Command_reader& _reader, ostream& _stat): writer(_writer), reader(_reader), stat(_stat)
-{}
+{
+    params_internal = {AmplitudeChangingAlgorithm::linear, TimeStepChangingAlgorithm::random_deviation};
+    params_internal.previous_same_results_lookback_count = 2;
+    params_internal.same_result_threshold = 10;
+    params_internal.missed_decreasing_passes_count = 2;
+    params_internal.amplitude_change_if_test_wrong = 20;
+}
 
 void HearingTester::execute(const HearingParameters parameters)
 {
@@ -70,8 +80,8 @@ void HearingTester::execute_for_one_ear(const HearingParameters parameters, cons
     double average_decreasing_threshold = 0;
 
     /// format of this vectors: <if_precise_assessment, receivedResult>
-    std::vector<std::pair<bool, HearingThresholdResult>> up_threshold_results{};
-    std::vector<std::pair<bool, HearingThresholdResult>> down_threshold_results{};
+    std::vector<std::pair<bool, HearingThresholdResult>> increasing_pass_threshold_results{};
+    std::vector<std::pair<bool, HearingThresholdResult>> decreasing_pass_threshold_results{};
     std::array<uint16_t, REACTION_SURVEYS_COUNT> reaction_times = {0};
     /// @endsection
 
@@ -98,66 +108,55 @@ void HearingTester::execute_for_one_ear(const HearingParameters parameters, cons
 
     if (params.pass_algorithm == PassAlgorithm::staircase)
     {
-        const size_t increasing_pass_count = 6;
-        const size_t increasing_accurate_pass_count = 0;
-        const size_t decreasing_pass_count = 0;
-        const size_t decreasing_accurate_pass_count = 3;
-
-        const size_t previous_same_results_lookback_count = 2;
-        const uint16_t same_result_threshold = 10;
-        /// If patient miss more than \a missed_decreasing_passes_count, than we need to increase start_volume for decreasing pass
-        const size_t missed_decreasing_passes_count = 2;
-        const uint16_t amplitude_change_if_test_wrong = 20;
-
-        for (size_t i = 0; i < increasing_pass_count; ++i)
+        for (size_t i = 0; i < params.increasing_pass_count; ++i)
         {
-            cout << "Running increasing pass test " << i << " of " << increasing_pass_count << endl;
+            cout << "Running increasing pass test " << i + 1 << " of " << params.increasing_pass_count << endl;
             HearingThresholdResult rough_result =
                     make_pass(PassVariant::IncreasingLinear, 0, params.initial_amplitude_step);
             if (rough_result.is_result_received)
             {
-                up_threshold_results.emplace_back(false, rough_result);
+                increasing_pass_threshold_results.emplace_back(false, rough_result);
 
-                int first_accurate_measure_index = (int) up_threshold_results.size() - 1 + 1;
+                int first_accurate_measure_index = (int) increasing_pass_threshold_results.size() - 1 + 1;
                 uint16_t start_amplitude = rough_result.threshold;
                 safe_unsigned_decrease(start_amplitude, 2 * params.initial_amplitude_step);
-                for (size_t j = 0; j < increasing_accurate_pass_count; ++j)
+                for (size_t j = 0; j < params.increasing_accurate_pass_count; ++j)
                 {
                     sleep(chrono::milliseconds(rand() % 1500 + 500));
-                    if (j >= previous_same_results_lookback_count &&
-                    std::count_if(up_threshold_results.begin() + first_accurate_measure_index, up_threshold_results.end(), [&](const auto& item){
+                    if (j >= params_internal.previous_same_results_lookback_count &&
+                    std::count_if(increasing_pass_threshold_results.begin() + first_accurate_measure_index, increasing_pass_threshold_results.end(), [&](const auto& item){
                         return item.first;
-                    }) >= previous_same_results_lookback_count )  // If we already have at least lookback_count accurate results in vector after last rough measure
+                    }) >= params_internal.previous_same_results_lookback_count )  // If we already have at least lookback_count accurate results in vector after last rough measure
                     {
-                        size_t same_results_count = std::count_if(up_threshold_results.begin() + first_accurate_measure_index, up_threshold_results.end(),
-                                                          [&](const auto& item) {
+                        size_t same_results_count = std::count_if(increasing_pass_threshold_results.begin() + first_accurate_measure_index, increasing_pass_threshold_results.end(),
+                                                                  [&](const auto& item) {
                                                               assert(item.first);
-                                                              if (item.second.threshold - start_amplitude <= same_result_threshold)
+                                                              if (item.second.threshold - start_amplitude <= params_internal.same_result_threshold)
                                                                   return true;
                                                               return false;
                                                           });
-                        if (same_results_count >= previous_same_results_lookback_count && start_amplitude >= amplitude_change_if_test_wrong)
+                        if (same_results_count >= params_internal.previous_same_results_lookback_count && start_amplitude >= params_internal.amplitude_change_if_test_wrong)
                         {
                             cout << "Warning! Changing start volume from " << start_amplitude;
-                            start_amplitude -= amplitude_change_if_test_wrong; // We can safely decrease, as we check it safety in the 'if' condition
-                            cout << " to " << start_amplitude << ", because " << previous_same_results_lookback_count
+                            start_amplitude -= params_internal.amplitude_change_if_test_wrong; // We can safely decrease, as we check it safety in the 'if' condition
+                            cout << " to " << start_amplitude << ", because " << params_internal.previous_same_results_lookback_count
                                  << " last patient' responses are located near start volume" << endl;
                             j = 0;
                         }
                     }
                     HearingThresholdResult accurate_result = make_pass(PassVariant::IncreasingLinear, start_amplitude, 1);
                     if (accurate_result.is_result_received)
-                        up_threshold_results.emplace_back(true, accurate_result);
+                        increasing_pass_threshold_results.emplace_back(true, accurate_result);
                 }
             }
 
             sleep(chrono::milliseconds(rand() % 2000 + 1000));
         }
 
-        size_t acceptable_results_count = std::count_if(up_threshold_results.begin(), up_threshold_results.end(), is_include_result);
+        size_t acceptable_results_count = std::count_if(increasing_pass_threshold_results.begin(), increasing_pass_threshold_results.end(), is_include_result);
         if (acceptable_results_count != 0)
             average_increasing_threshold =
-                    std::accumulate(up_threshold_results.begin(), up_threshold_results.end(), 0.0,
+                    std::accumulate(increasing_pass_threshold_results.begin(), increasing_pass_threshold_results.end(), 0.0,
                                     [&](const double a, const auto& p) {
                                         if (is_include_result(p))
                                             return a + p.second.threshold;
@@ -167,30 +166,31 @@ void HearingTester::execute_for_one_ear(const HearingParameters parameters, cons
         else
             average_increasing_threshold = 0;
 
-        for (size_t i = 0; i < decreasing_pass_count; ++i)
+        for (size_t i = 0; i < params.decreasing_pass_count; ++i)
         {
+            cout << "Running decreasing pass test " << i + 1 << " of " << params.decreasing_pass_count << endl;
             uint16_t initial_amplitude_in_decreasing_pass = (uint16_t) (round(2 * average_increasing_threshold));
             HearingThresholdResult rough_result =
                     make_pass(PassVariant::DecreasingLinear, initial_amplitude_in_decreasing_pass, params.initial_amplitude_step);
             if (rough_result.is_result_received)
             {
-                down_threshold_results.emplace_back(false, rough_result);
+                decreasing_pass_threshold_results.emplace_back(false, rough_result);
 
-                int first_accurate_measure_index = (int) down_threshold_results.size() - 1 + 1;
+                size_t first_accurate_measure_index = decreasing_pass_threshold_results.size() - 1 + 1;
                 uint16_t start_amplitude = rough_result.threshold;
                 safe_unsigned_increase(start_amplitude, 4 * params.initial_amplitude_step);
-                for (size_t j = 0; j < decreasing_accurate_pass_count; ++j)
+                for (size_t j = 0; j < params.decreasing_accurate_pass_count; ++j)
                 {
                     sleep(chrono::milliseconds(rand() % 1500 + 500));
-                    if (j >= previous_same_results_lookback_count)
+                    if (j >= params_internal.previous_same_results_lookback_count)
                     {
-                        size_t results_count = down_threshold_results.size() - first_accurate_measure_index;
-                        if (j - results_count >= missed_decreasing_passes_count) // || same_results_count >= previous_same_results_lookback_count)
+                        size_t results_count = decreasing_pass_threshold_results.size() - first_accurate_measure_index;
+                        if (j - results_count >= params_internal.missed_decreasing_passes_count) // || same_results_count >= previous_same_results_lookback_count)
                         {
                             cout << "Warning! Changing start volume from " << start_amplitude;
-                            safe_unsigned_increase(start_amplitude, amplitude_change_if_test_wrong);
+                            safe_unsigned_increase(start_amplitude, params_internal.amplitude_change_if_test_wrong);
                             cout << " to " << start_amplitude << ", because ";
-                            /*else*/ if (j - results_count >= missed_decreasing_passes_count)
+                            /*else*/ if (j - results_count >= params_internal.missed_decreasing_passes_count)
                                 cout << "patient doesn't hear tone";
                             cout << endl;
                             j = 0;
@@ -198,17 +198,17 @@ void HearingTester::execute_for_one_ear(const HearingParameters parameters, cons
                     }
                     HearingThresholdResult accurate_result = make_pass(PassVariant::DecreasingLinear, start_amplitude, 3);
                     if (accurate_result.is_result_received)
-                        down_threshold_results.emplace_back(true, accurate_result);
+                        decreasing_pass_threshold_results.emplace_back(true, accurate_result);
                 }
             }
 
             sleep(chrono::milliseconds(rand() % 2000 + 1000));
         }
 
-        acceptable_results_count = std::count_if(down_threshold_results.begin(), down_threshold_results.end(), is_include_result);
+        acceptable_results_count = std::count_if(decreasing_pass_threshold_results.begin(), decreasing_pass_threshold_results.end(), is_include_result);
         if (acceptable_results_count != 0)
             average_decreasing_threshold =
-                    std::accumulate(down_threshold_results.begin(), down_threshold_results.end(), 0.0,
+                    std::accumulate(decreasing_pass_threshold_results.begin(), decreasing_pass_threshold_results.end(), 0.0,
                                     [&](const double a, const auto& p) {
                                         if (is_include_result(p))
                                             return a + p.second.threshold;
@@ -234,7 +234,7 @@ void HearingTester::execute_for_one_ear(const HearingParameters parameters, cons
             break;
     }
     log_string << " ear" << endl;
-    if (!up_threshold_results.empty() || !down_threshold_results.empty()) /// Patient reacted at least in one pass
+    if (!increasing_pass_threshold_results.empty() || !decreasing_pass_threshold_results.empty()) /// Patient reacted at least in one pass
     {
         sleep(chrono::milliseconds(rand() % 1000 + 750));
 //        stop_current_measure();
@@ -243,10 +243,10 @@ void HearingTester::execute_for_one_ear(const HearingParameters parameters, cons
         stop_current_measure();
 //TODO Сделать плавное нарастание громкости при измерении амплитуды
         log_string << "Up threshold results:" << endl;
-        for (const auto &item: up_threshold_results)
+        for (const auto &item: increasing_pass_threshold_results)
             log_string << item.first << del << item.second.threshold << endl;
         log_string << "Down threshold results:" << endl;
-        for (const auto &item : down_threshold_results)
+        for (const auto &item : decreasing_pass_threshold_results)
             log_string << item.first << del << item.second.threshold << endl;
         log_string << "Reaction time results:" << endl;
         for (auto iter = reaction_times.begin(); iter < reaction_times.end(); ++iter)
@@ -258,12 +258,12 @@ void HearingTester::execute_for_one_ear(const HearingParameters parameters, cons
         log_string << endl;
 
         vector<uint16_t> increasing_thresholds;
-        for (const auto &item : up_threshold_results)
+        for (const auto &item : increasing_pass_threshold_results)
             if (is_include_result(item))
                 increasing_thresholds.push_back(item.second.threshold);
 
         vector<uint16_t> decreasing_thresholds;
-        for (const auto &item : down_threshold_results)
+        for (const auto &item : decreasing_pass_threshold_results)
             if (is_include_result(item))
                 decreasing_thresholds.push_back(item.second.threshold);
 
@@ -335,7 +335,7 @@ HearingThresholdResult HearingTester::make_pass(const PassVariant pass_variant, 
     uint16_t curr_time = 0;
     uint16_t curr_amplitude = start_amplitude;
     uint16_t time_step;
-    switch (params.time_step_changing_algorithm)
+    switch (params_internal.time_step_changing_algorithm)
     {
         case TimeStepChangingAlgorithm::constant:
             time_step = params.time_step;
@@ -360,7 +360,7 @@ HearingThresholdResult HearingTester::make_pass(const PassVariant pass_variant, 
     while (true)
     {
         curr_time += params.time_step;
-        switch (params.amplitude_algorithm)
+        switch (params_internal.amplitude_algorithm)
         {
             case AmplitudeChangingAlgorithm::linear:
                 break;
@@ -467,7 +467,10 @@ HearingThresholdResult HearingTester::set_up_new_amplitude_and_receive_threshold
         return HearingThresholdResult{false, 0, 0};
     }
     else
+    {
         assert(false && static_cast<bool>(button_state));
+        return HearingThresholdResult{false, 0, 0};
+    }
 }
 
 std::array<uint16_t, HearingTester::REACTION_SURVEYS_COUNT> HearingTester::get_reaction_time(const uint16_t amplitude)

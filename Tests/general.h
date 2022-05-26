@@ -9,7 +9,7 @@
 
 #define USE_SLEEP_IN_HEARING_TEST
 
-static const std::string del = ", "; //Delimiter between results written to csv file
+extern const std::string del; //Delimiter between results written to csv file
 
 
 /// @section Auxiliary stuff

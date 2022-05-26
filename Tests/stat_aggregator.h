@@ -34,7 +34,7 @@ public:
     static double get_student_distribution_coefficient(double confidence_level, size_t n);
 
 private:
-    const static std::map<double, std::map<double, double>> Student_distribution_coefficients;
+    const static std::map<double, std::map<size_t, double>> Student_distribution_coefficients;
 
 };
 

@@ -34,8 +34,28 @@ struct HearingParameters
     uint16_t initial_amplitude_step=0;
     uint16_t time_step=0;
     PassAlgorithm pass_algorithm{};
+
+    size_t increasing_pass_count =0;
+    size_t increasing_accurate_pass_count =0;
+    size_t decreasing_pass_count =0;
+    size_t decreasing_accurate_pass_count =0;
+};
+
+struct HearingParametersInternal
+{
     AmplitudeChangingAlgorithm amplitude_algorithm{};
     TimeStepChangingAlgorithm time_step_changing_algorithm{};
+
+    /// applicable for increasing pass
+    size_t previous_same_results_lookback_count =0;
+    uint16_t same_result_threshold =0;
+
+    /// applicable for decreasing pass
+    /// If patient miss more than \a missed_decreasing_passes_count, than we need to increase start_volume for decreasing pass
+    size_t missed_decreasing_passes_count =0;
+
+    /// applicable for increasing/decreasing passes
+    uint16_t amplitude_change_if_test_wrong =0;
 };
 
 struct HearingThresholdResult
@@ -52,6 +72,8 @@ public:
 
     void execute(HearingParameters parameters);
 
+    void execute_for_one_ear(HearingParameters parameters, HearingDynamic dynamic);
+
 private:
 
     Command_writer& writer;
@@ -59,11 +81,10 @@ private:
     std::ostream& stat;
 
     HearingParameters params;
+    HearingParametersInternal params_internal;
     enum class PassVariant {IncreasingLinear, DecreasingLinear};
     static const size_t REACTION_SURVEYS_COUNT = 3;
 
-
-    void execute_for_one_ear(HearingParameters result, HearingDynamic dynamic);
 
     HearingThresholdResult make_pass(PassVariant pass_variant, uint16_t start_amplitude, uint16_t amplitude_step);
 

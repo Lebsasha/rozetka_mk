@@ -274,7 +274,7 @@ void process_cmd(const uint8_t* command, const uint32_t len)
                 }
                 prepare_for_sending(&writer, cmd, true);
             }
-            else if (cmd == 0x14)//TODO ASK
+            else if (cmd == 0x14)
             {
                 usb_assert(currMeasure == Hearing);
                 if (hearingTester.state == PlayingConstantVolume)
