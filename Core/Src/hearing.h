@@ -16,7 +16,7 @@
 
 typedef enum HearingStates
 {
-    PlayingConstantVolume, StartingMeasuringReaction, WaitingBeforeMeasuringReaction, MeasuringReaction, Sending, Idle
+    PlayingConstantVolume, StartingMeasuringReaction, WaitingBeforeMeasuringReaction, MeasuringReaction, Sending, PlayingConstantToneForDebug, Idle
 } HearingStates;
 
 /// Possible hearing test states from high level program (i. e. from PC) point of view

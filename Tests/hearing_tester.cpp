@@ -51,23 +51,22 @@ HearingTester::HearingTester(Command_writer& _writer, Command_reader& _reader, o
     params_internal.amplitude_change_if_test_wrong = 20;
 }
 
-void HearingTester::execute(const HearingParameters parameters)
+void HearingTester::execute(HearingParameters& parameters)
 {
-    assert(parameters.frequency <= 20'000);
-    assert(parameters.max_amplitude_in_increasing_pass <= MAX_VOLUME);
+
+//    sleep(chrono::milliseconds(rand() % 250 + 500));
+    execute_for_one_ear(parameters, HearingDynamic::Right);
+//    sleep(chrono::milliseconds(rand() % 1000 + 2000));
+    execute_for_one_ear(parameters, HearingDynamic::Left);
+}
+
+void HearingTester::execute_for_one_ear(HearingParameters& parameters, HearingDynamic dynamic)
+{
+    check_frequency_validness(parameters.frequency);
+    check_volume_validness(parameters.max_amplitude_in_increasing_pass);
     assert(parameters.initial_amplitude_step < parameters.max_amplitude_in_increasing_pass);
     assert(parameters.time_step <= 5'000);
     assert(parameters.pass_algorithm == PassAlgorithm::staircase);
-    params = parameters;
-
-    sleep(chrono::milliseconds(rand() % 250 + 500));
-    execute_for_one_ear(params, HearingDynamic::Right);
-    sleep(chrono::milliseconds(rand() % 1000 + 2000));
-    execute_for_one_ear(params, HearingDynamic::Left);
-}
-
-void HearingTester::execute_for_one_ear(const HearingParameters parameters, const HearingDynamic dynamic)
-{
 //    assert(_freq < BASE_FREQ/2);
     params = parameters;
 
@@ -112,7 +111,7 @@ void HearingTester::execute_for_one_ear(const HearingParameters parameters, cons
         {
             cout << "Running increasing pass test " << i + 1 << " of " << params.increasing_pass_count << endl;
             HearingThresholdResult rough_result =
-                    make_pass(PassVariant::IncreasingLinear, 0, params.initial_amplitude_step);
+                    make_pass(PassVariant::IncreasingLinear, 100, params.initial_amplitude_step);
             if (rough_result.is_result_received)
             {
                 increasing_pass_threshold_results.emplace_back(false, rough_result);
@@ -233,7 +232,9 @@ void HearingTester::execute_for_one_ear(const HearingParameters parameters, cons
             log_string << "Right";
             break;
     }
-    log_string << " ear" << endl;
+    log_string << " ear" ;
+    log_string << ", with frequency " << params.frequency;
+    log_string << endl;
     if (!increasing_pass_threshold_results.empty() || !decreasing_pass_threshold_results.empty()) /// Patient reacted at least in one pass
     {
         sleep(chrono::milliseconds(rand() % 1000 + 750));
@@ -438,9 +439,9 @@ void HearingTester::reset_current_result_on_device(const DesiredButtonState stat
     assert(!reader.is_error());
 }
 
-HearingThresholdResult HearingTester::set_up_new_amplitude_and_receive_threshold_results(const uint16_t curr_amplitude)
+HearingThresholdResult HearingTester::set_up_new_amplitude_and_receive_threshold_results(uint16_t curr_amplitude)
 {
-    assert(curr_amplitude <= MAX_VOLUME);
+    check_volume_validness(curr_amplitude);
     Time_measurer time_measurer{};
     uint8_t command = 0x13;
     writer.set_cmd(command);
@@ -473,9 +474,9 @@ HearingThresholdResult HearingTester::set_up_new_amplitude_and_receive_threshold
     }
 }
 
-std::array<uint16_t, HearingTester::REACTION_SURVEYS_COUNT> HearingTester::get_reaction_time(const uint16_t amplitude)
+std::array<uint16_t, HearingTester::REACTION_SURVEYS_COUNT> HearingTester::get_reaction_time(uint16_t amplitude)
 {
-    assert(amplitude <= MAX_VOLUME);
+    check_volume_validness(amplitude);
     Time_measurer time_measurer{};
     HearingState state;
     do {
@@ -503,5 +504,39 @@ void HearingTester::stop_current_measure()
     writer.write();
     reader.read();
     assert(!reader.is_error() && reader.is_empty());
+}
+
+[[maybe_unused]] void HearingTester::set_tone_once(HearingDynamic dynamic, uint16_t frequency, uint16_t volume)
+{
+    check_frequency_validness(frequency);
+    check_volume_validness(volume);
+
+    uint8_t cmd = 0x10;
+    writer.set_cmd(cmd);
+    writer.append_var<uint8_t>((uint8_t) dynamic);
+    writer.append_var<uint16_t>(volume);
+    writer.append_var<uint16_t>(frequency);
+    writer.prepare_for_sending();
+    writer.write();
+    reader.read();
+    if (reader.is_error())
+    {
+        cerr <<"error occurred while executing " << print_cmd(cmd) << " command: '" << reader.get_error_string() << '\'' << endl;
+    }
+}
+
+void HearingTester::check_frequency_validness(uint16_t frequency)
+{
+    assert(frequency <= 20'000);
+}
+
+void HearingTester::check_volume_validness(uint16_t& volume)
+{
+//    assert(volume <= MAX_VOLUME);
+    if (!(volume <= MAX_VOLUME))
+    {
+        cout << "Warning! Volume " << volume << " is higher than maximum possible value for this parameter " << MAX_VOLUME << " Setting volume = " << MAX_VOLUME << endl;
+        volume = MAX_VOLUME;
+    }
 }
 

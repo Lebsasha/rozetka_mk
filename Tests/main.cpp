@@ -119,7 +119,10 @@ int main (int , char** )
         std::cout << "Error opening COM file" << std::endl;
         return 1;
     }
-    system("stty -F /dev/ttyACM0 -parenb -parodd -cmspar cs8 hupcl -cstopb cread -clocal -crtscts -ignbrk -brkint ignpar -parmrk -inpck -istrip -inlcr -igncr -icrnl -ixon -ixoff -iuclc -ixany -imaxbel -iutf8 -opost -olcuc -ocrnl -onlcr -onocr -onlret -ofill -ofdel nl0 cr0 tab0 bs0 vt0 ff0 -isig -icanon -iexten -echo -echoe -echok -echonl -noflsh -xcase -tostop -echoprt -echoctl -echoke -flusho -extproc");
+    system("stty -F /dev/ttyACM0 -parenb -parodd -cmspar cs8 hupcl -cstopb cread -clocal -crtscts -ignbrk -brkint ignpar "
+           "-parmrk -inpck -istrip -inlcr -igncr -icrnl -ixon -ixoff -iuclc -ixany -imaxbel -iutf8 "
+           "-opost -olcuc -ocrnl -onlcr -onocr -onlret -ofill -ofdel nl0 cr0 tab0 bs0 vt0 ff0 "
+           "-isig -icanon -iexten -echo -echoe -echok -echonl -noflsh -xcase -tostop -echoprt -echoctl -echoke -flusho -extproc");
     Command_writer writer(dev_write);
     Command_reader reader(dev_read);
 //#elif defined(_WIN32) || defined(_MSC_VER)
@@ -162,9 +165,23 @@ int main (int , char** )
         if (cmd == 0x11)
         {
 //            stat << cmd_ptr - cmds.cbegin() << ", "; /// Number of curr command
-            HearingParameters parameters = {4000, 4000, 1, 700, PassAlgorithm::staircase, 6, 0, 0, 0};
-//            hearing_tester.execute(parameters);
-            hearing_tester.execute_for_one_ear(parameters, HearingDynamic::Left);
+            vector<uint16_t> frequencies = {1000, 2000, 4000, 8000, 500, 250, 125};
+            HearingParameters parameters = {4000, 4000, 1, 400, PassAlgorithm::staircase, 6, 0, 0, 0};
+//            HearingParameters parameters = {4000, 80dB, 5dB, 2000, PassAlgorithm::staircaseFromDecreasing, 6, 0, 0, 0};
+
+//            hearing_tester.set_tone_once(HearingDynamic::Right, 4000, 100);
+
+            for (const auto &frequency : frequencies)
+            {
+                parameters.frequency = frequency;
+                hearing_tester.execute_for_one_ear(parameters, HearingDynamic::Right);
+            }
+
+            for (const auto &frequency : frequencies)
+            {
+                parameters.frequency = frequency;
+                hearing_tester.execute_for_one_ear(parameters, HearingDynamic::Left);
+            }
 
             continue;
         }

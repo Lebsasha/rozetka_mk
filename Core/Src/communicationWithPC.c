@@ -178,7 +178,7 @@ void process_cmd(const uint8_t* command, const uint32_t len)
                     usb_assert(freq <= TONE_FREQ / 2);
                     *c = freq_to_dx(&tone_pins[hearingTester.dynamic], freq);
                 }
-                hearingTester.state = Idle; // as we need only to set unchanging tone and nothing else needs to be done, we make state Idle
+                hearingTester.state = PlayingConstantToneForDebug; // as we need only to set unchanging tone and nothing else needs to be done, we make state Idle
                 set_new_tone_volume(&hearingTester, volume);
                 hearing_start(&hearingTester);
                 currMeasure = Hearing;
@@ -186,7 +186,7 @@ void process_cmd(const uint8_t* command, const uint32_t len)
             }
             else if (cmd == 0x11)
             {
-                usb_assert(currMeasure == None);
+                usb_assert(currMeasure == None || (currMeasure == Hearing && hearingTester.state == PlayingConstantToneForDebug));
                 usb_assert(get_param_8(&reader, (uint8_t*) &hearingTester.dynamic));
                 usb_assert(hearingTester.dynamic < 2);
                 for (volatile uint16_t* freq = hearingTester.freq; freq < hearingTester.freq + sizeof_arr(hearingTester.freq); ++freq)

@@ -70,9 +70,11 @@ class HearingTester
 public:
     HearingTester(Command_writer& writer, Command_reader& reader, std::ostream& stat);
 
-    void execute(HearingParameters parameters);
+    void execute(HearingParameters& parameters);
 
-    void execute_for_one_ear(HearingParameters parameters, HearingDynamic dynamic);
+    void execute_for_one_ear(HearingParameters& parameters, HearingDynamic dynamic);
+
+    [[maybe_unused]] void set_tone_once(HearingDynamic dynamic, uint16_t frequency, uint16_t volume);
 
 private:
 
@@ -97,6 +99,10 @@ private:
     std::array<uint16_t, HearingTester::REACTION_SURVEYS_COUNT> get_reaction_time(uint16_t amplitude);
 
     void stop_current_measure();
+
+    static void check_frequency_validness(uint16_t frequency);
+
+    static void check_volume_validness(uint16_t& volume);
 };
 
 

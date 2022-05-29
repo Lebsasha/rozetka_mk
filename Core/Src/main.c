@@ -117,13 +117,19 @@ int main(void)
   MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
 
+    uint16_t LED_flashs_delay;
+#ifndef NDEBUG
+    LED_flashs_delay = 300;
+#else
+    LED_flashs_delay = 150;
+#endif
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
-    HAL_Delay(300);
+    HAL_Delay(LED_flashs_delay);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-    HAL_Delay(400);
+    HAL_Delay(LED_flashs_delay);
     HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-    HAL_Delay(200);
-//    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+    HAL_Delay(LED_flashs_delay - 100);
+//    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET); // located below (after initialisation)
 
     write_pin_if_in_debug(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);//show that initialisation started
 
