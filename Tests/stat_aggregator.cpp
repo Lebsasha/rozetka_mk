@@ -33,7 +33,18 @@ decltype(stat_aggregator::Student_distribution_coefficients) stat_aggregator::St
             {22, 2.074},
             {23, 2.069},
             {24, 2.064},
-            {25, 2.060}
+            {25, 2.060},
+            {26, 2.056},
+            {27, 2.052},
+            {28, 2.048},
+            {29, 2.045},
+            {30, 2.042},
+            {40, 2.021},
+            {60, 2.000},
+            {80, 1.990},
+            {100, 1.984},
+            {200, 1.972},
+            {500, 1.965}
         }}
 };
 
@@ -47,30 +58,34 @@ double stat_aggregator::get_confidence_interval(double std, size_t n, double con
 
 double stat_aggregator::get_student_distribution_coefficient(double confidence_level, size_t n)
 {
+    assert(n != 0);
     assert(confidence_level > 0 && confidence_level < 1);
 
-    for (auto &item : Student_distribution_coefficients)
+    for (auto &conf_level_item : Student_distribution_coefficients)
     {
-        if (std::abs(item.first - confidence_level) < std::numeric_limits<double>::epsilon())
+        if (std::abs(conf_level_item.first - confidence_level) < std::numeric_limits<double>::epsilon())
         {
-            size_t max_n_for_confidence_level = std::max_element(item.second.begin(), item.second.end())->first;
-            if (n > max_n_for_confidence_level)
-            {
-                std::cerr << "In " << __PRETTY_FUNCTION__ << ": requested Student distribution coefficient' size parameter " << n
-                        << "is higher than maximum known coefficient' parameter " << max_n_for_confidence_level << std::endl
-                          << "Returning 0 instead " << std::endl;
-                return 0;
-            }
-            auto iter = std::find_if(item.second.begin(), item.second.end(),
-                                     [&](const auto& item) {
-                                         return item.first == n;
+            auto iter = std::find_if(conf_level_item.second.rbegin(), conf_level_item.second.rend(),
+                                     [&](const auto& n_item) {
+                                         return n_item.first <= n;
                                      });
-            if (iter != item.second.end())
-                return iter->second;
+            if (iter != conf_level_item.second.rend())
+            {
+                if (iter->first == n)
+                    return iter->second;
+                else
+                {
+                    std::cout << "Warining. In " << __PRETTY_FUNCTION__ << " Search n = " << n << " not found. "
+                                                          "Returning known Student distribution coefficient for greatest n1 that n1 < n (n1 = " << iter->first << ")"
+                                                          << "That will mean that your true confidence interval will be closer than it calculated" << std::endl;
+                    return iter->second;
+                }
+            }
 
-            return 0; // We not found element, but for preventing program fail in assert, we return 0
+
+            return std::numeric_limits<double>::quiet_NaN(); // We not found element, but for preventing program fail in assert, we return nan
         }
     }
 //    assert(false);
-    return 0;
+    return std::numeric_limits<double>::quiet_NaN();
 }

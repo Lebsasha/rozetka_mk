@@ -49,15 +49,6 @@
 
 using namespace std;
 
-//template<typename T>
-//std::enable_if_t<std::is_array<T>::value_type, bool > arr_size(T arr)
-//{
-//    size_t i = sizeof_arr(arr);
-//    auto t = std::tie(arr, i);
-//    return t;
-// //    return std::tuple(arr, sizeof_arr(arr));
-//}
-
 template<typename Rep, typename Period>
 static inline void sleep(const chrono::duration<Rep, Period>& rtime)
 {
@@ -166,21 +157,42 @@ int main (int , char** )
         {
 //            stat << cmd_ptr - cmds.cbegin() << ", "; /// Number of curr command
             vector<uint16_t> frequencies = {1000, 2000, 4000, 8000, 500, 250, 125};
-            HearingParameters parameters = {4000, 4000, 1, 400, PassAlgorithm::staircase, 6, 0, 0, 0};
+            TickStep step (10);
+            HearingParameters parameters = {4000, VolumeLevel().set_ticks(4000), &step, 700, PassAlgorithm::staircase, 2, 2, 0, 0, VolumeLevel().set_ticks(0)};
 //            HearingParameters parameters = {4000, 80dB, 5dB, 2000, PassAlgorithm::staircaseFromDecreasing, 6, 0, 0, 0};
 
 //            hearing_tester.set_tone_once(HearingDynamic::Right, 4000, 100);
 
+            parameters.frequency = 4000;
+            hearing_tester.execute_for_one_ear(parameters, HearingDynamic::Right);
+            hearing_tester.execute_for_one_ear(parameters, HearingDynamic::Left);
+
             for (const auto &frequency : frequencies)
             {
-                parameters.frequency = frequency;
-                hearing_tester.execute_for_one_ear(parameters, HearingDynamic::Right);
+                HearingParameters params = parameters;
+                params.frequency = frequency;
+                if (params.pass_algorithm == PassAlgorithm::staircase)
+                {
+//                    if (params.frequency == 1000)
+//                        params.start_amplitude = 600;
+//                    else if (params.frequency == 2000)
+//                        params.start_amplitude = 100;
+                }
+                hearing_tester.execute_for_one_ear(params, HearingDynamic::Right);
             }
 
             for (const auto &frequency : frequencies)
             {
-                parameters.frequency = frequency;
-                hearing_tester.execute_for_one_ear(parameters, HearingDynamic::Left);
+                HearingParameters params = parameters;
+                params.frequency = frequency;
+                if (params.pass_algorithm == PassAlgorithm::staircase)
+                {
+//                    if (params.frequency == 1000)
+//                        params.start_amplitude = 700;
+//                    else if (params.frequency == 2000)
+//                        params.start_amplitude = 100;
+                }
+                hearing_tester.execute_for_one_ear(params, HearingDynamic::Left);
             }
 
             continue;
@@ -189,7 +201,7 @@ int main (int , char** )
         if (cmd == 0x10 || cmd == 0x11)
             writer.append_var<uint8_t>( (uint8_t)(HearingDynamic::Right) );/// Channel
         if (cmd == 0x10)
-            writer.append_var<uint16_t>(40);///Curr volume
+            writer.append_var<uint16_t>(1000);///Curr volume
         else if (cmd == 0x11)
         {
             reaction_time = 0;

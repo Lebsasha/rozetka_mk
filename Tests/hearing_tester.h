@@ -27,18 +27,77 @@ enum class TimeStepChangingAlgorithm {constant, random_deviation};
 
 static const uint16_t MAX_VOLUME = 4095;
 
+class VolumeStep
+{
+public:
+    virtual ~VolumeStep() = default;
+};
+
+
+class DbStep: public VolumeStep
+{
+    double dB;
+public:
+    [[maybe_unused]] explicit DbStep(double _dB);
+    [[nodiscard]] double get_dB() const;
+};
+
+struct TickStep: public VolumeStep
+{
+    uint16_t ticks;
+public:
+    [[maybe_unused]] explicit TickStep(uint16_t _ticks);
+    [[nodiscard]] uint16_t get_ticks() const;
+};
+
+class VolumeLevel
+{
+    uint16_t ticks;
+    double dB;
+
+    static double  convert_to_dB(uint16_t ticks);
+    static uint16_t convert_to_ticks(double dB);
+
+public:
+
+    static const uint16_t MAX_VOLUME = 4095;
+    constexpr static double TICKS_FOR_0dB = 0.39;
+
+    VolumeLevel() = default;
+    VolumeLevel& set_ticks(uint16_t _ticks);
+
+    [[maybe_unused]] VolumeLevel& set_dB(double _dB);
+
+    bool add_dB(double amount);
+    bool add_ticks(uint16_t amount);
+    bool add(const VolumeStep* vs);
+
+    bool subtract_dB(double amount);
+    bool subtract_ticks(uint16_t amount);
+    bool subtract(const VolumeStep* vs);
+
+    [[nodiscard]] uint16_t get_ticks() const;
+    [[nodiscard]] double get_dB() const;
+
+    bool operator<(const VolumeLevel& rhs) const;
+    bool operator>(const VolumeLevel& rhs) const;
+    bool operator<=(const VolumeLevel& rhs) const;
+    bool operator>=(const VolumeLevel& rhs) const;
+};
+
 struct HearingParameters
 {
-    uint16_t frequency=0;
-    uint16_t max_amplitude_in_increasing_pass=0;
-    uint16_t initial_amplitude_step=0;
-    uint16_t time_step=0;
+    uint16_t frequency;
+    VolumeLevel max_amplitude_in_increasing_pass;
+    VolumeStep* initial_amplitude_step;
+    uint16_t time_step;
     PassAlgorithm pass_algorithm{};
 
     size_t increasing_pass_count =0;
     size_t increasing_accurate_pass_count =0;
     size_t decreasing_pass_count =0;
     size_t decreasing_accurate_pass_count =0;
+    VolumeLevel start_volume =VolumeLevel();
 };
 
 struct HearingParametersInternal
@@ -62,7 +121,8 @@ struct HearingThresholdResult
 {
     bool is_result_received;
     uint16_t elapsed_time;
-    uint16_t threshold;
+    VolumeLevel threshold;
+    uint16_t elapsed_time_on_PC;
 };
 
 class HearingTester
@@ -88,7 +148,7 @@ private:
     static const size_t REACTION_SURVEYS_COUNT = 3;
 
 
-    HearingThresholdResult make_pass(PassVariant pass_variant, uint16_t start_amplitude, uint16_t amplitude_step);
+    HearingThresholdResult make_pass(const PassVariant pass_variant, const VolumeLevel start_volume, const TickStep* amplitude_step);
 
     void set_pass_parameters(DesiredButtonState state);
 
@@ -101,8 +161,6 @@ private:
     void stop_current_measure();
 
     static void check_frequency_validness(uint16_t frequency);
-
-    static void check_volume_validness(uint16_t& volume);
 };
 
 
