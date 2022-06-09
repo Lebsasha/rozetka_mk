@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "warnings": [
+    {
+      "FileName": "hearing_tester.h",
+      "ErrorCode": "V802",
+      "Message": "On _-bit platform, structure size can be reduced from _ to _ bytes by rearranging the fields according to their sizes in decreasing order.",
+      "CodePrev": -125641998,
+      "CodeCurrent": 123,
+      "CodeNext": 298200743
+    },
+    {
+      "FileName": "hearing_tester.h",
+      "ErrorCode": "V802",
+      "Message": "On _-bit platform, structure size can be reduced from _ to _ bytes by rearranging the fields according to their sizes in decreasing order.",
+      "CodePrev": -1005246911,
+      "CodeCurrent": 123,
+      "CodeNext": 20962607
+    },
+    {
+      "FileName": "hearing_tester.cpp",
+      "ErrorCode": "V1037",
+      "Message": "Two or more case-branches perform the same actions. Check lines: _, _",
+      "CodePrev": -861660137,
+      "CodeCurrent": -887750593,
+      "CodeNext": 2337
+    },
+    {
+      "FileName": "hearing_tester.cpp",
+      "ErrorCode": "V522",
+      "Message": "There might be dereferencing of a potential null pointer \u0027dB_ptr\u0027.",
+      "CodePrev": 1921677595,
+      "CodeCurrent": -1717485576,
+      "CodeNext": 125
+    },
+    {
+      "FileName": "hearing_tester.cpp",
+      "ErrorCode": "V522",
+      "Message": "There might be dereferencing of a potential null pointer \u0027dB_ptr\u0027.",
+      "CodePrev": 1921677595,
+      "CodeCurrent": -702464675,
+      "CodeNext": 125
+    },
+    {
+      "FileName": "main.cpp",
+      "ErrorCode": "V560",
+      "Message": "A part of conditional expression is always false: cmd \u003d\u003d _x_.",
+      "CodePrev": 49871649,
+      "CodeCurrent": 747545007,
+      "CodeNext": -2084139666
+    },
+    {
+      "FileName": "main.cpp",
+      "ErrorCode": "V560",
+      "Message": "A part of conditional expression is always false: cmd \u003d\u003d _x_.",
+      "CodePrev": 125,
+      "CodeCurrent": 747545007,
+      "CodeNext": 123
+    },
+    {
+      "FileName": "main.cpp",
+      "ErrorCode": "V560",
+      "Message": "A part of conditional expression is always false: cmd \u003d\u003d _x_.",
+      "CodePrev": 123,
+      "CodeCurrent": 747545007,
+      "CodeNext": -1731814115
+    },
+    {
+      "FileName": "main.cpp",
+      "ErrorCode": "V547",
+      "Message": "Expression \u0027cmd \u003d\u003d _x_\u0027 is always false.",
+      "CodePrev": -1731814115,
+      "CodeCurrent": 364975,
+      "CodeNext": 123
+    },
+    {
+      "FileName": "hearing_tester.cpp",
+      "ErrorCode": "V522",
+      "Message": "There might be dereferencing of a potential null pointer \u0027ticks_ptr\u0027.",
+      "CodePrev": -901897684,
+      "CodeCurrent": -2100179284,
+      "CodeNext": 125
+    },
+    {
+      "FileName": "hearing_tester.cpp",
+      "ErrorCode": "V522",
+      "Message": "There might be dereferencing of a potential null pointer \u0027ticks_ptr\u0027.",
+      "CodePrev": -901897684,
+      "CodeCurrent": -2100001741,
+      "CodeNext": 125
+    }
+  ]
+}

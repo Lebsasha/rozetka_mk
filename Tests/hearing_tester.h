@@ -13,13 +13,12 @@ enum class HearingState
 };
 
 enum class HearingDynamic {Left=1, Right=0};
+std::ostream& operator<<(std::ostream& os, const HearingDynamic& enum_member);
 
 enum class DesiredButtonState {StartWaitingForPress=0, StartWaitingForRelease=2};
 enum class ActualButtonState {WaitingForPress=0, Pressed=1, WaitingForRelease=2, Released=3};
 
 enum class PassAlgorithm {inc_linear_by_step=0, dec_linear_by_step=1, staircase};
-
-enum class AmplitudeChangingAlgorithm {linear, exp_on_high_linear_at_low};
 
 /// How time step need to be modified on each pass
 /// @a random_deviation time step - i. e. when adding or subtracting random_deviation value to given time step
@@ -60,12 +59,12 @@ class VolumeLevel
 
 public:
 
-    static const uint16_t MAX_VOLUME = 4095;
-    constexpr static double TICKS_FOR_0dB = 0.39;
+    static const uint16_t MAX_TICK_VOLUME = 4095;
+    constexpr static double TICKS_FOR_0dB = 15.4;
 
     VolumeLevel() = default;
-    VolumeLevel& set_ticks(uint16_t _ticks);
 
+    VolumeLevel& set_ticks(uint16_t _ticks);
     [[maybe_unused]] VolumeLevel& set_dB(double _dB);
 
     bool add_dB(double amount);
@@ -79,6 +78,8 @@ public:
     [[nodiscard]] uint16_t get_ticks() const;
     [[nodiscard]] double get_dB() const;
 
+    bool is_equal(const VolumeLevel& rhs, VolumeStep* is_equal_threshold) const;
+
     bool operator<(const VolumeLevel& rhs) const;
     bool operator>(const VolumeLevel& rhs) const;
     bool operator<=(const VolumeLevel& rhs) const;
@@ -87,10 +88,10 @@ public:
 
 struct HearingParameters
 {
-    uint16_t frequency;
-    VolumeLevel max_amplitude_in_increasing_pass;
-    VolumeStep* initial_amplitude_step;
-    uint16_t time_step;
+    uint16_t frequency =0;
+    VolumeLevel max_amplitude_in_increasing_pass =VolumeLevel();
+    VolumeStep* initial_volume_step =nullptr;
+    uint16_t time_step =0;
     PassAlgorithm pass_algorithm{};
 
     size_t increasing_pass_count =0;
@@ -100,10 +101,22 @@ struct HearingParameters
     VolumeLevel start_volume =VolumeLevel();
 };
 
+struct HearingParametersForBSA_Algorithm
+{
+    uint16_t frequency;
+    VolumeLevel start_volume;
+    VolumeStep* increasing_volume_step;
+    VolumeStep* decreasing_volume_step;
+    uint16_t time_step;
+    VolumeStep* is_equal_threshold;
+    uint16_t minimum_count_of_equal_thresholds;
+    bool is_reaction_time_need_to_be_measured;
+};
+
 struct HearingParametersInternal
 {
-    AmplitudeChangingAlgorithm amplitude_algorithm{};
     TimeStepChangingAlgorithm time_step_changing_algorithm{};
+    uint16_t minimum_deviated_time_step =600;
 
     /// applicable for increasing pass
     size_t previous_same_results_lookback_count =0;
@@ -117,11 +130,18 @@ struct HearingParametersInternal
     uint16_t amplitude_change_if_test_wrong =0;
 };
 
-struct HearingThresholdResult
+enum class PassVariant {Increasing, Decreasing};
+
+struct HearingThresholdResultFromMCU
 {
     bool is_result_received;
     uint16_t elapsed_time;
     VolumeLevel threshold;
+};
+
+struct HearingThresholdResult
+{
+    HearingThresholdResultFromMCU MCU_result;
     uint16_t elapsed_time_on_PC;
 };
 
@@ -134,6 +154,8 @@ public:
 
     void execute_for_one_ear(HearingParameters& parameters, HearingDynamic dynamic);
 
+    std::vector<VolumeLevel> execute_for_one_ear(HearingParametersForBSA_Algorithm& parameters, HearingDynamic dynamic);
+
     [[maybe_unused]] void set_tone_once(HearingDynamic dynamic, uint16_t frequency, uint16_t volume);
 
 private:
@@ -144,7 +166,6 @@ private:
 
     HearingParameters params;
     HearingParametersInternal params_internal;
-    enum class PassVariant {IncreasingLinear, DecreasingLinear};
     static const size_t REACTION_SURVEYS_COUNT = 3;
 
 
@@ -154,13 +175,15 @@ private:
 
     void reset_current_result_on_device(DesiredButtonState state);
 
-    HearingThresholdResult set_up_new_amplitude_and_receive_threshold_results(uint16_t curr_amplitude);
+    HearingThresholdResultFromMCU set_up_new_amplitude_and_receive_threshold_result(uint16_t curr_amplitude);
 
     std::array<uint16_t, HearingTester::REACTION_SURVEYS_COUNT> get_reaction_time(uint16_t amplitude);
 
     void stop_current_measure();
 
-    static void check_frequency_validness(uint16_t frequency);
+    static bool is_frequency_valid(uint16_t frequency);
+
+    bool start_hearing_threshold_measure(const uint16_t frequency, const HearingDynamic dynamic);
 };
 
 

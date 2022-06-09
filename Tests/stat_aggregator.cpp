@@ -7,6 +7,48 @@
 #include <iostream>
 #include "stat_aggregator.h"
 
+double stat_aggregator::get_confidence_interval(double std, size_t n, double confidence_level)
+{
+    if (n == 0)
+        return 0;
+    double stud_coef = get_student_distribution_coefficient(confidence_level, n);
+    return stud_coef * std / sqrt(static_cast<double>(n));
+}
+
+double stat_aggregator::get_student_distribution_coefficient(double confidence_level, size_t n)
+{
+    assert(n != 0);
+    assert(confidence_level > 0 && confidence_level < 1);
+
+    for (auto &conf_level_item : Student_distribution_coefficients)
+    {
+        if (std::abs(conf_level_item.first - confidence_level) < std::numeric_limits<double>::epsilon())
+        {
+            auto iter = std::find_if(conf_level_item.second.rbegin(), conf_level_item.second.rend(),
+                                     [&](const auto& n_item) {
+                                         return n >= n_item.first;
+                                     });
+            if (iter != conf_level_item.second.rend())
+            {
+                if (iter->first == n)
+                    return iter->second;
+                else
+                {
+                    std::cout << "Warining. In " << __PRETTY_FUNCTION__ << " Search n = " << n << " not found. "
+                                                                                                  "Returning known Student distribution coefficient for greatest n1 that n > n1 (note: n1 found is n1 = " << iter->first << "). "
+                              << "Note: That will mean that your true confidence interval will be closer than those calculated from stat_aggregator." << std::endl;
+                    return iter->second;
+                }
+            }
+
+
+            return std::numeric_limits<double>::quiet_NaN(); // We not found element, but for preventing program fail in assert, we return nan
+        }
+    }
+//    assert(false);
+    return std::numeric_limits<double>::quiet_NaN();
+}
+
 decltype(stat_aggregator::Student_distribution_coefficients) stat_aggregator::Student_distribution_coefficients = {
         {0.95,{
             {1, 12.706},
@@ -47,45 +89,3 @@ decltype(stat_aggregator::Student_distribution_coefficients) stat_aggregator::St
             {500, 1.965}
         }}
 };
-
-double stat_aggregator::get_confidence_interval(double std, size_t n, double confidence_level)
-{
-    if (n == 0)
-        return 0;
-    double stud_coef = get_student_distribution_coefficient(confidence_level, n);
-    return stud_coef * std / sqrt(static_cast<double>(n));
-}
-
-double stat_aggregator::get_student_distribution_coefficient(double confidence_level, size_t n)
-{
-    assert(n != 0);
-    assert(confidence_level > 0 && confidence_level < 1);
-
-    for (auto &conf_level_item : Student_distribution_coefficients)
-    {
-        if (std::abs(conf_level_item.first - confidence_level) < std::numeric_limits<double>::epsilon())
-        {
-            auto iter = std::find_if(conf_level_item.second.rbegin(), conf_level_item.second.rend(),
-                                     [&](const auto& n_item) {
-                                         return n_item.first <= n;
-                                     });
-            if (iter != conf_level_item.second.rend())
-            {
-                if (iter->first == n)
-                    return iter->second;
-                else
-                {
-                    std::cout << "Warining. In " << __PRETTY_FUNCTION__ << " Search n = " << n << " not found. "
-                                                          "Returning known Student distribution coefficient for greatest n1 that n1 < n (n1 = " << iter->first << ")"
-                                                          << "That will mean that your true confidence interval will be closer than it calculated" << std::endl;
-                    return iter->second;
-                }
-            }
-
-
-            return std::numeric_limits<double>::quiet_NaN(); // We not found element, but for preventing program fail in assert, we return nan
-        }
-    }
-//    assert(false);
-    return std::numeric_limits<double>::quiet_NaN();
-}

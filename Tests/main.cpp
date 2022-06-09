@@ -9,6 +9,7 @@
 #include <thread>
 #include <iomanip>
 #include <vector>
+#include <map>
 #include <cstdint>
 #include <filesystem>
 #include "../Core/Inc/notes.h"
@@ -82,6 +83,8 @@ auto calculate_amplitude_points(PassAlgorithm alg, std::tuple<T...> algorithm_pa
     }
     return v;
 }
+
+std::string audiogram_to_string(std::map<uint16_t, std::vector<VolumeLevel>>& audiogram, HearingDynamic dynamic);
 
 int main (int , char** )
 {
@@ -157,15 +160,63 @@ int main (int , char** )
         {
 //            stat << cmd_ptr - cmds.cbegin() << ", "; /// Number of curr command
             vector<uint16_t> frequencies = {1000, 2000, 4000, 8000, 500, 250, 125};
+            DbStep down_step(5);
+            DbStep up_step (2);
+            DbStep is_equal_threshold (2);
+            HearingParametersForBSA_Algorithm params_for_BSA_algo = {4000, VolumeLevel().set_dB(40), &up_step, &down_step, 2000, &is_equal_threshold, 4, false};
+            HearingDynamic testing_ear = HearingDynamic::Left;
+
+            std::map<uint16_t, vector<VolumeLevel>> audiogram;
+
+            time_measurer.begin();
+            for (const auto &item : frequencies)
+            {
+                params_for_BSA_algo.frequency = item;
+//                if (params_for_BSA_algo.frequency == 4000)
+//                    params_for_BSA_algo.is_reaction_time_need_to_be_measured = true;
+//                else
+//                    params_for_BSA_algo.is_reaction_time_need_to_be_measured = false;
+                audiogram[params_for_BSA_algo.frequency] = hearing_tester.execute_for_one_ear(params_for_BSA_algo, testing_ear);
+                sleep(chrono::milliseconds(2000 + rand() % 1000));
+            }
+            string str_for_audiogram = audiogram_to_string(audiogram, testing_ear);
+
+            stat << str_for_audiogram;
+            stat.flush();
+            cout << str_for_audiogram;
+            stringstream str_for_audiogram_test_end{};
+            str_for_audiogram_test_end << "Running audiogram test for " << frequencies.size() << " number of frequencies";
+            time_measurer.log_end(str_for_audiogram_test_end.str());
+
+            time_measurer.begin();
+            for (const auto &item : frequencies)
+            {
+                params_for_BSA_algo.frequency = item;
+                audiogram[params_for_BSA_algo.frequency] = hearing_tester.execute_for_one_ear(params_for_BSA_algo, HearingDynamic::Left);
+                sleep(chrono::milliseconds(2000 + rand() % 1000));
+            }
+            string str_for_left_ear_audiogram = audiogram_to_string(audiogram, HearingDynamic::Left);
+
+            stat << str_for_left_ear_audiogram;
+            stat.flush();
+            cout << str_for_left_ear_audiogram;
+
+            time_measurer.log_end(str_for_audiogram_test_end.str());
+
             TickStep step (10);
-            HearingParameters parameters = {4000, VolumeLevel().set_ticks(4000), &step, 700, PassAlgorithm::staircase, 2, 2, 0, 0, VolumeLevel().set_ticks(0)};
+            HearingParameters parameters = {4000, VolumeLevel().set_ticks(VolumeLevel::MAX_TICK_VOLUME), &step, 700, PassAlgorithm::staircase, 1, 3, 0, 0, VolumeLevel().set_ticks(0)};
 //            HearingParameters parameters = {4000, 80dB, 5dB, 2000, PassAlgorithm::staircaseFromDecreasing, 6, 0, 0, 0};
 
 //            hearing_tester.set_tone_once(HearingDynamic::Right, 4000, 100);
 
             parameters.frequency = 4000;
-            hearing_tester.execute_for_one_ear(parameters, HearingDynamic::Right);
-            hearing_tester.execute_for_one_ear(parameters, HearingDynamic::Left);
+//            bool rand_dynamic = rand() % 2;
+//            hearing_tester.execute_for_one_ear(parameters, static_cast<HearingDynamic>(rand_dynamic));
+//            hearing_tester.execute_for_one_ear(parameters, static_cast<HearingDynamic>(rand() % 2));
+//            hearing_tester.execute_for_one_ear(parameters, static_cast<HearingDynamic>(rand() % 2));
+//            hearing_tester.execute_for_one_ear(parameters, static_cast<HearingDynamic>(rand() % 2));
+//            hearing_tester.execute_for_one_ear(parameters, static_cast<HearingDynamic>(rand() % 2));
+//            hearing_tester.execute_for_one_ear(parameters, static_cast<HearingDynamic>(rand() % 2));
 
             for (const auto &frequency : frequencies)
             {
@@ -174,25 +225,13 @@ int main (int , char** )
                 if (params.pass_algorithm == PassAlgorithm::staircase)
                 {
 //                    if (params.frequency == 1000)
-//                        params.start_amplitude = 600;
+//                        params.start_volume = VolumeLevel().set_ticks(600);
 //                    else if (params.frequency == 2000)
-//                        params.start_amplitude = 100;
+//                        params.start_volume = VolumeLevel().set_ticks(2500);
                 }
-                hearing_tester.execute_for_one_ear(params, HearingDynamic::Right);
-            }
-
-            for (const auto &frequency : frequencies)
-            {
-                HearingParameters params = parameters;
-                params.frequency = frequency;
-                if (params.pass_algorithm == PassAlgorithm::staircase)
-                {
-//                    if (params.frequency == 1000)
-//                        params.start_amplitude = 700;
-//                    else if (params.frequency == 2000)
-//                        params.start_amplitude = 100;
-                }
-                hearing_tester.execute_for_one_ear(params, HearingDynamic::Left);
+                bool random_dynamic = rand() % 2;
+                hearing_tester.execute_for_one_ear(params, static_cast<HearingDynamic>(random_dynamic));
+                hearing_tester.execute_for_one_ear(params, static_cast<HearingDynamic>(!random_dynamic));
             }
 
             continue;
@@ -201,7 +240,7 @@ int main (int , char** )
         if (cmd == 0x10 || cmd == 0x11)
             writer.append_var<uint8_t>( (uint8_t)(HearingDynamic::Right) );/// Channel
         if (cmd == 0x10)
-            writer.append_var<uint16_t>(1000);///Curr volume
+            writer.append_var<uint16_t>(VolumeLevel::MAX_TICK_VOLUME);///Curr volume
         else if (cmd == 0x11)
         {
             reaction_time = 0;
@@ -212,7 +251,7 @@ int main (int , char** )
         }
         if (cmd == 0x10 || cmd == 0x11)
         {
-            writer.append_var<uint16_t>((4000));/// array of 1-3 notes
+            writer.append_var<uint16_t>((100));/// array of 1-3 notes
 //            writer.append_var<uint16_t>(NOTE_E5);
 //            writer.append_var<uint16_t>(NOTE_G5);
         }
@@ -341,6 +380,40 @@ int main (int , char** )
     {
         cerr << e.what() << endl;
     }
+}
+
+std::string audiogram_to_string(std::map<uint16_t, vector<VolumeLevel>>& audiogram, HearingDynamic dynamic)
+{
+    stringstream str_for_audiogram;
+    str_for_audiogram.precision(4);
+    str_for_audiogram << "" << dynamic << " ear";
+//            for (const auto &item : frequencies)
+//                str_for_audiogram << del << item;
+//    str_for_audiogram << endl;
+    size_t max_count_of_results = std::max_element(audiogram.begin(),  audiogram.end(), [&](const auto& a, const auto& b){
+        return a.second.size() < b.second.size();
+    })->second.size();
+
+    for (const auto &item : audiogram)
+        str_for_audiogram << del << item.first;
+    str_for_audiogram << endl;
+    for (int i = 0; i < max_count_of_results; ++i)
+    {
+        for (const auto& item : audiogram)
+            if (i < item.second.size())
+                str_for_audiogram << del << item.second[i].get_ticks();
+            else
+                str_for_audiogram << del;
+        str_for_audiogram << endl;
+    }
+//    for (const auto& item : audiogram)
+//    {
+//        str_for_audiogram << item.first;
+//        for (const auto &volume_threshold : item.second)
+//            str_for_audiogram << del << volume_threshold.get_ticks();
+//        str_for_audiogram << endl;
+//    }
+    return str_for_audiogram.str();
 }
 
 

@@ -1,13 +1,31 @@
 #ifndef STAT_AGGREGATOR
 #define STAT_AGGREGATOR
 
+#include <algorithm>
 #include <map>
 
 class stat_aggregator
 {
 public:
 
-//    double get_mean();
+    template<typename InputIterator>
+    static double get_mean(InputIterator begin, InputIterator end)
+    {
+        typedef typename InputIterator::value_type value_type;
+
+        double sum = 0;
+        size_t count = end - begin;
+        if (count != 0)
+        {
+               std::for_each(begin, end,
+                                [&](const value_type number) {
+                                    return sum + number;
+                                });
+                return sum / (double) count;
+        }
+        else
+            return 0;
+    }
 
     template<typename InputIterator, typename MeanType>
     static double get_std(InputIterator begin, InputIterator end, MeanType mean)

@@ -13,7 +13,8 @@ public:
 
     void begin();
 
-    void log_end(uint8_t cmd = 0, const std::string& description = "");
+    void log_end(uint8_t cmd, const std::string& description = "");
+    void log_end(const std::string& description = "");
 };
 
 #endif //TIME_MEASURER

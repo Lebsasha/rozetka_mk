@@ -53,3 +53,8 @@ void Time_measurer::log_end(const uint8_t cmd, const std::string& description)
         std::cout << convert_to<std::chrono::microseconds>(diff) << " us";
     std::cout << std::endl;
 }
+
+void Time_measurer::log_end(const std::string& description)
+{
+    return log_end(0, description);
+}
