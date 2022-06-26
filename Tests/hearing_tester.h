@@ -14,6 +14,7 @@ enum class HearingState
 
 enum class HearingDynamic {Left=1, Right=0};
 std::ostream& operator<<(std::ostream& os, const HearingDynamic& enum_member);
+HearingDynamic invertEar(const HearingDynamic& testing_ear);
 
 enum class DesiredButtonState {StartWaitingForPress=0, StartWaitingForRelease=2};
 enum class ActualButtonState {WaitingForPress=0, Pressed=1, WaitingForRelease=2, Released=3};

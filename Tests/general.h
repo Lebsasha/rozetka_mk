@@ -5,7 +5,7 @@
 
 /// @section Some settings related to time in program
 
-#define USE_SLEEP
+//#define USE_SLEEP
 
 #define USE_SLEEP_IN_HEARING_TEST
 

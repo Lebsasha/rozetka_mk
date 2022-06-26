@@ -159,12 +159,27 @@ int main (int , char** )
         if (cmd == 0x11)
         {
 //            stat << cmd_ptr - cmds.cbegin() << ", "; /// Number of curr command
+
+//            vector<uint16_t> test_range_frequencies = {1, 10, 100, 1000, 8000, 10000, 12000, 15000, 18000, 20000};
+//
+//            for (const auto &item : test_range_frequencies)
+//            {
+//                uint16_t volume = 2048;
+//                hearing_tester.set_tone_once(HearingDynamic::Left, item, volume);
+//            }
+//
+//            for (const auto &item : test_range_frequencies)
+//            {
+//                uint16_t volume = 2048;
+//                hearing_tester.set_tone_once(HearingDynamic::Right, item, volume);
+//            }
+
             vector<uint16_t> frequencies = {1000, 2000, 4000, 8000, 500, 250, 125};
             DbStep down_step(5);
             DbStep up_step (2);
             DbStep is_equal_threshold (2);
-            HearingParametersForBSA_Algorithm params_for_BSA_algo = {4000, VolumeLevel().set_dB(40), &up_step, &down_step, 2000, &is_equal_threshold, 4, false};
-            HearingDynamic testing_ear = HearingDynamic::Left;
+            HearingParametersForBSA_Algorithm params_for_BSA_algo = {4000, VolumeLevel().set_dB(20), &up_step, &down_step, 2000, &is_equal_threshold, 4, false};
+            HearingDynamic testing_ear = HearingDynamic::Right;
 
             std::map<uint16_t, vector<VolumeLevel>> audiogram;
 
@@ -179,23 +194,25 @@ int main (int , char** )
                 audiogram[params_for_BSA_algo.frequency] = hearing_tester.execute_for_one_ear(params_for_BSA_algo, testing_ear);
                 sleep(chrono::milliseconds(2000 + rand() % 1000));
             }
-            string str_for_audiogram = audiogram_to_string(audiogram, testing_ear);
+            string str_for_right_ear_audiogram = audiogram_to_string(audiogram, testing_ear);
 
-            stat << str_for_audiogram;
+            stat << str_for_right_ear_audiogram;
             stat.flush();
-            cout << str_for_audiogram;
+            cout << str_for_right_ear_audiogram << endl;
             stringstream str_for_audiogram_test_end{};
             str_for_audiogram_test_end << "Running audiogram test for " << frequencies.size() << " number of frequencies";
             time_measurer.log_end(str_for_audiogram_test_end.str());
 
+            testing_ear = invertEar(testing_ear);
             time_measurer.begin();
             for (const auto &item : frequencies)
             {
                 params_for_BSA_algo.frequency = item;
-                audiogram[params_for_BSA_algo.frequency] = hearing_tester.execute_for_one_ear(params_for_BSA_algo, HearingDynamic::Left);
+                audiogram[params_for_BSA_algo.frequency] = hearing_tester.execute_for_one_ear(params_for_BSA_algo, testing_ear);
                 sleep(chrono::milliseconds(2000 + rand() % 1000));
             }
-            string str_for_left_ear_audiogram = audiogram_to_string(audiogram, HearingDynamic::Left);
+            string str_for_left_ear_audiogram = audiogram_to_string(audiogram, testing_ear);
+
 
             stat << str_for_left_ear_audiogram;
             stat.flush();

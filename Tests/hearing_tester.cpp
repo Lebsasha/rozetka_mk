@@ -70,6 +70,9 @@ ostream& operator<<(ostream& os, const HearingDynamic& enum_member)
     return os << str;
 }
 
+HearingDynamic invertEar(const HearingDynamic& testing_ear)
+{ return static_cast<HearingDynamic>((!static_cast<bool>(testing_ear))); }
+
 HearingTester::HearingTester(Command_writer& _writer, Command_reader& _reader, ostream& _stat): writer(_writer), reader(_reader), stat(_stat)
 {
     params_internal = {TimeStepChangingAlgorithm::random_deviation};
@@ -342,6 +345,10 @@ vector<VolumeLevel> HearingTester::execute_for_one_ear(HearingParametersForBSA_A
     const uint16_t MINIMUM_TIME_STEP = 1500;
     const uint16_t TIME_TO_WAIT_BEFORE_GETTING_CONFIRMING_RESULT = 3;
 
+    cout << "Starting measuring hearing threshold ";
+    if (parameters.is_reaction_time_need_to_be_measured)
+        cout << "and reaction time ";
+    cout << "for " << dynamic << " ear via BSA-based algorithm with frequency " << parameters.frequency << " ear" << endl;
     bool is_measure_started = start_hearing_threshold_measure(parameters.frequency, dynamic);
     assert(is_measure_started);
 
@@ -428,22 +435,28 @@ vector<VolumeLevel> HearingTester::execute_for_one_ear(HearingParametersForBSA_A
                 HearingThresholdResultFromMCU confirming_result = set_up_new_amplitude_and_receive_threshold_result(current_volume.get_ticks());
                 if (confirming_result.is_result_received == true)
                 {
-                    results_in_increasing_pass.emplace_back(HearingThresholdResult{current_result_for_previous_volume, static_cast<uint16_t>(current_time - current_time_step)});
-
-                    for (const auto &item : results_in_increasing_pass)
+                    if(! results_in_decreasing_pass.empty())
                     {
-                        size_t count_of_same_result = std::count_if(results_in_increasing_pass.begin(), results_in_increasing_pass.end(), [&](const typename decltype(results_in_increasing_pass)::value_type result)
+                        results_in_increasing_pass.emplace_back(
+                                HearingThresholdResult{current_result_for_previous_volume, static_cast<uint16_t>(current_time - current_time_step)});
+
+                        for (const auto& item: results_in_increasing_pass)
                         {
-                            return item.MCU_result.threshold.is_equal(result.MCU_result.threshold, parameters.is_equal_threshold);
-                        });
-                        assert(count_of_same_result >= 1); // Хотя бы сам с собой он будет равен
-//                       cout << "Count of 'same' results with threshold " << item.MCU_result.threshold.get_ticks() << ": " << count_of_same_result << endl;
-                        if (count_of_same_result > max_same_results_count)
-                        {
-                            max_same_results_count = count_of_same_result;
-                            result_with_max_same_count = item;
+                            size_t count_of_same_result = std::count_if(results_in_increasing_pass.begin(), results_in_increasing_pass.end(),
+                                                                        [&](const typename decltype(results_in_increasing_pass)::value_type result) {
+                                                                            return item.MCU_result.threshold.is_equal(result.MCU_result.threshold, parameters.is_equal_threshold);
+                                                                        });
+                            assert(count_of_same_result >= 1); // Хотя бы сам с собой он будет равен
+//                           cout << "Count of 'same' results with threshold " << item.MCU_result.threshold.get_ticks() << ": " << count_of_same_result << endl;
+                            if (count_of_same_result > max_same_results_count)
+                            {
+                                max_same_results_count = count_of_same_result;
+                                result_with_max_same_count = item;
+                            }
                         }
                     }
+                    else
+                    {} // In first probe let familiarise patient with hearing algorithm and thus ignore first received result
                     is_current_pass_need_to_be_changed = true;
                 }
                 else
@@ -476,7 +489,7 @@ vector<VolumeLevel> HearingTester::execute_for_one_ear(HearingParametersForBSA_A
                     divider = 1;
                 current_time_step = parameters.time_step - rand() % divider;
             }
-            cout << "Now " << current_pass << " pass" << endl;
+            cout << "Now beginning " << current_pass << " pass" << endl;
 //            cout << "In pending " << current_pass << " pass: setting " << current_time_step << " time step" << endl;
 
             if (current_pass == PassVariant::Increasing)
@@ -578,10 +591,11 @@ vector<VolumeLevel> HearingTester::execute_for_one_ear(HearingParametersForBSA_A
 //    printed_results << del << "decreasing threshold results:" << average_decreasing_threshold << " +- " << decreasing_conf_interval << " (with std: " << decreasing_threshold_std << ")";
 
     stat << printed_results.str();
-    stat.flush();
     cout << printed_results.str();
 
-    time_measurer.log_end("estimating threshold");
+    long seconds_elapsed = time_measurer.log_end("estimating threshold");
+    stat << "Time for estimate threshold takes " << seconds_elapsed << "s" << endl;
+    stat.flush();
 
     return final_results;
 }
@@ -871,6 +885,8 @@ VolumeLevel& VolumeLevel::set_ticks(uint16_t _ticks)
 
 bool VolumeLevel::add_dB(double amount)
 {
+    if(amount < 0)
+        return subtract_dB(-amount);
     uint16_t new_ticks = convert_to_ticks(dB + amount);
     if (new_ticks <= VolumeLevel::MAX_TICK_VOLUME)
     {
@@ -918,31 +934,34 @@ bool VolumeLevel::add(const VolumeStep* vs)
 
 bool VolumeLevel::subtract_dB(double amount)
 {
-//    if (dB - amount < 0)
-//        return false;
-    uint16_t new_ticks = convert_to_ticks(dB - amount);
-    if(new_ticks <= VolumeLevel::MAX_TICK_VOLUME)
+    if(amount < 0)
+        return add_dB(-amount);
+
+    double new_dB = dB - amount;
+    uint16_t new_ticks = convert_to_ticks(new_dB);
+
+    if (ticks == new_ticks)
     {
-        if (ticks == new_ticks)
-        {
-            cerr << "Warning! In " << __PRETTY_FUNCTION__ << " Current tick (" << ticks << ") and new tick (" << new_ticks << ") "
+        if (ticks != 0)
+            cerr << "Warning! In " << __PRETTY_FUNCTION__ << ": Current tick (" << ticks << ") and new tick (" << new_ticks << ") "
                                                                                                                               "calculated for " << dB << " - " << amount << "dB are the same." << endl;
-            if (ticks == 0)
-                cerr << "Underflow for converting dB to ticks. Not doing subtract" << endl;
+        else
+        {
+            cerr << "Warning! In " << __PRETTY_FUNCTION__ << ": Underflow for converting dB to ticks (ticks on current subtraction already 0. Cannot decrease it less than 0). Not doing subtraction" << endl;
+            return false;
         }
-        ticks = new_ticks;
-        dB -= amount;
-        return true;
     }
-    // else
-    return false;
+    ticks = new_ticks;
+    dB = new_dB;
+    return true;
+
 }
 
 bool VolumeLevel::subtract_ticks(uint16_t amount)
 {
-    uint16_t new_ticks = ticks - amount;
-    if (new_ticks <= VolumeLevel::MAX_TICK_VOLUME)
+    if (ticks >= amount)
     {
+        uint16_t new_ticks = ticks - amount;
         ticks = new_ticks;
         dB = convert_to_dB(ticks);
         return true;
