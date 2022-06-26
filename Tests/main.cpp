@@ -199,7 +199,7 @@ int main (int , char** )
 
             stat << str_for_left_ear_audiogram;
             stat.flush();
-            cout << str_for_left_ear_audiogram;
+            cout << str_for_left_ear_audiogram << endl;
 
             time_measurer.log_end(str_for_audiogram_test_end.str());
 
@@ -397,7 +397,7 @@ std::string audiogram_to_string(std::map<uint16_t, vector<VolumeLevel>>& audiogr
     for (const auto &item : audiogram)
         str_for_audiogram << del << item.first;
     str_for_audiogram << endl;
-    for (int i = 0; i < max_count_of_results; ++i)
+    for (size_t i = 0; i < max_count_of_results; ++i)
     {
         for (const auto& item : audiogram)
             if (i < item.second.size())

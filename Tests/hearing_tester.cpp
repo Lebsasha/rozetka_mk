@@ -45,7 +45,7 @@ template <typename T>
 
 ostream& operator<<(ostream& os, const PassVariant& enum_member)
 {
-    const char* str;
+    const char* str = "";
     switch(enum_member){
 #define PROCESS_VAL(p) case(p): str = #p; break;
         PROCESS_VAL(PassVariant::Increasing);
@@ -57,7 +57,7 @@ ostream& operator<<(ostream& os, const PassVariant& enum_member)
 
 ostream& operator<<(ostream& os, const HearingDynamic& enum_member)
 {
-    const char* str;
+    const char* str = "";
     switch(enum_member)
     {
         case (HearingDynamic::Left):
@@ -353,18 +353,18 @@ vector<VolumeLevel> HearingTester::execute_for_one_ear(HearingParametersForBSA_A
     size_t max_same_results_count = 0;
     HearingThresholdResult result_with_max_same_count {};
 
-    PassVariant current_pass = PassVariant::Increasing;
     VolumeLevel current_volume = parameters.start_volume;
     uint16_t current_time_step = parameters.time_step;
 
     uint16_t current_time = 0;
     bool is_current_pass_need_to_be_changed = false;
 
+    PassVariant current_pass = PassVariant::Increasing;
     set_pass_parameters(DesiredButtonState::StartWaitingForPress);
     HearingThresholdResultFromMCU current_result = set_up_new_amplitude_and_receive_threshold_result(current_volume.get_ticks());
     if (current_result.is_result_received == true)
     {
-        cerr << "Warning! In " << __PRETTY_FUNCTION__ << ": when set initial threshold, some result already received. Ignoring it." << endl;
+        cerr << "Warning! In " << __PRETTY_FUNCTION__ << ": When set initial threshold, some result already received. Ignoring it." << endl;
         reset_current_result_on_device(DesiredButtonState::StartWaitingForPress);
     }
 
@@ -571,6 +571,7 @@ vector<VolumeLevel> HearingTester::execute_for_one_ear(HearingParametersForBSA_A
         {
             printed_results << del << item;
         }
+        printed_results << endl;
     }
 
 //    printed_results << "increasing threshold results: " << average_increasing_threshold << " +- " << increasing_conf_interval << " (with std: " << increasing_threshold_std << ")";
@@ -851,7 +852,7 @@ VolumeLevel& VolumeLevel::set_ticks(uint16_t _ticks)
     }
     else
     {
-        cerr << "Warning! In " << __PRETTY_FUNCTION__ << " Attempt to set ticks =" << _ticks
+        cerr << "Warning! In " << __PRETTY_FUNCTION__ << ": Attempt to set ticks = " << _ticks
              << " that greater than maximum possible volume " << VolumeLevel::MAX_TICK_VOLUME << ". Setting ticks = 0" << endl;
         ticks = 0;
         dB = convert_to_dB(ticks);
@@ -874,7 +875,7 @@ bool VolumeLevel::add_dB(double amount)
     if (new_ticks <= VolumeLevel::MAX_TICK_VOLUME)
     {
         if (ticks == new_ticks)
-            cerr << "Warning! In " << __PRETTY_FUNCTION__ << " Current tick (" << ticks << ") and new tick (" << new_ticks << ") "
+            cerr << "Warning! In " << __PRETTY_FUNCTION__ << ": Current tick (" << ticks << ") and new tick (" << new_ticks << ") "
                                                                                                                               "calculated for " << dB << " + " << amount << "dB are the same." << endl;
         ticks = new_ticks;
         dB += amount;
@@ -910,8 +911,8 @@ bool VolumeLevel::add(const VolumeStep* vs)
         return add_dB(dB_ptr->get_dB());
     }
     // else
-    cerr << "Warning! In " << __PRETTY_FUNCTION__
-         << " Unknown cast for volumeStep pointer provided to me! Not incrementing any number and returning false";
+    cerr << "Warning! In " << __PRETTY_FUNCTION__ << ": "
+         << "Unknown cast for volumeStep pointer provided to me! Not incrementing any number and returning false";
     return false;
 }
 
@@ -964,8 +965,8 @@ bool VolumeLevel::subtract(const VolumeStep* vs)
         return subtract_dB(dB_ptr->get_dB());
     }
     // else
-    cerr << "Warning! In " << __PRETTY_FUNCTION__
-         << " Unknown cast for volumeStep pointer provided to me! Not decrementing any number and returning false";
+    cerr << "Warning! In " << __PRETTY_FUNCTION__ << ": "
+         << "Unknown cast for volumeStep pointer provided to me! Not decrementing any number and returning false";
     return false;
 }
 
@@ -995,7 +996,7 @@ bool VolumeLevel::operator<(const VolumeLevel& rhs) const
         return true;
     if (rhs.ticks < ticks)
         return false;
-    cerr << "Warning! In " << __PRETTY_FUNCTION__ << " There are equal ticks ==" << ticks << " Returning false" << endl;
+    cerr << "Warning! In " << __PRETTY_FUNCTION__ << ": There are equal ticks (" << ticks << " == " << rhs.ticks << "). Returning false" << endl;
     return false;
 //    return dB < rhs.dB;
 }

@@ -13,8 +13,9 @@ public:
 
     void begin();
 
-    void log_end(uint8_t cmd, const std::string& description = "");
-    void log_end(const std::string& description = "");
+    std::chrono::seconds::rep log_end(uint8_t cmd, const std::string& description = "");
+    std::chrono::seconds::rep log_end(const std::string& description = "");
+//    [[nodiscard]] std::chrono::seconds::rep get_difference_in_seconds() const;
 };
 
 #endif //TIME_MEASURER

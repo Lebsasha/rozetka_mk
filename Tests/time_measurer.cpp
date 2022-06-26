@@ -9,6 +9,7 @@
 Time_measurer::Time_measurer()
 {
     begin();
+    t_end = now();
 }
 
 void Time_measurer::begin()
@@ -22,7 +23,7 @@ typename T::rep convert_to(D point)
     return std::chrono::duration_cast<T>(point).count();
 }
 
-void Time_measurer::log_end(const uint8_t cmd, const std::string& description)
+std::chrono::seconds::rep Time_measurer::log_end(const uint8_t cmd, const std::string& description)
 {
     t_end = now();
     std::cout << "Time ";
@@ -52,9 +53,15 @@ void Time_measurer::log_end(const uint8_t cmd, const std::string& description)
     else
         std::cout << convert_to<std::chrono::microseconds>(diff) << " us";
     std::cout << std::endl;
+    return convert_to<std::chrono::seconds>(t_end - t_begin);
 }
 
-void Time_measurer::log_end(const std::string& description)
+std::chrono::seconds::rep Time_measurer::log_end(const std::string& description)
 {
     return log_end(0, description);
 }
+
+//std::chrono::seconds::rep Time_measurer::get_difference_in_seconds() const
+//{
+//    return convert_to<std::chrono::seconds>(t_end - t_begin);
+//}
